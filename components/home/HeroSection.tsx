@@ -106,7 +106,7 @@ export default function HeroSection() {
                 background: "linear-gradient(135deg, #DC143C, #7B2FBE)",
               }}
             />
-            Digital Ecosystem for World
+            Digital Ecosystem for Everyone
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
