@@ -55,7 +55,7 @@ export default function Footer() {
             </div>
             <p className="text-sm text-white/40 leading-relaxed max-w-xs">
               Empowering Lives. Creating Opportunities. Transforming Communities
-              across Africa.
+              across the World.
             </p>
           </div>
 

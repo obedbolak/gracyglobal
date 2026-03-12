@@ -20,7 +20,7 @@ const heroCards = [
     icon: Briefcase,
     title: "Find Remote Jobs",
     description:
-      "Browse 500+ vetted remote opportunities from global and African companies.",
+      "Browse 500+ vetted remote opportunities from global and Worldn companies.",
     href: "/jobs",
     gradient: "linear-gradient(135deg, #DC143C, #7B2FBE)",
     glowColor: "rgba(220, 20, 60, 0.4)",
@@ -44,7 +44,7 @@ const heroCards = [
     icon: ShoppingBag,
     title: "Shop Gracy Products",
     description:
-      "Discover and support African entrepreneurs through our curated marketplace.",
+      "Discover and support Worldn entrepreneurs through our curated marketplace.",
     href: "/marketplace",
     gradient: "linear-gradient(135deg, #1A3ADB, #7B2FBE, #DC143C)",
     glowColor: "rgba(123, 47, 190, 0.35)",
@@ -106,7 +106,7 @@ export default function HeroSection() {
                 background: "linear-gradient(135deg, #DC143C, #7B2FBE)",
               }}
             />
-            Digital Ecosystem for Africa
+            Digital Ecosystem for World
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
@@ -127,7 +127,7 @@ export default function HeroSection() {
 
           <p className="text-base sm:text-lg text-white/50 max-w-2xl mx-auto font-light leading-relaxed">
             A digital ecosystem connecting counseling, remote work, community
-            development, and commerce across Africa.
+            development, and commerce across World.
           </p>
         </div>
 

@@ -45,7 +45,7 @@ export default function JobsSection() {
               Find Remote Jobs
             </h2>
             <p className="text-sm text-gray-500">
-              Search for remote work opportunities across Africa.
+              Search for remote work opportunities across World.
             </p>
           </div>
           <Link

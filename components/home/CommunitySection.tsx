@@ -34,7 +34,7 @@ const projects = [
   {
     title: "Community Development",
     cat: "Community",
-    desc: "Foster modern progress throughout Africa.",
+    desc: "Foster modern progress throughout World.",
   },
 ];
 
