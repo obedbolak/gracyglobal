@@ -40,7 +40,7 @@ export default function Navbar() {
                 backgroundClip: "text",
               }}
             >
-              GRACY WORLD
+              GRACY GLOBAL
             </span>
           </Link>
 

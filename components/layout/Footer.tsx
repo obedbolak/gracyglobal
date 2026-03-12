@@ -50,7 +50,7 @@ export default function Footer() {
                   backgroundClip: "text",
                 }}
               >
-                GRACY WORLD
+                GRACY GLOBAL
               </span>
             </div>
             <p className="text-sm text-white/40 leading-relaxed max-w-xs">
