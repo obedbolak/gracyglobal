@@ -15,7 +15,7 @@ const counselors = [
     role: "Relationship Counselor",
     rating: 4.8,
     reviews: 120,
-    img: "https://randomuser.me/api/portraits/men/32.jpg",
+    img: "/images/couselor1.jpeg",
     available: true,
   },
   {
@@ -24,7 +24,7 @@ const counselors = [
     role: "Emotional Wellness",
     rating: 4.9,
     reviews: 98,
-    img: "https://randomuser.me/api/portraits/women/44.jpg",
+    img: "/images/counselor2.jpeg",
     available: true,
   },
   {
