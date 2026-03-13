@@ -1,7 +1,9 @@
-"use client";
-
 import Link from "next/link";
 import { Search, ChevronRight, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 
 const jobs = [
   {
@@ -33,6 +35,12 @@ const jobs = [
   },
 ];
 
+const typeVariant: Record<string, "purple" | "blue" | "scarlet"> = {
+  Remote: "blue",
+  Freelance: "purple",
+  Contract: "scarlet",
+};
+
 export default function JobsSection() {
   return (
     <section className="py-16 relative">
@@ -50,53 +58,43 @@ export default function JobsSection() {
               Search for remote work opportunities across the World.
             </p>
           </div>
-          <Link
-            href="/jobs"
-            className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-105 whitespace-nowrap"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              boxShadow: "0 4px 14px rgba(220,20,60,0.30)",
-            }}
-          >
-            View All Jobs
-          </Link>
+          <Button asChild size="sm" variant="scarlet">
+            <Link href="/jobs">View All Jobs</Link>
+          </Button>
         </div>
 
-        {/* Search bar */}
+        {/* Search bar — using Input component */}
         <div className="flex gap-3 mb-7">
           <div className="relative flex-1">
             <Search
               size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
               style={{ color: "var(--text-muted)" }}
             />
-            <input
+            <Input
               type="text"
               placeholder="Search remote jobs..."
-              className="w-full pl-10 pr-4 py-3 text-sm rounded-xl transition-all glass-input"
-              style={{ color: "var(--text-primary)" }}
+              className="pl-10 h-11 text-sm"
             />
           </div>
           <select
-            className="px-4 py-3 text-sm rounded-xl glass-input"
-            style={{ color: "var(--text-secondary)" }}
+            className="px-4 h-11 text-sm rounded-[var(--input-radius)] transition-all"
+            style={{
+              background: "var(--input-bg)",
+              border: "1px solid var(--input-border)",
+              color: "var(--text-secondary)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
           >
             <option>Category</option>
             <option>Tech</option>
             <option>Design</option>
             <option>Marketing</option>
           </select>
-          <button
-            className="px-5 py-3 text-sm font-bold text-white rounded-xl whitespace-nowrap transition-all hover:scale-105"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              boxShadow: "0 4px 12px rgba(220,20,60,0.30)",
-            }}
-          >
+          <Button variant="scarlet" size="lg">
             Search
-          </button>
+          </Button>
         </div>
 
         {/* Column headers */}
@@ -112,92 +110,75 @@ export default function JobsSection() {
           ))}
         </div>
 
-        {/* Job rows */}
+        {/* Job rows — using Card component */}
         <div className="space-y-3">
           {jobs.map((job) => (
-            <Link
-              key={job.id}
-              href={`/jobs/${job.id}`}
-              className="grid grid-cols-4 items-center px-4 py-4 rounded-2xl transition-all duration-200 group hover:-translate-y-0.5"
-              style={{
-                background: "var(--card-bg)",
-                border: "1px solid var(--card-border)",
-                boxShadow: "var(--card-shadow)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-              }}
-            >
-              {/* Company */}
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md"
-                  style={{ background: job.color }}
-                >
-                  {job.logo}
+            <Link key={job.id} href={`/jobs/${job.id}`} className="block group">
+              <Card className="grid grid-cols-4 items-center px-4 py-4 rounded-2xl hover:-translate-y-0.5 transition-all duration-200 gap-0">
+                {/* Company */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md"
+                    style={{ background: job.color }}
+                  >
+                    {job.logo}
+                  </div>
+                  <span
+                    className="font-semibold text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {job.company}
+                  </span>
+                  <ChevronRight
+                    size={14}
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                    style={{ color: "var(--text-muted)" }}
+                  />
                 </div>
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {job.company}
-                </span>
-                <ChevronRight
-                  size={14}
-                  className="transition-colors duration-200 group-hover:translate-x-0.5"
-                  style={{ color: "var(--text-muted)" }}
-                />
-              </div>
 
-              {/* Salary */}
-              <div
-                className="text-sm font-medium"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {job.salary}
-              </div>
-
-              {/* Applicants */}
-              <div className="flex items-center gap-1.5">
-                <Users size={13} style={{ color: "var(--scarlet)" }} />
-                <span
-                  className="text-sm font-bold"
-                  style={{ color: "var(--scarlet)" }}
+                {/* Salary */}
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  {job.applicants.toLocaleString()}
-                </span>
-              </div>
+                  {job.salary}
+                </div>
 
-              {/* Apply button */}
-              <div className="flex justify-end">
-                <span
-                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all group-hover:scale-105"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--blue), var(--purple))",
-                  }}
-                >
-                  Apply
-                </span>
-              </div>
+                {/* Applicants */}
+                <div className="flex items-center gap-1.5">
+                  <Users size={13} style={{ color: "var(--scarlet)" }} />
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: "var(--scarlet)" }}
+                  >
+                    {job.applicants.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Apply + type badge */}
+                <div className="flex items-center justify-end gap-2">
+                  <Badge variant={typeVariant[job.type]}>{job.type}</Badge>
+                  <Button size="xs" className="pointer-events-none">
+                    Apply
+                  </Button>
+                </div>
+              </Card>
             </Link>
           ))}
         </div>
 
         {/* View all CTA */}
         <div className="mt-5">
-          <Link
-            href="/jobs"
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01]"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--accent-primary)",
-              backdropFilter: "blur(12px)",
-            }}
+          <Button
+            asChild
+            variant="outline"
+            className="w-full py-3.5 h-auto rounded-2xl"
           >
-            View All Jobs
-            <ChevronRight size={16} />
-          </Link>
+            <Link href="/jobs">
+              View All Jobs
+              <ChevronRight size={16} />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>

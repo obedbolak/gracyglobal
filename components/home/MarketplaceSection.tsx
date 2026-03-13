@@ -1,6 +1,8 @@
-"use client";
 import Link from "next/link";
 import { Star, ShoppingCart, ShieldCheck, RotateCcw } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const products = [
   {
@@ -10,6 +12,7 @@ const products = [
     rating: 4.5,
     img: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=400&q=80",
     tag: "Wellness",
+    tagVariant: "success" as const,
   },
   {
     id: "2",
@@ -18,6 +21,7 @@ const products = [
     rating: 4.8,
     img: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&q=80",
     tag: "Beauty",
+    tagVariant: "scarlet" as const,
   },
   {
     id: "3",
@@ -26,6 +30,7 @@ const products = [
     rating: 4.7,
     img: "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400&q=80",
     tag: "Skincare",
+    tagVariant: "purple" as const,
   },
 ];
 
@@ -41,12 +46,10 @@ function formatCFA(n: number) {
 export default function MarketplaceSection() {
   return (
     <section className="py-16 relative overflow-hidden">
-      {/* Subtle glass bg — matches other sections */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "var(--glass-bg-subtle)" }}
       />
-      {/* Soft glow accents */}
       <div
         className="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
         style={{
@@ -89,32 +92,17 @@ export default function MarketplaceSection() {
               Shop and Earn with Gracy
             </p>
           </div>
-          <Link
-            href="/marketplace"
-            className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-105 whitespace-nowrap"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              boxShadow: "0 4px 14px rgba(220,20,60,0.30)",
-            }}
-          >
-            View All Products
-          </Link>
+          <Button asChild size="sm" variant="scarlet">
+            <Link href="/marketplace">View All Products</Link>
+          </Button>
         </div>
 
-        {/* Product cards */}
+        {/* Product cards — using Card + Badge + Button */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {products.map((p) => (
-            <div
+            <Card
               key={p.id}
-              className="rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-2 group"
-              style={{
-                background: "var(--card-bg)",
-                border: "1px solid var(--card-border)",
-                boxShadow: "var(--card-shadow)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-              }}
+              className="overflow-hidden hover:-translate-y-2 transition-all duration-300 group p-0 gap-0"
             >
               {/* Image */}
               <div className="relative overflow-hidden h-44">
@@ -127,23 +115,16 @@ export default function MarketplaceSection() {
                   className="absolute inset-0"
                   style={{
                     background:
-                      "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.40) 100%)",
+                      "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.30) 100%)",
                   }}
                 />
-                <div
-                  className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold text-white"
-                  style={{
-                    background: "rgba(123,47,190,0.80)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(255,255,255,0.20)",
-                  }}
-                >
-                  {p.tag}
+                <div className="absolute top-3 left-3">
+                  <Badge variant={p.tagVariant}>{p.tag}</Badge>
                 </div>
               </div>
 
               {/* Info */}
-              <div className="p-4">
+              <CardContent className="p-4">
                 <div
                   className="font-bold text-sm mb-1"
                   style={{ color: "var(--text-primary)" }}
@@ -187,27 +168,21 @@ export default function MarketplaceSection() {
                   >
                     {formatCFA(p.price)}
                   </span>
-                  <Link
-                    href={`/marketplace/${p.id}`}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--purple), var(--blue))",
-                      boxShadow: "0 3px 10px rgba(123,47,190,0.35)",
-                    }}
-                  >
-                    <ShoppingCart size={12} />
-                    Add to Cart
-                  </Link>
+                  <Button asChild size="sm">
+                    <Link href={`/marketplace/${p.id}`}>
+                      <ShoppingCart size={12} />
+                      Add to Cart
+                    </Link>
+                  </Button>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
-        {/* Trust badges */}
+        {/* Trust badges — using Badge component */}
         <div
-          className="flex flex-wrap gap-5 mt-8 pt-6"
+          className="flex flex-wrap gap-4 mt-8 pt-6"
           style={{ borderTop: "1px solid var(--divider)" }}
         >
           {trustBadges.map(({ icon: Icon, label }) => (
@@ -215,18 +190,13 @@ export default function MarketplaceSection() {
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{
-                  background: "rgba(123,47,190,0.30)",
+                  background: "rgba(123,47,190,0.15)",
                   border: "1px solid rgba(168,85,247,0.25)",
                 }}
               >
                 <Icon size={14} style={{ color: "var(--purple-light)" }} />
               </div>
-              <span
-                className="text-xs font-medium"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {label}
-              </span>
+              <Badge variant="outline">{label}</Badge>
             </div>
           ))}
           {["Lidluck", "Yroloto"].map((b) => (
@@ -239,12 +209,7 @@ export default function MarketplaceSection() {
                   opacity: 0.7,
                 }}
               />
-              <span
-                className="text-xs font-medium"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {b}
-              </span>
+              <Badge variant="ghost">{b}</Badge>
             </div>
           ))}
         </div>
