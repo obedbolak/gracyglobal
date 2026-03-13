@@ -49,7 +49,7 @@ export default function CounselorsSection() {
           {["text", "video", "group"].map((tab) => (
             <TabsContent key={tab} value={tab}>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                {counselors.map((c) => (
+                {counselors.slice(0, 4).map((c) => (
                   <Card
                     key={c.id}
                     className="overflow-hidden hover:-translate-y-1.5 transition-all duration-300 group p-0 gap-0"
