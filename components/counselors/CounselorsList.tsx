@@ -312,7 +312,7 @@ export default function CounselorsList() {
 
                 {/* CTA */}
                 <Link
-                  href="/register"
+                  href={`/counselors/${name.toLowerCase().replace(/\s+/g, "-")}/book`}
                   className="w-full text-center py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-105 mt-auto"
                   style={{
                     background: available
@@ -341,7 +341,7 @@ export default function CounselorsList() {
           className="text-center mt-10"
         >
           <Link
-            href="/register"
+            href="/counselors#councelors"
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-105"
             style={{
               background: "var(--glass-bg)",
