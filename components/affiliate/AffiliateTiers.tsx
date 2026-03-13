@@ -51,7 +51,8 @@ const tiers = [
     commissionNote: "on every referral",
     minReferrals: "51+ referrals/mo",
     color: "var(--scarlet)",
-    gradient: "linear-gradient(135deg, var(--purple-light), var(--scarlet-light))",
+    gradient:
+      "linear-gradient(135deg, var(--purple-light), var(--scarlet-light))",
     glow: "rgba(168,85,247,0.35)",
     features: [
       "Everything in Growth",
@@ -96,7 +97,8 @@ export default function AffiliateTiers() {
             The More You Share,{" "}
             <span
               style={{
-                background: "linear-gradient(90deg, var(--purple-light), var(--scarlet-light))",
+                background:
+                  "linear-gradient(90deg, var(--purple-light), var(--scarlet-light))",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -109,7 +111,8 @@ export default function AffiliateTiers() {
             className="text-base max-w-xl mx-auto font-light"
             style={{ color: "var(--text-muted)" }}
           >
-            Unlock higher commission rates as your referrals grow. Tiers are updated automatically each month.
+            Unlock higher commission rates as your referrals grow. Tiers are
+            updated automatically each month.
           </p>
         </motion.div>
 
@@ -117,8 +120,19 @@ export default function AffiliateTiers() {
         <div className="grid sm:grid-cols-3 gap-5 items-start">
           {tiers.map(
             (
-              { name, badge, commission, commissionNote, minReferrals, gradient, glow, features, cta, featured },
-              i
+              {
+                name,
+                badge,
+                commission,
+                commissionNote,
+                minReferrals,
+                gradient,
+                glow,
+                features,
+                cta,
+                featured,
+              },
+              i,
             ) => (
               <motion.div
                 key={i}
@@ -126,12 +140,11 @@ export default function AffiliateTiers() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: i * 0.1 }}
-                className={`glass flex flex-col gap-6 p-7 relative overflow-hidden ${featured ? "ring-2" : ""}`}
+                className="glass flex flex-col gap-6 p-7 relative overflow-hidden"
                 style={
                   featured
                     ? {
-                        ringColor: "var(--purple-light)",
-                        boxShadow: `0 24px 60px ${glow}, var(--glass-shadow)`,
+                        boxShadow: `0 0 0 2px var(--purple-light), 0 24px 60px ${glow}, var(--glass-shadow)`,
                         transform: "scale(1.02)",
                       }
                     : {}
@@ -192,7 +205,11 @@ export default function AffiliateTiers() {
                 {/* Features */}
                 <ul className="flex flex-col gap-3">
                   {features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-secondary)" }}>
+                    <li
+                      key={j}
+                      className="flex items-start gap-2.5 text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       <div
                         className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                         style={{
@@ -200,7 +217,11 @@ export default function AffiliateTiers() {
                           boxShadow: `0 2px 8px ${glow}`,
                         }}
                       >
-                        <Check size={11} className="text-white" strokeWidth={3} />
+                        <Check
+                          size={11}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
                       </div>
                       {f}
                     </li>
@@ -219,7 +240,7 @@ export default function AffiliateTiers() {
                   {cta}
                 </Link>
               </motion.div>
-            )
+            ),
           )}
         </div>
       </div>
