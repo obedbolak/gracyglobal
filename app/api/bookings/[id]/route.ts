@@ -6,14 +6,15 @@ import { ok, err, requireUser } from "@/lib/api";
 // ── GET /api/bookings/[id] ────────────────────────────────────────────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await requireUser();
     if (!user) return err("Unauthorized", 401);
 
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         counselor: {
           include: {
@@ -38,15 +39,14 @@ export async function GET(
 // ── PATCH /api/bookings/[id] — cancel a booking ───────────────────────────────
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await requireUser();
     if (!user) return err("Unauthorized", 401);
 
-    const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
-    });
+    const booking = await prisma.booking.findUnique({ where: { id } });
     if (!booking) return err("Booking not found", 404);
     if (booking.userId !== user.id && user.role !== "ADMIN") {
       return err("Forbidden", 403);
@@ -57,7 +57,6 @@ export async function PATCH(
     if (booking.status === "COMPLETED")
       return err("Cannot cancel a completed booking");
 
-    // Enforce 24h cancellation policy
     const hoursUntilSession =
       (new Date(booking.scheduledAt).getTime() - Date.now()) / 36e5;
     if (hoursUntilSession < 24 && user.role !== "ADMIN") {
@@ -67,7 +66,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: "CANCELLED" },
     });
 
