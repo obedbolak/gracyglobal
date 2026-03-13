@@ -81,55 +81,78 @@ export default function AffiliateTestimonials() {
 
         {/* Cards */}
         <div className="grid sm:grid-cols-3 gap-5">
-          {testimonials.map(({ name, location, img, tier, earned, quote, rating }, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: i * 0.1 }}
-              className="glass flex flex-col gap-5 p-6"
-            >
-              {/* Stars */}
-              <div className="flex gap-0.5">
-                {Array.from({ length: rating }).map((_, j) => (
-                  <Star key={j} size={13} className="fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-
-              {/* Quote */}
-              <p
-                className="text-sm leading-relaxed font-light flex-1"
-                style={{ color: "var(--text-secondary)" }}
+          {testimonials.map(
+            ({ name, location, img, tier, earned, quote, rating }, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: i * 0.1 }}
+                className="glass flex flex-col gap-5 p-6"
               >
-                "{quote}"
-              </p>
+                {/* Stars */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: rating }).map((_, j) => (
+                    <Star
+                      key={j}
+                      size={13}
+                      className="fill-yellow-400 text-yellow-400"
+                    />
+                  ))}
+                </div>
 
-              {/* User */}
-              <div className="flex items-center gap-3 pt-2" style={{ borderTop: "1px solid var(--divider)" }}>
-                <img src={img} alt={name} className="w-10 h-10 rounded-full object-cover ring-2" style={{ ringColor: "var(--glass-border)" }} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>
-                    {name}
+                {/* Quote */}
+                <p
+                  className="text-sm leading-relaxed font-light flex-1"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  "{quote}"
+                </p>
+
+                {/* User */}
+                <div
+                  className="flex items-center gap-3 pt-2"
+                  style={{ borderTop: "1px solid var(--divider)" }}
+                >
+                  <img
+                    src={img}
+                    alt={name}
+                    className="w-10 h-10 rounded-full object-cover"
+                    style={{ boxShadow: "0 0 0 2px var(--glass-border)" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-sm font-bold truncate"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {name}
+                    </div>
+                    <div
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {location}
+                    </div>
                   </div>
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {location}
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className="text-[10px] font-bold px-2.5 py-1 rounded-full text-white"
+                      style={{ background: tierColors[tier] }}
+                    >
+                      {tier}
+                    </span>
+                    <span
+                      className="text-xs font-bold"
+                      style={{ color: "var(--accent-primary)" }}
+                    >
+                      {earned}
+                    </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span
-                    className="text-[10px] font-bold px-2.5 py-1 rounded-full text-white"
-                    style={{ background: tierColors[tier] }}
-                  >
-                    {tier}
-                  </span>
-                  <span className="text-xs font-bold" style={{ color: "var(--accent-primary)" }}>
-                    {earned}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ),
+          )}
         </div>
       </div>
     </section>
