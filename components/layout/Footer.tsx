@@ -1,4 +1,5 @@
-// components/layout/Footer.tsx
+"use client";
+
 import Link from "next/link";
 
 const links = {
@@ -25,18 +26,22 @@ export default function Footer() {
   return (
     <footer
       style={{
-        background: "linear-gradient(135deg, #060410 0%, #0D0820 100%)",
+        background:
+          "linear-gradient(135deg, #060410 0%, #0D0820 60%, #120820 100%)",
+        borderTop: "1px solid rgba(168,85,247,0.10)",
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2.5 mb-4">
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm"
                 style={{
-                  background: "linear-gradient(135deg, #7B2FBE, #1A3ADB)",
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--blue))",
+                  boxShadow: "0 4px 14px rgba(123,47,190,0.40)",
                 }}
               >
                 G
@@ -44,7 +49,8 @@ export default function Footer() {
               <span
                 className="font-extrabold text-lg tracking-tight"
                 style={{
-                  background: "linear-gradient(135deg, #A855F7, #4F72FF)",
+                  background:
+                    "linear-gradient(135deg, var(--purple-light), var(--blue-light))",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
@@ -53,16 +59,41 @@ export default function Footer() {
                 GRACY GLOBAL
               </span>
             </div>
-            <p className="text-sm text-white/40 leading-relaxed max-w-xs">
+            <p
+              className="text-sm leading-relaxed max-w-xs"
+              style={{ color: "rgba(255,255,255,0.38)" }}
+            >
               Empowering Lives. Creating Opportunities. Transforming Communities
               across the World.
             </p>
+
+            {/* Social dots */}
+            <div className="flex gap-2 mt-5">
+              {[
+                "linear-gradient(135deg, var(--purple), var(--blue))",
+                "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                "linear-gradient(135deg, var(--blue), var(--scarlet))",
+                "linear-gradient(135deg, var(--purple-light), var(--blue-light))",
+              ].map((g, i) => (
+                <span
+                  key={i}
+                  className="w-7 h-7 rounded-lg flex-shrink-0 cursor-pointer transition-all hover:scale-110"
+                  style={{
+                    background: g,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.30)",
+                  }}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Links */}
+          {/* Link columns */}
           {Object.entries(links).map(([section, items]) => (
             <div key={section}>
-              <div className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">
+              <div
+                className="text-xs font-bold uppercase tracking-widest mb-4"
+                style={{ color: "rgba(255,255,255,0.25)" }}
+              >
                 {section}
               </div>
               <ul className="space-y-2.5">
@@ -70,7 +101,16 @@ export default function Footer() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLElement).style.color =
+                          "var(--purple-light)")
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLElement).style.color =
+                          "rgba(255,255,255,0.45)")
+                      }
                     >
                       {item.label}
                     </Link>
@@ -86,17 +126,28 @@ export default function Footer() {
           className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8"
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-xs text-white/25">
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
             © 2025 Gracy World. All rights reserved.
           </p>
-          <div className="flex gap-2">
-            {["#7B2FBE", "#DC143C", "#1A3ADB", "#F5EFFF"].map((c, i) => (
-              <span
-                key={i}
-                className="w-2 h-2 rounded-full"
-                style={{ background: c, boxShadow: `0 0 6px ${c}88` }}
-              />
-            ))}
+
+          {/* Glassy pill */}
+          <div
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs"
+            style={{
+              background: "rgba(123,47,190,0.12)",
+              border: "1px solid rgba(168,85,247,0.18)",
+              color: "rgba(255,255,255,0.35)",
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: "var(--purple-light)",
+                boxShadow: "0 0 6px rgba(168,85,247,0.8)",
+                animation: "pulse 2s ease-in-out infinite",
+              }}
+            />
+            Built with ♥ for Africa
           </div>
         </div>
       </div>

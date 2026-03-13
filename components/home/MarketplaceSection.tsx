@@ -1,6 +1,6 @@
-// components/home/MarketplaceSection.tsx
+"use client";
 import Link from "next/link";
-import { Star, ShoppingCart } from "lucide-react";
+import { Star, ShoppingCart, ShieldCheck, RotateCcw } from "lucide-react";
 
 const products = [
   {
@@ -29,43 +29,73 @@ const products = [
   },
 ];
 
+const trustBadges = [
+  { icon: ShieldCheck, label: "Secure Checkout" },
+  { icon: RotateCcw, label: "Money Back" },
+];
+
 function formatCFA(n: number) {
   return `CFA ${n.toLocaleString()}`;
 }
 
 export default function MarketplaceSection() {
   return (
-    <section
-      className="py-16"
-      style={{
-        background:
-          "linear-gradient(135deg, #060C3A 0%, #1A0F3C 50%, #3A0A1A 100%)",
-      }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 relative overflow-hidden">
+      {/* Subtle glass bg — matches other sections */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: "var(--glass-bg-subtle)" }}
+      />
+      {/* Soft glow accents */}
+      <div
+        className="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(123,47,190,0.10) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+      />
+      <div
+        className="absolute bottom-0 left-0 w-72 h-72 rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(220,20,60,0.08) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2.5 mb-1">
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, #7B2FBE, #1A3ADB)",
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--blue))",
                 }}
               >
                 <ShoppingCart size={14} className="text-white" />
               </div>
-              <h2 className="text-2xl font-extrabold text-white">
+              <h2
+                className="text-2xl font-extrabold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 Gracy Marketplace
               </h2>
             </div>
-            <p className="text-sm text-white/50">Shop and Earn with Gracy</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Shop and Earn with Gracy
+            </p>
           </div>
           <Link
             href="/marketplace"
-            className="text-sm font-bold px-5 py-2 rounded-xl text-white transition-all hover:scale-105 whitespace-nowrap"
+            className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-105 whitespace-nowrap"
             style={{
-              background: "linear-gradient(135deg, #DC143C, #7B2FBE)",
-              boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
+              background:
+                "linear-gradient(135deg, var(--scarlet), var(--purple))",
+              boxShadow: "0 4px 14px rgba(220,20,60,0.30)",
             }}
           >
             View All Products
@@ -77,25 +107,35 @@ export default function MarketplaceSection() {
           {products.map((p) => (
             <div
               key={p.id}
-              className="rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-2"
+              className="rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-2 group"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+                background: "var(--card-bg)",
+                border: "1px solid var(--card-border)",
+                boxShadow: "var(--card-shadow)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
               }}
             >
-              {/* Product image */}
+              {/* Image */}
               <div className="relative overflow-hidden h-44">
                 <img
                   src={p.img}
                   alt={p.name}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.40) 100%)",
+                  }}
                 />
                 <div
                   className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold text-white"
                   style={{
-                    background: "rgba(123,47,190,0.85)",
-                    backdropFilter: "blur(4px)",
+                    background: "rgba(123,47,190,0.80)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.20)",
                   }}
                 >
                   {p.tag}
@@ -104,28 +144,42 @@ export default function MarketplaceSection() {
 
               {/* Info */}
               <div className="p-4">
-                <div className="font-bold text-white mb-1 text-sm">
+                <div
+                  className="font-bold text-sm mb-1"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   {p.name}
                 </div>
                 <div className="flex items-center gap-1 mb-3">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      size={12}
+                      size={11}
                       className={
                         i < Math.floor(p.rating)
                           ? "text-yellow-400 fill-yellow-400"
-                          : "text-gray-600"
+                          : ""
+                      }
+                      style={
+                        i < Math.floor(p.rating)
+                          ? {}
+                          : { color: "var(--text-disabled)" }
                       }
                     />
                   ))}
-                  <span className="text-xs text-white/40 ml-1">{p.rating}</span>
+                  <span
+                    className="text-xs ml-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {p.rating}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span
                     className="font-extrabold text-base"
                     style={{
-                      background: "linear-gradient(90deg, #A855F7, #FF4D6D)",
+                      background:
+                        "linear-gradient(90deg, var(--purple-light), var(--scarlet-light))",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
                       backgroundClip: "text",
@@ -137,7 +191,8 @@ export default function MarketplaceSection() {
                     href={`/marketplace/${p.id}`}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
                     style={{
-                      background: "linear-gradient(135deg, #7B2FBE, #1A3ADB)",
+                      background:
+                        "linear-gradient(135deg, var(--purple), var(--blue))",
                       boxShadow: "0 3px 10px rgba(123,47,190,0.35)",
                     }}
                   >
@@ -150,20 +205,46 @@ export default function MarketplaceSection() {
           ))}
         </div>
 
-        {/* Store badges */}
+        {/* Trust badges */}
         <div
-          className="flex flex-wrap gap-4 mt-8 pt-6"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          className="flex flex-wrap gap-5 mt-8 pt-6"
+          style={{ borderTop: "1px solid var(--divider)" }}
         >
-          {["Secure Checkout", "Money Back", "Lidluck", "Yroloto"].map((b) => (
+          {trustBadges.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-2">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{
+                  background: "rgba(123,47,190,0.30)",
+                  border: "1px solid rgba(168,85,247,0.25)",
+                }}
+              >
+                <Icon size={14} style={{ color: "var(--purple-light)" }} />
+              </div>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {label}
+              </span>
+            </div>
+          ))}
+          {["Lidluck", "Yroloto"].map((b) => (
             <div key={b} className="flex items-center gap-2">
               <div
-                className="w-6 h-6 rounded-md"
+                className="w-7 h-7 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, #7B2FBE, #1A3ADB)",
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--blue))",
+                  opacity: 0.7,
                 }}
               />
-              <span className="text-xs text-white/40 font-medium">{b}</span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {b}
+              </span>
             </div>
           ))}
         </div>
