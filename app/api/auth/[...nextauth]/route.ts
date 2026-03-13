@@ -1,21 +1,7 @@
+// app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import { authOptions } from "@/lib/auth";
 
-const handler = NextAuth({
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // Add your auth logic here
-        return null;
-      },
-    }),
-  ],
-  secret: process.env.NEXTAUTH_SECRET,
-});
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

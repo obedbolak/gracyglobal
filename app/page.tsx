@@ -11,7 +11,6 @@ import MarketplaceSection from "@/components/home/MarketplaceSection";
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      <Navbar />
       <HeroSection />
       <StatsBar />
 

@@ -12,6 +12,7 @@ const navLinks = [
   { label: "My Nation & I", href: "/community" },
   { label: "Marketplace", href: "/marketplace" },
   { label: "Blog", href: "/blog" },
+  { label: "Affiliate", href: "/affiliate" },
 ];
 
 export default function Navbar() {

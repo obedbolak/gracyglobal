@@ -32,6 +32,7 @@ model User {
   orders           Order[]
   communityPosts   CommunityPost[]
   bookings         Booking[]
+  affiliate        Affiliate?
 
   @@map("users")
 }
@@ -293,4 +294,78 @@ model SiteStat {
   updatedAt        DateTime @updatedAt
 
   @@map("site_stats")
+}
+
+
+model Affiliate {
+  id             String          @id @default(cuid())
+  userId         String          @unique
+  code           String          @unique   // e.g. "AMINA-X7K2"
+  tier           AffiliateTier   @default(STARTER)
+  totalReferrals Int             @default(0)
+  totalEarnings  Int             @default(0) // in CFA
+  pendingPayout  Int             @default(0) // in CFA
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals AffiliateReferral[]
+  payouts   AffiliatePayout[]
+
+  @@map("affiliates")
+}
+
+enum AffiliateTier {
+  STARTER  // 0–10 referrals → 10%
+  GROWTH   // 11–50 referrals → 20%
+  ELITE    // 51+ referrals → 30%
+}
+
+model AffiliateReferral {
+  id          String           @id @default(cuid())
+  affiliateId String
+  referredId  String           @unique  // the User who signed up
+  status      ReferralStatus   @default(PENDING)
+  commission  Int              @default(0) // CFA earned on this referral
+  convertedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@map("affiliate_referrals")
+}
+
+enum ReferralStatus {
+  PENDING    // clicked link, signed up, no paid action yet
+  CONVERTED  // completed first paid action — commission earned
+  EXPIRED    // cookie expired without conversion
+}
+
+model AffiliatePayout {
+  id          String        @id @default(cuid())
+  affiliateId String
+  amount      Int           // CFA
+  method      PayoutMethod
+  reference   String?       // bank/MoMo transaction ref
+  status      PayoutStatus  @default(PENDING)
+  requestedAt DateTime      @default(now())
+  processedAt DateTime?
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@map("affiliate_payouts")
+}
+
+enum PayoutMethod {
+  MOBILE_MONEY
+  BANK_TRANSFER
+  PAYPAL
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
 }

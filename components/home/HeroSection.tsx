@@ -11,10 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  Calendar,
-  Users,
-  ShoppingCart,
-  Heart,
   ArrowRight,
 } from "lucide-react";
 
@@ -61,7 +57,7 @@ const slides = [
           name: "Sarah Johnson",
           role: "Family Counselor",
           rating: 4.8,
-          img: "https://randomuser.me/api/portraits/women/68.jpg",
+          img: "https://randomuser.me/api/portraits/women/58.jpg",
           available: false,
         },
       ],
@@ -409,7 +405,7 @@ export default function HeroSection() {
 
   return (
     <section
-      className="relative overflow-hidden min-h-screen flex items-center"
+      className="relative overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -454,11 +450,11 @@ export default function HeroSection() {
         />
       </AnimatePresence>
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        {/* ── Top: static headline ── */}
-        <div className="text-center mb-14">
+      {/* ── Hero headline section ── */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-32 lg:pt-36 pb-6">
+        <div className="text-center">
           <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-7"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-8"
             style={{
               background: "var(--glass-bg-subtle)",
               border: "1px solid var(--glass-border)",
@@ -477,7 +473,7 @@ export default function HeroSection() {
           </div>
 
           <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-5 leading-[1.05] tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
             style={{ color: "var(--text-primary)" }}
           >
             Empowering Lives.{" "}
@@ -499,14 +495,14 @@ export default function HeroSection() {
           </h1>
 
           <p
-            className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed"
+            className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-10"
             style={{ color: "var(--text-muted)" }}
           >
             A digital ecosystem connecting counseling, remote work, community
             development, and commerce across Africa and the World.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/register"
               className="px-8 py-3.5 rounded-2xl text-white font-bold text-sm transition-all duration-200 hover:scale-105 hover:-translate-y-0.5"
@@ -532,8 +528,43 @@ export default function HeroSection() {
             </Link>
           </div>
         </div>
+      </div>
 
-        {/* ── Carousel ── */}
+      {/* ── Carousel section ── */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+        {/* Section tab pills above carousel */}
+        <div className="flex justify-center gap-2 sm:gap-3 mb-8 flex-wrap">
+          {slides.map((s, i) => {
+            const SIcon = s.icon;
+            return (
+              <button
+                key={s.id}
+                onClick={() => go(i, i > active ? 1 : -1)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200"
+                style={
+                  i === active
+                    ? {
+                        background: slide.gradient,
+                        color: "#fff",
+                        boxShadow: `0 4px 14px ${slide.glowA}`,
+                        border: "1px solid rgba(255,255,255,0.20)",
+                      }
+                    : {
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-muted)",
+                        backdropFilter: "blur(10px)",
+                      }
+                }
+              >
+                <SIcon size={14} />
+                <span className="hidden sm:inline">{s.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Carousel card */}
         <div
           className="rounded-3xl overflow-hidden relative"
           style={{
@@ -551,9 +582,9 @@ export default function HeroSection() {
             }}
           />
 
-          <div className="relative z-10 grid lg:grid-cols-2 gap-0 min-h-[420px]">
+          <div className="relative z-10 grid lg:grid-cols-2 gap-0 min-h-[400px] lg:min-h-[420px]">
             {/* LEFT — text content */}
-            <div className="flex flex-col justify-between p-8 lg:p-10">
+            <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-10">
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div
                   key={slide.id + "-text"}
@@ -568,20 +599,20 @@ export default function HeroSection() {
                   {/* Icon + label */}
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center"
                       style={{
                         background: "rgba(255,255,255,0.18)",
                         border: "1px solid rgba(255,255,255,0.28)",
                         backdropFilter: "blur(8px)",
                       }}
                     >
-                      <Icon size={22} className="text-white" />
+                      <Icon size={20} className="text-white" />
                     </div>
                     <span className="text-xs font-bold tracking-widest uppercase text-white/70">
                       {slide.label}
                     </span>
                     <span
-                      className="ml-auto text-xs font-bold px-3 py-1 rounded-full"
+                      className="ml-auto text-[11px] font-bold px-3 py-1 rounded-full"
                       style={{
                         background: "rgba(255,255,255,0.16)",
                         color: "rgba(255,255,255,0.90)",
@@ -597,16 +628,16 @@ export default function HeroSection() {
                     <h2 className="text-2xl lg:text-3xl font-extrabold text-white leading-tight mb-2">
                       {slide.title}
                     </h2>
-                    <p className="text-sm text-white/55 font-medium mb-3">
+                    <p className="text-sm text-white/60 font-medium mb-3">
                       {slide.subtitle}
                     </p>
-                    <p className="text-sm text-white/45 leading-relaxed font-light">
+                    <p className="text-sm text-white/45 leading-relaxed font-light max-w-md">
                       {slide.description}
                     </p>
                   </div>
 
                   {/* Stats row */}
-                  <div className="flex gap-4">
+                  <div className="flex gap-5 sm:gap-6">
                     {slide.stats.map((s, i) => (
                       <div key={i} className="flex flex-col gap-0.5">
                         <span className="text-lg font-extrabold text-white">
@@ -639,7 +670,7 @@ export default function HeroSection() {
               </AnimatePresence>
 
               {/* Nav controls */}
-              <div className="flex items-center gap-3 mt-6">
+              <div className="flex items-center gap-3 mt-8">
                 <button
                   onClick={prev}
                   className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
@@ -662,7 +693,7 @@ export default function HeroSection() {
                 </button>
 
                 {/* Dot indicators */}
-                <div className="flex items-center gap-2 ml-1">
+                <div className="flex items-center gap-2 ml-2">
                   {slides.map((s, i) => (
                     <button
                       key={s.id}
@@ -733,38 +764,6 @@ export default function HeroSection() {
               transition={{ duration: 5, ease: "linear" }}
             />
           )}
-        </div>
-
-        {/* ── Section tab pills below carousel ── */}
-        <div className="flex justify-center gap-3 mt-6 flex-wrap">
-          {slides.map((s, i) => {
-            const SIcon = s.icon;
-            return (
-              <button
-                key={s.id}
-                onClick={() => go(i, i > active ? 1 : -1)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200"
-                style={
-                  i === active
-                    ? {
-                        background: slide.gradient,
-                        color: "#fff",
-                        boxShadow: `0 4px 14px ${slide.glowA}`,
-                        border: "1px solid rgba(255,255,255,0.20)",
-                      }
-                    : {
-                        background: "var(--glass-bg)",
-                        border: "1px solid var(--glass-border)",
-                        color: "var(--text-muted)",
-                        backdropFilter: "blur(10px)",
-                      }
-                }
-              >
-                <SIcon size={14} />
-                {s.label}
-              </button>
-            );
-          })}
         </div>
       </div>
     </section>
