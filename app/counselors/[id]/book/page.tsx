@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+
 import {
   CheckCircle,
   Video,
@@ -16,27 +15,11 @@ import {
   Clock,
   CreditCard,
   Calendar,
-  User,
   FileText,
   ArrowRight,
   Check,
 } from "lucide-react";
-
-// ─── Mock counselor data (swap with real fetch later) ─────────────────────────
-const COUNSELOR = {
-  id: "1",
-  name: "Grace Nfor",
-  role: "Emotional Wellness & Trauma",
-  specialty: "Trauma Healing",
-  rating: 4.9,
-  reviews: 124,
-  pricePerHour: 5000,
-  img: "https://randomuser.me/api/portraits/women/44.jpg",
-  verified: true,
-  available: true,
-  bio: "Certified trauma therapist with 8 years helping clients process grief, anxiety, and past wounds in a safe, judgment-free space.",
-  languages: ["English", "French"],
-};
+import { getCounselorById, type Counselor } from "@/data/counselors";
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 const TIME_SLOTS = [
@@ -58,7 +41,7 @@ function getAvailableDates() {
   for (let i = 1; i <= 14; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    if (d.getDay() !== 0) dates.push(d); // exclude Sundays
+    if (d.getDay() !== 0) dates.push(d);
   }
   return dates;
 }
@@ -89,7 +72,6 @@ const SESSION_TYPES = [
   },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -203,7 +185,6 @@ function StepDateTime({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      {/* Date picker */}
       <div>
         <h3
           className="text-lg font-extrabold mb-1"
@@ -266,8 +247,6 @@ function StepDateTime({
           })}
         </div>
       </div>
-
-      {/* Time slots */}
       <div>
         <h3
           className="text-lg font-extrabold mb-1"
@@ -335,8 +314,8 @@ function StepNotes({
         rows={6}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="E.g. I've been struggling with anxiety at work lately and would like strategies to cope..."
-        className="glass-input w-full p-4 text-sm resize-none leading-relaxed"
+        placeholder="E.g. I've been struggling with anxiety at work lately..."
+        className="w-full p-4 text-sm resize-none leading-relaxed transition-all duration-200"
         style={{
           background: "var(--input-bg)",
           border: "1px solid var(--input-border)",
@@ -375,11 +354,8 @@ function StepConfirm({
   date: Date | null;
   time: string;
   notes: string;
-  counselor: typeof COUNSELOR;
+  counselor: Counselor;
 }) {
-  const sessionLabel =
-    sessionType === "VIDEO" ? "Video Session" : "Text Session";
-
   return (
     <div className="flex flex-col gap-5">
       <h3
@@ -388,11 +364,12 @@ function StepConfirm({
       >
         Review & Confirm
       </h3>
-
-      {/* Summary rows */}
       {[
         { label: "Counselor", value: counselor.name },
-        { label: "Session Type", value: sessionLabel },
+        {
+          label: "Session Type",
+          value: sessionType === "VIDEO" ? "Video Session" : "Text Session",
+        },
         { label: "Date", value: date ? formatDate(date) : "—" },
         { label: "Time", value: time || "—" },
         { label: "Duration", value: "60 minutes" },
@@ -419,7 +396,6 @@ function StepConfirm({
           </span>
         </div>
       ))}
-
       {notes && (
         <div
           className="p-4 rounded-xl"
@@ -442,8 +418,6 @@ function StepConfirm({
           </p>
         </div>
       )}
-
-      {/* Price */}
       <div
         className="flex items-center justify-between p-5 rounded-2xl"
         style={{
@@ -475,11 +449,9 @@ function StepConfirm({
             backgroundClip: "text",
           }}
         >
-          CFA {counselor.pricePerHour.toLocaleString()}
+          CFA {counselor.price.toLocaleString()}
         </span>
       </div>
-
-      {/* Trust note */}
       <div
         className="flex items-center gap-2 text-xs justify-center"
         style={{ color: "var(--text-muted)" }}
@@ -491,13 +463,12 @@ function StepConfirm({
   );
 }
 
-// ─── Success screen ───────────────────────────────────────────────────────────
 function SuccessScreen({
   counselor,
   date,
   time,
 }: {
-  counselor: typeof COUNSELOR;
+  counselor: Counselor;
   date: Date | null;
   time: string;
 }) {
@@ -547,7 +518,7 @@ function SuccessScreen({
           border: "1px solid var(--success-border)",
         }}
       >
-        <Clock size={12} />A reminder will be sent 1 hour before your session
+        <Clock size={12} /> A reminder will be sent 1 hour before your session
       </div>
       <a
         href="/dashboard"
@@ -568,6 +539,9 @@ export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
 
+  const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
+  const counselor = getCounselorById(id);
+
   const [step, setStep] = useState(1);
   const [sessionType, setSessionType] = useState("VIDEO");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -576,7 +550,28 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const counselor = COUNSELOR; // swap with fetch by params.id later
+  // Counselor not found
+  if (!counselor) {
+    return (
+      <main className="min-h-screen">
+        <div className="max-w-lg mx-auto px-4 py-32 text-center">
+          <p
+            className="text-lg font-bold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Counselor not found.
+          </p>
+          <a
+            href="/counselors"
+            className="text-sm font-semibold"
+            style={{ color: "var(--accent-primary)" }}
+          >
+            ← Browse all counselors
+          </a>
+        </div>
+      </main>
+    );
+  }
 
   const canNext =
     (step === 1 && !!sessionType) ||
@@ -586,7 +581,7 @@ export default function BookingPage() {
 
   async function handleConfirm() {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400)); // simulate API call
+    await new Promise((r) => setTimeout(r, 1400));
     setLoading(false);
     setSubmitted(true);
   }
@@ -594,7 +589,6 @@ export default function BookingPage() {
   return (
     <main className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        {/* Back link */}
         {!submitted && (
           <button
             onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
@@ -615,9 +609,8 @@ export default function BookingPage() {
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-6 items-start">
-            {/* ── LEFT: Counselor card + step tracker ── */}
+            {/* LEFT sidebar */}
             <div className="flex flex-col gap-5">
-              {/* Counselor summary */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -631,13 +624,15 @@ export default function BookingPage() {
                       alt={counselor.name}
                       className="w-16 h-16 rounded-2xl object-cover"
                     />
-                    <span
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
-                      style={{
-                        background: "#4ade80",
-                        borderColor: "var(--card-bg)",
-                      }}
-                    />
+                    {counselor.available && (
+                      <span
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+                        style={{
+                          background: "#4ade80",
+                          borderColor: "var(--card-bg)",
+                        }}
+                      />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
@@ -700,7 +695,7 @@ export default function BookingPage() {
                     className="text-base font-extrabold"
                     style={{ color: "var(--accent-primary)" }}
                   >
-                    CFA {counselor.pricePerHour.toLocaleString()}
+                    CFA {counselor.price.toLocaleString()}
                   </span>
                 </div>
               </motion.div>
@@ -802,7 +797,7 @@ export default function BookingPage() {
               </motion.div>
             </div>
 
-            {/* ── RIGHT: Step form ── */}
+            {/* RIGHT form */}
             <div className="lg:col-span-2">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -810,7 +805,6 @@ export default function BookingPage() {
                 transition={{ duration: 0.4 }}
                 className="glass p-6 sm:p-8"
               >
-                {/* Step header */}
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <p
@@ -826,7 +820,6 @@ export default function BookingPage() {
                       {STEPS[step - 1].label}
                     </h2>
                   </div>
-                  {/* Progress bar */}
                   <div
                     className="w-24 h-2 rounded-full overflow-hidden"
                     style={{ background: "var(--glass-bg-subtle)" }}
@@ -842,7 +835,6 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Step content */}
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={step}
@@ -880,7 +872,6 @@ export default function BookingPage() {
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation */}
                 <div
                   className="flex items-center justify-between mt-10 pt-6"
                   style={{ borderTop: "1px solid var(--divider)" }}
@@ -924,7 +915,7 @@ export default function BookingPage() {
                     >
                       {loading ? (
                         <>
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
                           Processing...
                         </>
                       ) : (
@@ -940,8 +931,6 @@ export default function BookingPage() {
           </div>
         )}
       </div>
-
-      <Footer />
     </main>
   );
 }

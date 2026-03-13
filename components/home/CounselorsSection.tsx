@@ -7,45 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
-const counselors = [
-  {
-    id: "1",
-    name: "Daniel Evans",
-    role: "Relationship Counselor",
-    rating: 4.8,
-    reviews: 120,
-    img: "/images/couselor1.jpeg",
-    available: true,
-  },
-  {
-    id: "2",
-    name: "Grace Nfor",
-    role: "Emotional Wellness",
-    rating: 4.9,
-    reviews: 98,
-    img: "/images/counselor2.jpeg",
-    available: true,
-  },
-  {
-    id: "3",
-    name: "Dr. Michael",
-    role: "Life Coach",
-    rating: 4.7,
-    reviews: 215,
-    img: "https://randomuser.me/api/portraits/men/52.jpg",
-    available: false,
-  },
-  {
-    id: "4",
-    name: "Sarah Johnson",
-    role: "Family Counselor",
-    rating: 4.8,
-    reviews: 87,
-    img: "https://randomuser.me/api/portraits/women/68.jpg",
-    available: true,
-  },
-];
+import { counselors } from "@/data/counselors";
 
 export default function CounselorsSection() {
   const [activeTab, setActiveTab] = useState("text");

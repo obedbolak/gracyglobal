@@ -21,7 +21,6 @@ export default function CounselorsPage() {
       <CounselorsHowItWorks />
       <CounselorsList />
       <CounselorsCTA />
-      <Footer />
     </main>
   );
 }
