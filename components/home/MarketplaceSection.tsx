@@ -1,49 +1,37 @@
+"use client";
+
 import Link from "next/link";
 import { Star, ShoppingCart, ShieldCheck, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-const products = [
-  {
-    id: "1",
-    name: "Gracy 72 Aura",
-    price: 10000,
-    rating: 4.5,
-    img: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=400&q=80",
-    tag: "Wellness",
-    tagVariant: "success" as const,
-  },
-  {
-    id: "2",
-    name: "Gracy Shine",
-    price: 30000,
-    rating: 4.8,
-    img: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&q=80",
-    tag: "Beauty",
-    tagVariant: "scarlet" as const,
-  },
-  {
-    id: "3",
-    name: "Gracy Glow",
-    price: 50000,
-    rating: 4.7,
-    img: "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400&q=80",
-    tag: "Skincare",
-    tagVariant: "purple" as const,
-  },
-];
+import { getFeaturedProducts } from "@/data/products";
+import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const trustBadges = [
   { icon: ShieldCheck, label: "Secure Checkout" },
   { icon: RotateCcw, label: "Money Back" },
 ];
 
-function formatCFA(n: number) {
-  return `CFA ${n.toLocaleString()}`;
-}
+const BADGE_VARIANTS: Record<
+  string,
+  "success" | "scarlet" | "purple" | "blue" | "outline"
+> = {
+  Wellness: "success",
+  Beauty: "scarlet",
+  Skincare: "purple",
+  "Hair Care": "blue",
+  Supplements: "outline",
+};
 
 export default function MarketplaceSection() {
+  const { addToCart } = useCart();
+  const { convert, loading: currencyLoading } = useCurrency();
+
+  // Show only the first 3 featured products
+  const products = getFeaturedProducts().slice(0, 3);
+
   return (
     <section className="py-16 relative overflow-hidden">
       <div
@@ -97,7 +85,7 @@ export default function MarketplaceSection() {
           </Button>
         </div>
 
-        {/* Product cards — using Card + Badge + Button */}
+        {/* Product cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {products.map((p) => (
             <Card
@@ -107,7 +95,7 @@ export default function MarketplaceSection() {
               {/* Image */}
               <div className="relative overflow-hidden h-44">
                 <img
-                  src={p.img}
+                  src={p.images[0]}
                   alt={p.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
@@ -119,8 +107,15 @@ export default function MarketplaceSection() {
                   }}
                 />
                 <div className="absolute top-3 left-3">
-                  <Badge variant={p.tagVariant}>{p.tag}</Badge>
+                  <Badge variant={BADGE_VARIANTS[p.category] ?? "outline"}>
+                    {p.category}
+                  </Badge>
                 </div>
+                {p.badge && (
+                  <div className="absolute top-3 right-3">
+                    <Badge variant="purple">{p.badge}</Badge>
+                  </div>
+                )}
               </div>
 
               {/* Info */}
@@ -156,23 +151,29 @@ export default function MarketplaceSection() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span
-                    className="font-extrabold text-base"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, var(--purple-light), var(--scarlet-light))",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {formatCFA(p.price)}
-                  </span>
-                  <Button asChild size="sm">
-                    <Link href={`/marketplace/${p.id}`}>
-                      <ShoppingCart size={12} />
-                      Add to Cart
-                    </Link>
+                  <div className="flex flex-col">
+                    <span
+                      className="font-extrabold text-base"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, var(--purple-light), var(--scarlet-light))",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {currencyLoading ? "..." : convert(p.price)}
+                    </span>
+                    <span
+                      className="text-[10px]"
+                      style={{ color: "var(--text-disabled)" }}
+                    >
+                      CFA {p.price.toLocaleString()}
+                    </span>
+                  </div>
+                  <Button size="sm" onClick={() => addToCart(p)}>
+                    <ShoppingCart size={12} />
+                    Add to Cart
                   </Button>
                 </div>
               </CardContent>
@@ -180,7 +181,7 @@ export default function MarketplaceSection() {
           ))}
         </div>
 
-        {/* Trust badges — using Badge component */}
+        {/* Trust badges */}
         <div
           className="flex flex-wrap gap-4 mt-8 pt-6"
           style={{ borderTop: "1px solid var(--divider)" }}
@@ -197,19 +198,6 @@ export default function MarketplaceSection() {
                 <Icon size={14} style={{ color: "var(--purple-light)" }} />
               </div>
               <Badge variant="outline">{label}</Badge>
-            </div>
-          ))}
-          {["Lidluck", "Yroloto"].map((b) => (
-            <div key={b} className="flex items-center gap-2">
-              <div
-                className="w-7 h-7 rounded-lg"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--purple), var(--blue))",
-                  opacity: 0.7,
-                }}
-              />
-              <Badge variant="ghost">{b}</Badge>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CurrencySelector from "@/components/shared/CurrencySelector";
 
 const links = {
   Platform: [
@@ -26,9 +27,10 @@ export default function Footer() {
   return (
     <footer
       style={{
-        background:
-          "linear-gradient(135deg, #060410 0%, #0D0820 60%, #120820 100%)",
-        borderTop: "1px solid rgba(168,85,247,0.10)",
+        background: "var(--glass-bg)",
+        borderTop: "1px solid var(--divider-strong)",
+        backdropFilter: "var(--glass-blur)",
+        WebkitBackdropFilter: "var(--glass-blur)",
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -60,12 +62,23 @@ export default function Footer() {
               </span>
             </div>
             <p
-              className="text-sm leading-relaxed max-w-xs"
-              style={{ color: "rgba(255,255,255,0.38)" }}
+              className="text-sm leading-relaxed max-w-xs mb-5"
+              style={{ color: "var(--text-muted)" }}
             >
               Empowering Lives. Creating Opportunities. Transforming Communities
               across the World.
             </p>
+
+            {/* Currency selector */}
+            <div className="mb-5">
+              <p
+                className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                style={{ color: "var(--text-disabled)" }}
+              >
+                Display Currency
+              </p>
+              <CurrencySelector />
+            </div>
 
             {/* Social dots */}
             <div className="flex gap-2 mt-5">
@@ -80,7 +93,7 @@ export default function Footer() {
                   className="w-7 h-7 rounded-lg flex-shrink-0 cursor-pointer transition-all hover:scale-110"
                   style={{
                     background: g,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.30)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.20)",
                   }}
                 />
               ))}
@@ -92,7 +105,7 @@ export default function Footer() {
             <div key={section}>
               <div
                 className="text-xs font-bold uppercase tracking-widest mb-4"
-                style={{ color: "rgba(255,255,255,0.25)" }}
+                style={{ color: "var(--text-disabled)" }}
               >
                 {section}
               </div>
@@ -102,14 +115,14 @@ export default function Footer() {
                     <Link
                       href={item.href}
                       className="text-sm transition-colors duration-200"
-                      style={{ color: "rgba(255,255,255,0.45)" }}
+                      style={{ color: "var(--text-muted)" }}
                       onMouseEnter={(e) =>
                         ((e.currentTarget as HTMLElement).style.color =
-                          "var(--purple-light)")
+                          "var(--accent-primary)")
                       }
                       onMouseLeave={(e) =>
                         ((e.currentTarget as HTMLElement).style.color =
-                          "rgba(255,255,255,0.45)")
+                          "var(--text-muted)")
                       }
                     >
                       {item.label}
@@ -124,19 +137,19 @@ export default function Footer() {
         {/* Bottom bar */}
         <div
           className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderTop: "1px solid var(--divider)" }}
         >
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
+          <p className="text-xs" style={{ color: "var(--text-disabled)" }}>
             © 2025 Gracy World. All rights reserved.
           </p>
 
-          {/* Glassy pill */}
+          {/* Pill */}
           <div
             className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs"
             style={{
-              background: "rgba(123,47,190,0.12)",
-              border: "1px solid rgba(168,85,247,0.18)",
-              color: "rgba(255,255,255,0.35)",
+              background: "var(--badge-purple-bg)",
+              border: "1px solid var(--divider-strong)",
+              color: "var(--text-muted)",
             }}
           >
             <span

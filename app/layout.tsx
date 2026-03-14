@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import Navbar from "@/components/layout/Navbar";
+import { CartProvider } from "@/context/CartContext";
+import Footer from "@/components/layout/Footer";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 
 export const metadata: Metadata = {
   title: "Gracy Global",
@@ -18,8 +21,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider defaultTheme="light" storageKey="gracyglobal-theme">
-          <Navbar />
-          {children}
+          <CurrencyProvider>
+            <CartProvider>
+              <Navbar />
+              {children}
+              <Footer />
+            </CartProvider>
+          </CurrencyProvider>
         </ThemeProvider>
       </body>
     </html>

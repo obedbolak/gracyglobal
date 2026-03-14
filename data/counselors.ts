@@ -113,7 +113,7 @@ export const counselors: Counselor[] = [
     reviews: 76,
     price: 1000,
     img: "/images/remedy.jpeg",
-    available: false,
+    available: true,
     verified: true,
     languages: ["English", "Pidgin"],
     sessions: ["Video"],

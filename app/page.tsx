@@ -27,8 +27,6 @@ export default function HomePage() {
           <MarketplaceSection />
         </div>
       </div>
-
-      <Footer />
     </main>
   );
 }

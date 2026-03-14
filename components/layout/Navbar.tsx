@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { useCart } from "@/context/CartContext";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -18,6 +19,7 @@ const navLinks = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { count } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -73,9 +75,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className="px-3.5 py-2 text-sm font-medium rounded-xl transition-all duration-200"
-                style={{
-                  color: "var(--text-secondary)",
-                }}
+                style={{ color: "var(--text-secondary)" }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background =
                     "var(--btn-ghost-bg-hover)";
@@ -94,9 +94,35 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA + Theme toggle */}
+          {/* CTA + Theme toggle + Cart */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle size="sm" />
+
+            {/* Cart icon */}
+            <Link
+              href="/marketplace/cart"
+              className="relative p-2 rounded-xl transition-all duration-200 hover:scale-105"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <ShoppingBag size={18} />
+              {count > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 w-4.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                    boxShadow: "0 2px 8px rgba(220,20,60,0.4)",
+                  }}
+                >
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
+            </Link>
+
             <Link
               href="/login"
               className="text-sm font-semibold transition-colors duration-200"
@@ -128,6 +154,31 @@ export default function Navbar() {
           {/* Mobile toggle */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle size="sm" />
+
+            {/* Mobile cart */}
+            <Link
+              href="/marketplace/cart"
+              className="relative p-2 rounded-xl transition-all duration-200"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <ShoppingBag size={18} />
+              {count > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                  }}
+                >
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
+            </Link>
+
             <button
               onClick={() => setOpen(!open)}
               className="p-2 rounded-xl transition-all duration-200"
