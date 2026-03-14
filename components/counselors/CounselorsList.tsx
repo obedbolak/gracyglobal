@@ -1,10 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Star, Video, MessageCircle, CheckCircle } from "lucide-react";
+import {
+  Star,
+  Video,
+  MessageCircle,
+  CheckCircle,
+  Currency,
+} from "lucide-react";
 import Link from "next/link";
 // Replace hardcoded arrays with this import
 import { counselors, getCounselorById } from "@/data/counselors";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const specialtyColors: Record<string, string> = {
   "Marriage Counseling": "var(--badge-scarlet-bg)",
@@ -18,6 +25,7 @@ const specialtyText: Record<string, string> = {
 };
 
 export default function CounselorsList() {
+  const { convert, loading } = useCurrency();
   return (
     <section id="counselors" className="py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -177,7 +185,7 @@ export default function CounselorsList() {
                     className="text-sm font-bold"
                     style={{ color: "var(--accent-primary)" }}
                   >
-                    CFA {price.toLocaleString()}
+                    {loading ? "..." : convert(price)} /hr
                     <span
                       className="text-xs font-normal"
                       style={{ color: "var(--text-muted)" }}

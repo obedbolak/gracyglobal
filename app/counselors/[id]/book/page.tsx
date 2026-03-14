@@ -20,6 +20,7 @@ import {
   Check,
 } from "lucide-react";
 import { getCounselorById, type Counselor } from "@/data/counselors";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 const TIME_SLOTS = [
@@ -356,6 +357,8 @@ function StepConfirm({
   notes: string;
   counselor: Counselor;
 }) {
+  const { convert, loading } = useCurrency();
+
   return (
     <div className="flex flex-col gap-5">
       <h3
@@ -449,7 +452,7 @@ function StepConfirm({
             backgroundClip: "text",
           }}
         >
-          CFA {counselor.price.toLocaleString()}
+          {loading ? "..." : convert(counselor.price)} /hr
         </span>
       </div>
       <div
