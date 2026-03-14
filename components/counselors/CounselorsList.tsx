@@ -185,7 +185,7 @@ export default function CounselorsList() {
                     className="text-sm font-bold"
                     style={{ color: "var(--accent-primary)" }}
                   >
-                    {loading ? "..." : convert(price)} /hr
+                    {loading ? "..." : convert(price)}
                     <span
                       className="text-xs font-normal"
                       style={{ color: "var(--text-muted)" }}
