@@ -160,7 +160,7 @@ export default function Footer() {
                 animation: "pulse 2s ease-in-out infinite",
               }}
             />
-            Built with ♥ for Africa
+            Built with ♥ for Everyone
           </div>
         </div>
       </div>
