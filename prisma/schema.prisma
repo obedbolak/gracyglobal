@@ -2,15 +2,13 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
-  
 }
 
-// ─── USER ───────────────────────────────────────────────────────────────────
+// ─── USER ────────────────────────────────────────────────────────────────────
 
 model User {
   id            String    @id @default(cuid())
@@ -26,14 +24,16 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  accounts        Account[]
-  sessions        Session[]
+  accounts         Account[]
+  sessions         Session[]
   counselorProfile Counselor?
   jobApplications  JobApplication[]
   orders           Order[]
   communityPosts   CommunityPost[]
   bookings         Booking[]
   affiliate        Affiliate?
+  subscription     Subscription?
+  communityMember  CommunityMember?
 
   @@map("users")
 }
@@ -45,7 +45,7 @@ enum UserRole {
   VOLUNTEER
 }
 
-// ─── AUTH (NextAuth) ─────────────────────────────────────────────────────────
+// ─── AUTH (NextAuth) ──────────────────────────────────────────────────────────
 
 model Account {
   id                String  @id @default(cuid())
@@ -86,19 +86,120 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// ─── PLANS & SUBSCRIPTIONS ───────────────────────────────────────────────────
+
+model Plan {
+  id                String   @id @default(cuid())
+  name              String   @unique  // "free" | "starter" | "growth" | "elite"
+  displayName       String            // "Free" | "Starter" | "Growth" | "Elite / Pro"
+  description       String
+  priceMonthly      Int      @default(0)  // CFA
+  priceAnnual       Int      @default(0)  // CFA per month billed annually
+  pricePerSession   Int?                  // CFA per session (null = unlimited)
+  counselorSessions Int      @default(0)  // sessions per month (0 = unlimited)
+  highlighted       Boolean  @default(false)
+  active            Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  planId           String
+  billing          SubscriptionBilling @default(MONTHLY)
+  status           SubscriptionStatus  @default(ACTIVE)
+  currentPeriodStart DateTime          @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean           @default(false)
+  sessionsUsed       Int               @default(0)   // this billing period
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+  payments SubscriptionPayment[]
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionBilling {
+  MONTHLY
+  ANNUAL
+  PER_SESSION
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  TRIALING
+}
+
+model SubscriptionPayment {
+  id             String        @id @default(cuid())
+  subscriptionId String
+  amount         Int           // CFA
+  method         PayoutMethod
+  reference      String?
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ─── COMMUNITY MEMBERSHIP ────────────────────────────────────────────────────
+
+model CommunityMember {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  bio           String?  @db.Text
+  systems       String[]              // array of SystemId strings
+  badge         MemberBadge @default(CONTRIBUTOR)
+  contributions Int      @default(0)
+  joinedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("community_members")
+}
+
+enum MemberBadge {
+  CONTRIBUTOR
+  LEADER
+  MENTOR
+  PIONEER
+}
+
 // ─── COUNSELORS ──────────────────────────────────────────────────────────────
 
 model Counselor {
-  id           String           @id @default(cuid())
-  userId       String           @unique
-  bio          String?          @db.Text
+  id           String          @id @default(cuid())
+  userId       String          @unique
+  bio          String?         @db.Text
   specialty    CounselorType[]
-  rating       Float            @default(0)
-  reviewCount  Int              @default(0)
-  pricePerHour Int              @default(0) // in CFA
-  available    Boolean          @default(true)
-  verified     Boolean          @default(false)
-  createdAt    DateTime         @default(now())
+  rating       Float           @default(0)
+  reviewCount  Int             @default(0)
+  pricePerHour Int             @default(0)
+  available    Boolean         @default(true)
+  verified     Boolean         @default(false)
+  createdAt    DateTime        @default(now())
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]
@@ -122,8 +223,8 @@ model Booking {
   type        SessionType
   status      BookingStatus @default(PENDING)
   scheduledAt DateTime
-  duration    Int           @default(60) // minutes
-  price       Int           // in CFA
+  duration    Int           @default(60)
+  price       Int
   notes       String?       @db.Text
   createdAt   DateTime      @default(now())
 
@@ -149,21 +250,21 @@ enum BookingStatus {
 // ─── JOBS ────────────────────────────────────────────────────────────────────
 
 model Job {
-  id           String         @id @default(cuid())
-  title        String
-  company      String
-  companyLogo  String?
-  description  String         @db.Text
-  category     JobCategory
-  type         JobType        @default(REMOTE)
-  salaryMin    Int?           // in CFA
-  salaryMax    Int?
-  location     String?
-  skills       String[]
-  active       Boolean        @default(true)
-  featured     Boolean        @default(false)
-  createdAt    DateTime       @default(now())
-  expiresAt    DateTime?
+  id          String       @id @default(cuid())
+  title       String
+  company     String
+  companyLogo String?
+  description String       @db.Text
+  category    JobCategory
+  type        JobType      @default(REMOTE)
+  salaryMin   Int?
+  salaryMax   Int?
+  location    String?
+  skills      String[]
+  active      Boolean      @default(true)
+  featured    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  expiresAt   DateTime?
 
   applications JobApplication[]
 
@@ -215,16 +316,22 @@ enum ApplicationStatus {
 // ─── MARKETPLACE ─────────────────────────────────────────────────────────────
 
 model Product {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  description String        @db.Text
-  price       Int           // in CFA
+  description String   @db.Text
+  price       Int                     // in CFA
   images      String[]
-  category    String
-  stock       Int           @default(0)
-  featured    Boolean       @default(false)
-  active      Boolean       @default(true)
-  createdAt   DateTime      @default(now())
+  category    String                  // sub-category e.g. "Skincare"
+  group       String   @default("")  // department e.g. "Beauty & Personal Care"
+  stock       Int      @default(0)
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  badge       String?                 // "Best Seller" | "Top Rated" | "Premium"
+  benefits    String[]                // e.g. ["Deep hydration", "Brightening"]
+  ingredients String[]                // e.g. ["Argan oil", "Shea butter"]
+  createdAt   DateTime @default(now())
 
   orderItems OrderItem[]
 
@@ -234,7 +341,7 @@ model Product {
 model Order {
   id        String      @id @default(cuid())
   userId    String
-  total     Int         // in CFA
+  total     Int
   status    OrderStatus @default(PENDING)
   createdAt DateTime    @default(now())
 
@@ -266,7 +373,7 @@ enum OrderStatus {
   CANCELLED
 }
 
-// ─── COMMUNITY ───────────────────────────────────────────────────────────────
+// ─── COMMUNITY POSTS ─────────────────────────────────────────────────────────
 
 model CommunityPost {
   id        String   @id @default(cuid())
@@ -287,28 +394,29 @@ model CommunityPost {
 // ─── STATS ───────────────────────────────────────────────────────────────────
 
 model SiteStat {
-  id               String   @id @default(cuid())
-  peopleSupported  Int      @default(1000)
-  jobsShared       Int      @default(500)
-  communityProjects Int     @default(50)
-  marketplaceItems Int      @default(10)
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(cuid())
+  peopleSupported   Int      @default(1000)
+  jobsShared        Int      @default(500)
+  communityProjects Int      @default(50)
+  marketplaceItems  Int      @default(10)
+  updatedAt         DateTime @updatedAt
 
   @@map("site_stats")
 }
 
+// ─── AFFILIATE ───────────────────────────────────────────────────────────────
 
 model Affiliate {
-  id             String          @id @default(cuid())
-  userId         String          @unique
-  code           String          @unique   // e.g. "AMINA-X7K2"
-  tier           AffiliateTier   @default(STARTER)
-  totalReferrals Int             @default(0)
-  totalEarnings  Int             @default(0) // in CFA
-  pendingPayout  Int             @default(0) // in CFA
-  active         Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  code           String        @unique
+  tier           AffiliateTier @default(STARTER)
+  totalReferrals Int           @default(0)
+  totalEarnings  Int           @default(0)
+  pendingPayout  Int           @default(0)
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   referrals AffiliateReferral[]
@@ -318,19 +426,19 @@ model Affiliate {
 }
 
 enum AffiliateTier {
-  STARTER  // 0–10 referrals → 10%
-  GROWTH   // 11–50 referrals → 20%
-  ELITE    // 51+ referrals → 30%
+  STARTER
+  GROWTH
+  ELITE
 }
 
 model AffiliateReferral {
-  id          String           @id @default(cuid())
+  id          String         @id @default(cuid())
   affiliateId String
-  referredId  String           @unique  // the User who signed up
-  status      ReferralStatus   @default(PENDING)
-  commission  Int              @default(0) // CFA earned on this referral
+  referredId  String         @unique
+  status      ReferralStatus @default(PENDING)
+  commission  Int            @default(0)
   convertedAt DateTime?
-  createdAt   DateTime         @default(now())
+  createdAt   DateTime       @default(now())
 
   affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 
@@ -338,19 +446,19 @@ model AffiliateReferral {
 }
 
 enum ReferralStatus {
-  PENDING    // clicked link, signed up, no paid action yet
-  CONVERTED  // completed first paid action — commission earned
-  EXPIRED    // cookie expired without conversion
+  PENDING
+  CONVERTED
+  EXPIRED
 }
 
 model AffiliatePayout {
-  id          String        @id @default(cuid())
+  id          String       @id @default(cuid())
   affiliateId String
-  amount      Int           // CFA
+  amount      Int
   method      PayoutMethod
-  reference   String?       // bank/MoMo transaction ref
-  status      PayoutStatus  @default(PENDING)
-  requestedAt DateTime      @default(now())
+  reference   String?
+  status      PayoutStatus @default(PENDING)
+  requestedAt DateTime     @default(now())
   processedAt DateTime?
 
   affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
