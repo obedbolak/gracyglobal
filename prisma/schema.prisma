@@ -193,9 +193,9 @@ model Counselor {
   id           String          @id @default(cuid())
   userId       String          @unique
   bio          String?         @db.Text
-  specialty    CounselorType[]
+  specialty    String          // Changed from CounselorType[] to String to match data
   rating       Float           @default(0)
-  reviewCount  Int             @default(0)
+  reviews      Int             @default(0)  // Changed from reviewCount to reviews
   pricePerHour Int             @default(0)
   available    Boolean         @default(true)
   verified     Boolean         @default(false)
@@ -327,7 +327,7 @@ model Product {
   featured    Boolean  @default(false)
   active      Boolean  @default(true)
   rating      Float    @default(0)
-  reviewCount Int      @default(0)
+  reviews     Int      @default(0)     // Changed from reviewCount to reviews
   badge       String?                 // "Best Seller" | "Top Rated" | "Premium"
   benefits    String[]                // e.g. ["Deep hydration", "Brightening"]
   ingredients String[]                // e.g. ["Argan oil", "Shea butter"]

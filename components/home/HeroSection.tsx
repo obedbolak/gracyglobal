@@ -533,14 +533,14 @@ export default function HeroSection() {
       {/* ── Carousel section ── */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
         {/* Section tab pills above carousel */}
-        <div className="flex justify-center gap-2 sm:gap-3 mb-8 flex-wrap">
+        <div className="flex justify-center gap-1 sm:gap-2 mb-8 flex-wrap px-2">
           {slides.map((s, i) => {
             const SIcon = s.icon;
             return (
               <button
                 key={s.id}
                 onClick={() => go(i, i > active ? 1 : -1)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 min-w-0 flex-shrink-0"
                 style={
                   i === active
                     ? {
@@ -557,8 +557,8 @@ export default function HeroSection() {
                       }
                 }
               >
-                <SIcon size={14} />
-                <span className="hidden sm:inline">{s.label}</span>
+                <SIcon size={14} className="flex-shrink-0" />
+                <span className="hidden sm:inline truncate">{s.label}</span>
               </button>
             );
           })}

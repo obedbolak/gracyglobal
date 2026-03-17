@@ -64,7 +64,7 @@ export default function JobsSection() {
         </div>
 
         {/* Search bar — using Input component */}
-        <div className="flex gap-3 mb-7">
+        <div className="flex flex-col sm:flex-row gap-3 mb-7">
           <div className="relative flex-1">
             <Search
               size={15}
@@ -77,28 +77,30 @@ export default function JobsSection() {
               className="pl-10 h-11 text-sm"
             />
           </div>
-          <select
-            className="px-4 h-11 text-sm rounded-[var(--input-radius)] transition-all"
-            style={{
-              background: "var(--input-bg)",
-              border: "1px solid var(--input-border)",
-              color: "var(--text-secondary)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <option>Category</option>
-            <option>Tech</option>
-            <option>Design</option>
-            <option>Marketing</option>
-          </select>
-          <Button variant="scarlet" size="lg">
-            Search
-          </Button>
+          <div className="flex gap-3">
+            <select
+              className="px-4 h-11 text-sm rounded-[var(--input-radius)] transition-all flex-1 sm:flex-none sm:min-w-[120px]"
+              style={{
+                background: "var(--input-bg)",
+                border: "1px solid var(--input-border)",
+                color: "var(--text-secondary)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+              }}
+            >
+              <option>Category</option>
+              <option>Tech</option>
+              <option>Design</option>
+              <option>Marketing</option>
+            </select>
+            <Button variant="scarlet" size="lg" className="flex-shrink-0">
+              Search
+            </Button>
+          </div>
         </div>
 
-        {/* Column headers */}
-        <div className="grid grid-cols-4 px-4 mb-2.5">
+        {/* Column headers - hidden on mobile */}
+        <div className="hidden sm:grid grid-cols-4 px-4 mb-2.5">
           {["Company", "Salary Range", "Applicants", ""].map((h) => (
             <div
               key={h}
@@ -114,7 +116,7 @@ export default function JobsSection() {
         <div className="space-y-3">
           {jobs.map((job) => (
             <Link key={job.id} href={`/jobs/${job.id}`} className="block group">
-              <Card className="grid grid-cols-4 items-center px-4 py-4 rounded-2xl hover:-translate-y-0.5 transition-all duration-200 gap-0">
+              <Card className="sm:grid sm:grid-cols-4 sm:items-center px-4 py-4 rounded-2xl hover:-translate-y-0.5 transition-all duration-200 gap-0 space-y-3 sm:space-y-0">
                 {/* Company */}
                 <div className="flex items-center gap-3">
                   <div
@@ -123,29 +125,53 @@ export default function JobsSection() {
                   >
                     {job.logo}
                   </div>
-                  <span
-                    className="font-semibold text-sm"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {job.company}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="font-semibold text-sm block"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {job.company}
+                    </span>
+                    <div className="sm:hidden flex items-center gap-2 mt-1">
+                      <Badge variant={typeVariant[job.type]} className="text-xs">{job.type}</Badge>
+                    </div>
+                  </div>
                   <ChevronRight
                     size={14}
-                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                    className="transition-transform duration-200 group-hover:translate-x-0.5 sm:hidden"
                     style={{ color: "var(--text-muted)" }}
                   />
                 </div>
 
-                {/* Salary */}
+                {/* Salary - mobile layout */}
+                <div className="sm:hidden">
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {job.salary}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Users size={13} style={{ color: "var(--scarlet)" }} />
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: "var(--scarlet)" }}
+                    >
+                      {job.applicants.toLocaleString()} applicants
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desktop layout - Salary */}
                 <div
-                  className="text-sm font-medium"
+                  className="hidden sm:block text-sm font-medium"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   {job.salary}
                 </div>
 
-                {/* Applicants */}
-                <div className="flex items-center gap-1.5">
+                {/* Desktop layout - Applicants */}
+                <div className="hidden sm:flex items-center gap-1.5">
                   <Users size={13} style={{ color: "var(--scarlet)" }} />
                   <span
                     className="text-sm font-bold"
@@ -155,11 +181,18 @@ export default function JobsSection() {
                   </span>
                 </div>
 
-                {/* Apply + type badge */}
-                <div className="flex items-center justify-end gap-2">
+                {/* Desktop layout - Apply + type badge */}
+                <div className="hidden sm:flex items-center justify-end gap-2">
                   <Badge variant={typeVariant[job.type]}>{job.type}</Badge>
                   <Button size="xs" className="pointer-events-none">
                     Apply
+                  </Button>
+                </div>
+
+                {/* Mobile Apply button */}
+                <div className="sm:hidden">
+                  <Button size="sm" className="w-full pointer-events-none">
+                    Apply Now
                   </Button>
                 </div>
               </Card>

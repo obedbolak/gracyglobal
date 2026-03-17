@@ -198,22 +198,22 @@ async function main() {
     {
       name: "Daniel Evans",
       email: "daniel@gracyworld.com",
-      specialty: [CounselorType.RELATIONSHIP],
+      specialty: "Relationship Counseling",
     },
     {
       name: "Grace Nfor",
       email: "grace@gracyworld.com",
-      specialty: [CounselorType.EMOTIONAL_WELLNESS],
+      specialty: "Emotional Wellness",
     },
     {
       name: "Dr. Michael",
       email: "michael@gracyworld.com",
-      specialty: [CounselorType.LIFE_COACH],
+      specialty: "Life Coaching",
     },
     {
       name: "Sarah Johnson",
       email: "sarah@gracyworld.com",
-      specialty: [CounselorType.FAMILY],
+      specialty: "Family Counseling",
     },
   ];
 
@@ -235,10 +235,10 @@ async function main() {
       update: {},
       create: {
         userId: user.id,
-        bio: `Professional counselor specializing in ${cu.specialty[0].toLowerCase().replace("_", " ")}.`,
+        bio: `Professional counselor specializing in ${cu.specialty.toLowerCase()}.`,
         specialty: cu.specialty,
         rating: 4.7 + Math.random() * 0.3,
-        reviewCount: Math.floor(80 + Math.random() * 150),
+        reviews: Math.floor(80 + Math.random() * 150),
         pricePerHour: 5000 + Math.floor(Math.random() * 10000),
         available: true,
         verified: true,
@@ -295,7 +295,7 @@ async function main() {
       stock: 50,
       featured: true,
       rating: 4.5,
-      reviewCount: 89,
+      reviews: 89,
       badge: "Best Seller",
       description:
         "A premium wellness blend formulated to restore inner balance and radiance. Rich in natural African botanicals.",

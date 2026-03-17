@@ -10,12 +10,12 @@ import MarketplaceSection from "@/components/home/MarketplaceSection";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen overflow-x-hidden">
       <HeroSection />
       <StatsBar />
 
       {/* Two-column layout for Counselors + Jobs (mirrors the reference design) */}
-      <div className="max-w-none">
+      <div className="max-w-7xl mx-auto">
         {/* On large screens, side by side */}
         <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-100">
           <CounselorsSection />

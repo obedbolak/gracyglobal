@@ -1,7 +1,18 @@
+// prisma.config.ts
 import path from "node:path";
 import { defineConfig } from "prisma/config";
-import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
-  schema: path.join("prisma", "schema.prisma"),
+  schema: path.join(__dirname, "prisma", "schema.prisma"),
+
+  datasource: {
+    url: process.env.DATABASE_URL!,
+  },
+
+  migrations: {
+    seed: "npm run prisma/seed.ts",
+  },
 });

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -181,9 +182,10 @@ function PriceRangeSlider({
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-export default function MarketplacePage() {
+function MarketplacePageContent() {
   const { addToCart, count } = useCart();
   const { convert, rate, currency, loading: currencyLoading } = useCurrency();
+  const searchParams = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState<CategoryGroup | "All">("All");
@@ -193,6 +195,35 @@ export default function MarketplacePage() {
   const [maxPriceXAF, setMaxPriceXAF] = useState(XAF_MAX);
   const [showFilters, setShowFilters] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
+
+  // Handle URL parameters on mount
+  useEffect(() => {
+    const groupParam = searchParams.get('group');
+    const categoryParam = searchParams.get('category');
+    const searchParam = searchParams.get('search');
+    const sortParam = searchParams.get('sort') as SortOption;
+    
+    if (groupParam && CATEGORY_GROUPS.some(g => g.group === groupParam)) {
+      setGroup(groupParam as CategoryGroup);
+    }
+    
+    if (categoryParam && ALL_CATEGORIES.includes(categoryParam as ProductCategory)) {
+      setCategory(categoryParam as ProductCategory);
+    }
+    
+    if (searchParam) {
+      setSearch(searchParam);
+    }
+    
+    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam)) {
+      setSort(sortParam);
+    }
+    
+    // Show filters if any parameters are set
+    if (groupParam || categoryParam || searchParam || sortParam) {
+      setShowFilters(true);
+    }
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     let result = [...products];
@@ -815,5 +846,40 @@ export default function MarketplacePage() {
         )}
       </div>
     </main>
+  );
+}
+
+// Loading component for Suspense
+function MarketplaceLoading() {
+  return (
+    <main className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
+        <div className="animate-pulse">
+          <div className="h-10 bg-gray-200 rounded-xl mb-4"></div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="glass p-5">
+                <div className="h-52 bg-gray-200 rounded-lg mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded mb-4"></div>
+                <div className="flex justify-between items-center">
+                  <div className="h-6 w-20 bg-gray-200 rounded"></div>
+                  <div className="h-8 w-24 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<MarketplaceLoading />}>
+      <MarketplacePageContent />
+    </Suspense>
   );
 }

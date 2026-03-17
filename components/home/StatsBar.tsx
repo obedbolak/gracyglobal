@@ -44,34 +44,36 @@ export default function StatsBar() {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-4 lg:gap-y-0">
           {stats.map((s, i) => {
             const Icon = s.Icon;
             return (
               <div
                 key={i}
-                className="flex items-center gap-4 py-5 px-5 transition-all duration-200 group"
+                className="flex items-center gap-3 py-4 px-2 sm:px-4 transition-all duration-200 group min-w-0"
                 style={{
                   borderRight:
+                    i < stats.length - 1 && i % 2 === 1 ? "none" : 
                     i < stats.length - 1 ? "1px solid var(--divider)" : "none",
+                  borderBottom: i < 2 ? "1px solid var(--divider)" : "none",
                 }}
               >
                 {/* Icon bubble */}
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
                   style={{
                     background: `${s.glow}`,
                     border: `1px solid ${s.glow}`,
                     boxShadow: `0 4px 14px ${s.glow}`,
                   }}
                 >
-                  <Icon size={18} style={{ color: s.color }} />
+                  <Icon size={16} className="sm:w-[18px] sm:h-[18px]" style={{ color: s.color }} />
                 </div>
 
                 {/* Text */}
-                <div>
+                <div className="min-w-0 flex-1">
                   <div
-                    className="text-xl font-extrabold leading-none mb-0.5"
+                    className="text-lg sm:text-xl font-extrabold leading-none mb-0.5"
                     style={{
                       background: `linear-gradient(90deg, ${s.color}, var(--text-primary))`,
                       WebkitBackgroundClip: "text",
@@ -82,7 +84,7 @@ export default function StatsBar() {
                     {s.value}
                   </div>
                   <div
-                    className="text-xs font-medium mt-0.5"
+                    className="text-[11px] sm:text-xs font-medium mt-0.5 leading-tight"
                     style={{ color: "var(--text-muted)" }}
                   >
                     {s.label}
