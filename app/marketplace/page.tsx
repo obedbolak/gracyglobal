@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -186,6 +186,7 @@ function MarketplacePageContent() {
   const { addToCart, count } = useCart();
   const { convert, rate, currency, loading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
+  const topRef = useRef<HTMLDivElement>(null);
 
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState<CategoryGroup | "All">("All");
@@ -219,9 +220,9 @@ function MarketplacePageContent() {
       setSort(sortParam);
     }
     
-    // Show filters if any parameters are set
-    if (groupParam || categoryParam || searchParam || sortParam) {
-      setShowFilters(true);
+    // Scroll to top using ref after filters are applied
+    if (topRef.current) {
+      topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [searchParams]);
 
@@ -289,7 +290,7 @@ function MarketplacePageContent() {
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
         {/* ── Top bar ── */}
-        <div className="flex items-center gap-3 mb-3">
+        <div ref={topRef} className="flex items-center gap-3 mb-3">
           {/* Search */}
           <div className="relative flex-1">
             <Search
@@ -374,13 +375,38 @@ function MarketplacePageContent() {
         <AnimatePresence>
           {showFilters && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, x: -300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -300 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className="overflow-hidden mb-4"
+              className="fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto"
             >
-              <div className="glass p-5 flex flex-col gap-5">
+              {/* Backdrop */}
+              <div 
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+                onClick={() => setShowFilters(false)}
+              />
+              
+              {/* Sidebar */}
+              <div className="relative glass h-full p-5 flex flex-col gap-5">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3" style={{ borderBottom: "1px solid var(--divider)" }}>
+                  <h3 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>Filters</h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                    style={{ background: "var(--glass-bg-subtle)", color: "var(--text-muted)" }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Results count */}
+                <div className="px-3 py-2 rounded-lg" style={{ background: "var(--badge-blue-bg)" }}>
+                  <p className="text-sm font-medium" style={{ color: "var(--blue-dark)" }}>
+                    {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
+                  </p>
+                </div>
                 {/* Category + Sort */}
                 <div className="grid sm:grid-cols-2 gap-5">
                   {/* Two-level category select */}
@@ -573,29 +599,29 @@ function MarketplacePageContent() {
                 </div>
 
                 {/* Footer row */}
-                <div
-                  className="flex items-center justify-between pt-1"
-                  style={{ borderTop: "1px solid var(--divider)" }}
-                >
-                  <button
-                    onClick={clearAll}
-                    className="flex items-center gap-1.5 text-xs font-semibold hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    <X size={12} /> Clear all
-                  </button>
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 hover:scale-105"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--purple), var(--blue))",
-                      color: "#fff",
-                    }}
-                  >
-                    Show {filtered.length} result
-                    {filtered.length !== 1 ? "s" : ""}
-                  </button>
+                <div className="mt-auto pt-4" style={{ borderTop: "1px solid var(--divider)" }}>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={clearAll}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200"
+                      style={{
+                        background: "var(--glass-bg-subtle)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      <X size={12} /> Clear all
+                    </button>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200"
+                      style={{
+                        background: "linear-gradient(135deg, var(--purple), var(--blue))",
+                      }}
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -674,6 +700,72 @@ function MarketplacePageContent() {
             )}
           </div>
         )}
+
+        {/* Quick filter bar */}
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+          <span className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Quick filters:</span>
+          
+          {/* Department pills */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setGroup("All");
+                setCategory("All");
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+              style={
+                group === "All"
+                  ? {
+                      background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                      color: "#fff",
+                    }
+                  : {
+                      background: "var(--glass-bg-subtle)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-muted)",
+                    }
+              }
+            >
+              All
+            </button>
+            {CATEGORY_GROUPS.slice(0, 4).map((g) => (
+              <button
+                key={g.group}
+                onClick={() => {
+                  setGroup(g.group as any);
+                  setCategory("All");
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+                style={
+                  group === g.group
+                    ? {
+                        background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                        color: "#fff",
+                      }
+                    : {
+                        background: "var(--glass-bg-subtle)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-muted)",
+                      }
+                }
+              >
+                <span>{g.icon}</span> {g.group.split(' ')[0]}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => setShowFilters(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              More filters...
+            </button>
+          </div>
+        </div>
 
         {/* Count */}
         <p
