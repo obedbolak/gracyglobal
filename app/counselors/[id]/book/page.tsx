@@ -541,6 +541,7 @@ function SuccessScreen({
 export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
+  const { convert, currency, loading: currencyLoading } = useCurrency();
 
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const counselor = getCounselorById(id);
@@ -694,12 +695,20 @@ export default function BookingPage() {
                   >
                     Per session
                   </span>
-                  <span
-                    className="text-base font-extrabold"
-                    style={{ color: "var(--accent-primary)" }}
-                  >
-                    CFA {counselor.price.toLocaleString()}
-                  </span>
+                  <div className="text-right">
+                    <span
+                      className="text-base font-extrabold block"
+                      style={{ color: "var(--accent-primary)" }}
+                    >
+                      {currencyLoading ? "..." : convert(counselor.price)}
+                    </span>
+                    <span
+                      className="text-[10px] font-light"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      CFA {counselor.price.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
 

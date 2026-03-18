@@ -32,12 +32,12 @@ export default function LoginPage() {
       redirect: false,
     });
 
-    setLoading(false);
-
     if (res?.error) {
+      setLoading(false);
       setError("Invalid email or password. Please try again.");
-    } else {
-      router.push("/dashboard");
+    } else if (res?.ok) {
+      // Use window.location for full page reload to ensure session is loaded
+      window.location.href = "/dashboard";
     }
   }
 

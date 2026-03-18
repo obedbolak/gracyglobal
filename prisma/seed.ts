@@ -6,6 +6,9 @@ import {
   JobType,
   MemberBadge,
   SubscriptionBilling,
+  CourseLevel,
+  LessonType,
+  LiveSessionStatus,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -81,7 +84,7 @@ async function main() {
       priceMonthly: 35000,
       priceAnnual: 25000,
       pricePerSession: null,
-      counselorSessions: 0, // unlimited
+      counselorSessions: 0,
       highlighted: false,
       sortOrder: 4,
     },
@@ -162,7 +165,6 @@ async function main() {
       },
     });
 
-    // Subscription
     await prisma.subscription.upsert({
       where: { userId: user.id },
       update: {},
@@ -176,7 +178,6 @@ async function main() {
       },
     });
 
-    // Community member profile
     await prisma.communityMember.upsert({
       where: { userId: user.id },
       update: {},
@@ -694,6 +695,520 @@ async function main() {
   }
   console.log(`✅ ${products.length} products seeded`);
 
+  // ── E-Learning Courses ──────────────────────────────────────────────────────
+  console.log("🎓 Seeding e-learning courses...");
+
+  const coursesData = [
+    // ── Course 1: Financial Freedom (FREE) ────────────────────────────────────
+    {
+      title: "Financial Freedom for Africans",
+      description:
+        "Learn how to budget, save, invest, and build wealth from the African context. Practical strategies used by real people across the continent.",
+      thumbnail:
+        "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&q=80",
+      category: "Finance",
+      level: CourseLevel.BEGINNER,
+      price: 0,
+      isFree: true,
+      published: true,
+      featured: true,
+      sections: [
+        {
+          title: "Getting Started with Money",
+          order: 1,
+          lessons: [
+            {
+              title: "Why Most Africans Struggle Financially",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example1",
+              duration: 12,
+              order: 1,
+              isFree: true,
+            },
+            {
+              title: "The 3 Pillars of Financial Freedom",
+              type: LessonType.TEXT,
+              content:
+                "Financial freedom rests on three pillars: Income, Savings, and Investment. In this lesson we break down each pillar with actionable steps tailored to the African economic reality...",
+              duration: 8,
+              order: 2,
+              isFree: true,
+            },
+            {
+              title: "Module 1 Quiz",
+              type: LessonType.QUIZ,
+              order: 3,
+              isFree: true,
+              quiz: {
+                passingScore: 70,
+                questions: [
+                  {
+                    question: "What are the 3 pillars of financial freedom?",
+                    options: [
+                      "Income, Savings, Investment",
+                      "Salary, Loans, Credit",
+                      "Budget, Debt, Insurance",
+                      "Stocks, Bonds, Cash",
+                    ],
+                    answer: 0,
+                    order: 1,
+                  },
+                  {
+                    question:
+                      "Which of the following is NOT a good savings habit?",
+                    options: [
+                      "Paying yourself first",
+                      "Spending before saving",
+                      "Setting savings goals",
+                      "Automating transfers",
+                    ],
+                    answer: 1,
+                    order: 2,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          title: "Budgeting & Saving",
+          order: 2,
+          lessons: [
+            {
+              title: "Creating Your First Monthly Budget",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example2",
+              duration: 15,
+              order: 1,
+              isFree: false,
+            },
+            {
+              title: "Saving on a Low Income",
+              type: LessonType.TEXT,
+              content:
+                "Even with limited income, there are proven strategies to build savings. This lesson covers micro-saving, group savings (njangi/tontines), and digital wallet strategies...",
+              duration: 10,
+              order: 2,
+              isFree: false,
+            },
+          ],
+        },
+        {
+          title: "Investing Basics",
+          order: 3,
+          lessons: [
+            {
+              title: "Introduction to Investing in Africa",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example3",
+              duration: 18,
+              order: 1,
+              isFree: false,
+            },
+            {
+              title: "Live Q&A — Investing for Beginners",
+              type: LessonType.LIVE,
+              order: 2,
+              isFree: false,
+            },
+          ],
+        },
+      ],
+      liveSession: {
+        title: "Live Q&A: Financial Freedom Masterclass",
+        description:
+          "Join our admin coach for a live session answering your top questions about investing and saving in Africa.",
+        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+        duration: 60,
+        meetingUrl: "https://meet.google.com/example-financial",
+        status: LiveSessionStatus.SCHEDULED,
+      },
+    },
+
+    // ── Course 2: Public Speaking (PAID) ──────────────────────────────────────
+    {
+      title: "Public Speaking Mastery",
+      description:
+        "Build unshakeable confidence on stage and in meetings. From fear to power in 4 weeks with practical exercises and live coaching.",
+      thumbnail:
+        "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=80",
+      category: "Personal Development",
+      level: CourseLevel.INTERMEDIATE,
+      price: 28000,
+      isFree: false,
+      published: true,
+      featured: true,
+      sections: [
+        {
+          title: "Foundations of Confident Speaking",
+          order: 1,
+          lessons: [
+            {
+              title: "Understanding Fear & How to Overcome It",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example4",
+              duration: 14,
+              order: 1,
+              isFree: true, // preview
+            },
+            {
+              title: "Body Language Basics",
+              type: LessonType.TEXT,
+              content:
+                "Your body speaks before your mouth does. In this lesson, we cover posture, eye contact, hand gestures, and movement that commands respect and attention...",
+              duration: 10,
+              order: 2,
+              isFree: false,
+            },
+            {
+              title: "Week 1 Assessment",
+              type: LessonType.QUIZ,
+              order: 3,
+              isFree: false,
+              quiz: {
+                passingScore: 75,
+                questions: [
+                  {
+                    question:
+                      "What is the most common cause of public speaking fear?",
+                    options: [
+                      "Lack of preparation",
+                      "Fear of judgment",
+                      "Loud voice",
+                      "Too much confidence",
+                    ],
+                    answer: 1,
+                    order: 1,
+                  },
+                  {
+                    question:
+                      "Which body language signal conveys the most authority?",
+                    options: [
+                      "Crossed arms",
+                      "Looking at the floor",
+                      "Open posture with eye contact",
+                      "Fidgeting hands",
+                    ],
+                    answer: 2,
+                    order: 2,
+                  },
+                  {
+                    question:
+                      "How long should you pause for effect after a key point?",
+                    options: [
+                      "0 seconds",
+                      "1-3 seconds",
+                      "10 seconds",
+                      "30 seconds",
+                    ],
+                    answer: 1,
+                    order: 3,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          title: "Structuring a Powerful Speech",
+          order: 2,
+          lessons: [
+            {
+              title: "The Hook, Body, Close Framework",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example5",
+              duration: 16,
+              order: 1,
+              isFree: false,
+            },
+            {
+              title: "Storytelling as a Speaking Tool",
+              type: LessonType.TEXT,
+              content:
+                "Stories are the most powerful way to connect with an audience. This lesson teaches you how to structure personal stories that educate, inspire, and persuade...",
+              duration: 12,
+              order: 2,
+              isFree: false,
+            },
+          ],
+        },
+      ],
+      liveSession: {
+        title: "Live Coaching: Public Speaking Practice Session",
+        description:
+          "Practice your 2-minute speech live with peers and receive real-time feedback from the coach.",
+        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+        duration: 90,
+        meetingUrl: "https://meet.google.com/example-speaking",
+        status: LiveSessionStatus.SCHEDULED,
+      },
+    },
+
+    // ── Course 3: African Leadership (PAID) ───────────────────────────────────
+    {
+      title: "African Leadership Bootcamp",
+      description:
+        "A transformative 8-module leadership program built for young African professionals ready to lead teams, communities, and organizations.",
+      thumbnail:
+        "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80",
+      category: "Leadership",
+      level: CourseLevel.ADVANCED,
+      price: 45000,
+      isFree: false,
+      published: true,
+      featured: false,
+      sections: [
+        {
+          title: "What is African Leadership?",
+          order: 1,
+          lessons: [
+            {
+              title: "Ubuntu Philosophy & Modern Leadership",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example6",
+              duration: 20,
+              order: 1,
+              isFree: true, // preview
+            },
+            {
+              title: "African Leadership Models vs Western Models",
+              type: LessonType.TEXT,
+              content:
+                "Leadership in Africa has deep roots in community, consensus, and ubuntu. This lesson compares traditional African leadership philosophy with Western corporate models, and shows how to blend both for maximum impact...",
+              duration: 15,
+              order: 2,
+              isFree: false,
+            },
+          ],
+        },
+        {
+          title: "Building & Leading Teams",
+          order: 2,
+          lessons: [
+            {
+              title: "How to Build High-Performance Teams",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example7",
+              duration: 22,
+              order: 1,
+              isFree: false,
+            },
+            {
+              title: "Conflict Resolution in African Contexts",
+              type: LessonType.TEXT,
+              content:
+                "Conflict is inevitable in any team. This lesson provides culturally-aware strategies for resolving disputes, navigating hierarchy, and maintaining team cohesion across diverse African cultures...",
+              duration: 18,
+              order: 2,
+              isFree: false,
+            },
+            {
+              title: "Leadership Assessment",
+              type: LessonType.QUIZ,
+              order: 3,
+              isFree: false,
+              quiz: {
+                passingScore: 80,
+                questions: [
+                  {
+                    question: "What does 'Ubuntu' mean in leadership context?",
+                    options: [
+                      "I win, you lose",
+                      "I am because we are",
+                      "Lead from the top",
+                      "Individual success above all",
+                    ],
+                    answer: 1,
+                    order: 1,
+                  },
+                  {
+                    question:
+                      "Which leadership style focuses on collective decision-making?",
+                    options: [
+                      "Autocratic",
+                      "Laissez-faire",
+                      "Consensus-based",
+                      "Transactional",
+                    ],
+                    answer: 2,
+                    order: 2,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      liveSession: {
+        title: "Leadership Bootcamp — Live Cohort Session",
+        description:
+          "Join the full cohort for a live group discussion, case study breakdown, and networking session.",
+        scheduledAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 3 weeks from now
+        duration: 120,
+        meetingUrl: "https://meet.google.com/example-leadership",
+        status: LiveSessionStatus.SCHEDULED,
+      },
+    },
+
+    // ── Course 4: Digital Skills (FREE) ───────────────────────────────────────
+    {
+      title: "Digital Skills for Africa",
+      description:
+        "Master the essential digital tools every African professional needs — from Google Workspace to social media marketing and basic coding.",
+      thumbnail:
+        "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80",
+      category: "Technology",
+      level: CourseLevel.BEGINNER,
+      price: 0,
+      isFree: true,
+      published: true,
+      featured: true,
+      sections: [
+        {
+          title: "Getting Online Professionally",
+          order: 1,
+          lessons: [
+            {
+              title: "Setting Up Your Professional Online Presence",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example8",
+              duration: 11,
+              order: 1,
+              isFree: true,
+            },
+            {
+              title: "Google Workspace Essentials",
+              type: LessonType.TEXT,
+              content:
+                "Google Docs, Sheets, Drive, and Meet are the backbone of remote work. This lesson walks you through setting up and using each tool effectively for professional collaboration...",
+              duration: 14,
+              order: 2,
+              isFree: true,
+            },
+            {
+              title: "Digital Basics Quiz",
+              type: LessonType.QUIZ,
+              order: 3,
+              isFree: true,
+              quiz: {
+                passingScore: 60,
+                questions: [
+                  {
+                    question:
+                      "Which tool is best for collaborative document editing?",
+                    options: [
+                      "WhatsApp",
+                      "Google Docs",
+                      "Notepad",
+                      "Excel (offline)",
+                    ],
+                    answer: 1,
+                    order: 1,
+                  },
+                  {
+                    question: "What does SEO stand for?",
+                    options: [
+                      "Social Engagement Online",
+                      "Search Engine Optimization",
+                      "Secure Email Output",
+                      "Software Engineering Operations",
+                    ],
+                    answer: 1,
+                    order: 2,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          title: "Social Media for Business",
+          order: 2,
+          lessons: [
+            {
+              title: "Building a Brand on Instagram & TikTok",
+              type: LessonType.VIDEO,
+              videoUrl: "https://www.youtube.com/watch?v=example9",
+              duration: 17,
+              order: 1,
+              isFree: false,
+            },
+            {
+              title: "Content Strategy for African Audiences",
+              type: LessonType.TEXT,
+              content:
+                "Creating content that resonates with African audiences requires cultural awareness, language sensitivity, and platform-specific strategy. This lesson breaks it all down...",
+              duration: 13,
+              order: 2,
+              isFree: false,
+            },
+          ],
+        },
+      ],
+      liveSession: null,
+    },
+  ];
+
+  for (const courseData of coursesData) {
+    const { sections, liveSession, ...courseFields } = courseData;
+
+    const course = await prisma.course.create({
+      data: courseFields,
+    });
+
+    for (const sectionData of sections) {
+      const { lessons, ...sectionFields } = sectionData;
+
+      const section = await prisma.courseSection.create({
+        data: {
+          courseId: course.id,
+          ...sectionFields,
+        },
+      });
+
+      for (const lessonData of lessons) {
+        const { quiz, ...lessonFields } = lessonData as any;
+
+        const lesson = await prisma.lesson.create({
+          data: {
+            sectionId: section.id,
+            ...lessonFields,
+          },
+        });
+
+        if (quiz) {
+          const { questions, ...quizFields } = quiz;
+          const createdQuiz = await prisma.quiz.create({
+            data: {
+              lessonId: lesson.id,
+              ...quizFields,
+            },
+          });
+
+          for (const q of questions) {
+            await prisma.quizQuestion.create({
+              data: {
+                quizId: createdQuiz.id,
+                ...q,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (liveSession) {
+      await prisma.liveSession.create({
+        data: {
+          courseId: course.id,
+          ...liveSession,
+        },
+      });
+    }
+
+    console.log(`✅ Course seeded: ${course.title}`);
+  }
+
   console.log("\n🎉 Seeding complete!");
   console.log("\n📋 Test accounts (password: Test@2025):");
   console.log("   free@gracyworld.com     → Free plan");
@@ -702,6 +1217,10 @@ async function main() {
   console.log("   elite@gracyworld.com    → Elite/Pro plan");
   console.log("\n👑 Admin (password: Admin@2025):");
   console.log("   admin@gracyworld.com");
+  console.log("\n🎓 E-Learning:");
+  console.log("   4 courses seeded (2 free, 2 paid)");
+  console.log("   3 live sessions scheduled");
+  console.log("   4 quizzes with questions");
 }
 
 main()

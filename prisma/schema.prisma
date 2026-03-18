@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  
 }
 
 // ─── USER ────────────────────────────────────────────────────────────────────
@@ -34,6 +35,9 @@ model User {
   affiliate        Affiliate?
   subscription     Subscription?
   communityMember  CommunityMember?
+  enrollments      Enrollment[]
+  quizAttempts     QuizAttempt[]
+  liveAttendances  LiveAttendance[]
 
   @@map("users")
 }
@@ -108,20 +112,20 @@ model Plan {
 }
 
 model Subscription {
-  id               String             @id @default(cuid())
-  userId           String             @unique
-  planId           String
-  billing          SubscriptionBilling @default(MONTHLY)
-  status           SubscriptionStatus  @default(ACTIVE)
-  currentPeriodStart DateTime          @default(now())
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  planId             String
+  billing            SubscriptionBilling @default(MONTHLY)
+  status             SubscriptionStatus  @default(ACTIVE)
+  currentPeriodStart DateTime            @default(now())
   currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean           @default(false)
-  sessionsUsed       Int               @default(0)   // this billing period
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  cancelAtPeriodEnd  Boolean             @default(false)
+  sessionsUsed       Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan Plan @relation(fields: [planId], references: [id])
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     Plan                  @relation(fields: [planId], references: [id])
   payments SubscriptionPayment[]
 
   @@map("subscriptions")
@@ -166,14 +170,14 @@ enum PaymentStatus {
 // ─── COMMUNITY MEMBERSHIP ────────────────────────────────────────────────────
 
 model CommunityMember {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  bio           String?  @db.Text
-  systems       String[]              // array of SystemId strings
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  bio           String?     @db.Text
+  systems       String[]
   badge         MemberBadge @default(CONTRIBUTOR)
-  contributions Int      @default(0)
-  joinedAt      DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  contributions Int         @default(0)
+  joinedAt      DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -190,16 +194,16 @@ enum MemberBadge {
 // ─── COUNSELORS ──────────────────────────────────────────────────────────────
 
 model Counselor {
-  id           String          @id @default(cuid())
-  userId       String          @unique
-  bio          String?         @db.Text
-  specialty    String          // Changed from CounselorType[] to String to match data
-  rating       Float           @default(0)
-  reviews      Int             @default(0)  // Changed from reviewCount to reviews
-  pricePerHour Int             @default(0)
-  available    Boolean         @default(true)
-  verified     Boolean         @default(false)
-  createdAt    DateTime        @default(now())
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  bio          String?  @db.Text
+  specialty    String
+  rating       Float    @default(0)
+  reviews      Int      @default(0)
+  pricePerHour Int      @default(0)
+  available    Boolean  @default(true)
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[]
@@ -250,20 +254,20 @@ enum BookingStatus {
 // ─── JOBS ────────────────────────────────────────────────────────────────────
 
 model Job {
-  id          String       @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
   company     String
   companyLogo String?
-  description String       @db.Text
+  description String      @db.Text
   category    JobCategory
-  type        JobType      @default(REMOTE)
+  type        JobType     @default(REMOTE)
   salaryMin   Int?
   salaryMax   Int?
   location    String?
   skills      String[]
-  active      Boolean      @default(true)
-  featured    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
+  active      Boolean     @default(true)
+  featured    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
   expiresAt   DateTime?
 
   applications JobApplication[]
@@ -319,18 +323,18 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String   @db.Text
-  price       Int                     // in CFA
+  price       Int
   images      String[]
-  category    String                  // sub-category e.g. "Skincare"
-  group       String   @default("")  // department e.g. "Beauty & Personal Care"
+  category    String
+  group       String   @default("")
   stock       Int      @default(0)
   featured    Boolean  @default(false)
   active      Boolean  @default(true)
   rating      Float    @default(0)
-  reviews     Int      @default(0)     // Changed from reviewCount to reviews
-  badge       String?                 // "Best Seller" | "Top Rated" | "Premium"
-  benefits    String[]                // e.g. ["Deep hydration", "Brightening"]
-  ingredients String[]                // e.g. ["Argan oil", "Shea butter"]
+  reviews     Int      @default(0)
+  badge       String?
+  benefits    String[]
+  ingredients String[]
   createdAt   DateTime @default(now())
 
   orderItems OrderItem[]
@@ -477,4 +481,193 @@ enum PayoutStatus {
   PROCESSING
   PAID
   FAILED
+}
+
+// ─── E-LEARNING ──────────────────────────────────────────────────────────────
+
+model Course {
+  id          String      @id @default(cuid())
+  title       String
+  description String      @db.Text
+  thumbnail   String?
+  category    String
+  level       CourseLevel @default(BEGINNER)
+  price       Int         @default(0) // 0 = free, CFA
+  isFree      Boolean     @default(false)
+  published   Boolean     @default(false)
+  featured    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  sections    CourseSection[]
+  enrollments Enrollment[]
+  liveSession LiveSession?
+
+  @@map("courses")
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model CourseSection {
+  id       String @id @default(cuid())
+  courseId String
+  title    String
+  order    Int
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("course_sections")
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  sectionId   String
+  title       String
+  type        LessonType
+  content     String?    @db.Text // TEXT lessons
+  videoUrl    String?              // VIDEO lessons
+  duration    Int?                 // minutes
+  order       Int
+  isFree      Boolean    @default(false) // preview lesson
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+
+  section  CourseSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  quiz     Quiz?
+  progress LessonProgress[]
+
+  @@map("lessons")
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+  LIVE
+}
+
+// ─── QUIZZES ─────────────────────────────────────────────────────────────────
+
+model Quiz {
+  id           String @id @default(cuid())
+  lessonId     String @unique
+  passingScore Int    @default(70) // percentage
+
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id       String   @id @default(cuid())
+  quizId   String
+  question String   @db.Text
+  options  String[]
+  answer   Int      // index of correct option
+  order    Int
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  quizId      String
+  userId      String
+  answers     Int[]    // selected option indexes
+  score       Int      // percentage
+  passed      Boolean
+  attemptedAt DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_attempts")
+}
+
+// ─── LIVE SESSIONS ───────────────────────────────────────────────────────────
+
+model LiveSession {
+  id          String            @id @default(cuid())
+  courseId    String            @unique
+  title       String
+  description String?           @db.Text
+  scheduledAt DateTime
+  duration    Int               @default(60) // minutes
+  meetingUrl  String?
+  status      LiveSessionStatus @default(SCHEDULED)
+  createdAt   DateTime          @default(now())
+
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendances LiveAttendance[]
+
+  @@map("live_sessions")
+}
+
+enum LiveSessionStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+model LiveAttendance {
+  id            String   @id @default(cuid())
+  liveSessionId String
+  userId        String
+  joinedAt      DateTime @default(now())
+
+  liveSession LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([liveSessionId, userId])
+  @@map("live_attendances")
+}
+
+// ─── ENROLLMENT & PROGRESS ───────────────────────────────────────────────────
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  courseId    String
+  status      EnrollmentStatus @default(ACTIVE)
+  paidAmount  Int              @default(0)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model LessonProgress {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  lessonId     String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  watchedSecs  Int       @default(0) // video lessons
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lesson_progress")
 }

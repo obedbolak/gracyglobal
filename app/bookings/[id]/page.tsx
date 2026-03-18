@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
@@ -307,6 +308,7 @@ function CancelModal({
 export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { convert, currency } = useCurrency();
   const [booking] = useState<Booking>(MOCK); // swap: fetch(`/api/bookings/${params.id}`)
   const [showCancel, setShowCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -664,18 +666,26 @@ export default function BookingDetailPage() {
                     Booking #{booking.id}
                   </p>
                 </div>
-                <span
-                  className="text-2xl font-extrabold"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--purple), var(--blue))",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  CFA {booking.price.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span
+                    className="text-2xl font-extrabold block"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--purple), var(--blue))",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {convert(booking.price)}
+                  </span>
+                  <span
+                    className="text-xs font-light"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    CFA {booking.price.toLocaleString()}
+                  </span>
+                </div>
               </div>
             </motion.div>
 
