@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, ArrowRight } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useSubscription } from "@/context/SubscriptionContext";
 
 import CommunityHero from "@/components/community/CommunityHero";
 import CommunityPlans from "@/components/community/CommunityPlans";
@@ -17,7 +20,7 @@ import {
   CommunityResources,
   CommunityMembers,
 } from "@/components/community/CommunityContent";
-import { SYSTEMS } from "@/data/community";
+import { SYSTEMS, type SystemId } from "@/data/community";
 
 function GateScreen() {
   return (
@@ -99,14 +102,14 @@ function GateScreen() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           <Link
-            href="/register"
+            href="/plans"
             className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
             style={{
               background: "linear-gradient(135deg, var(--purple), var(--blue))",
               boxShadow: "0 4px 16px rgba(123,47,190,0.4)",
             }}
           >
-            Join the Community <ArrowRight size={15} />
+            View Plans <ArrowRight size={15} />
           </Link>
           <Link
             href="/login"
@@ -125,10 +128,26 @@ function GateScreen() {
   );
 }
 
-export default function CommunityPage() {
-  // 🔧 Replace with: const { data: session } = useSession(); const isLoggedIn = !!session;
-  const isLoggedIn = false;
+function CommunityPageContent() {
+  const { data: session } = useSession();
+  const { canAccessFeature, getCurrentPlan } = useSubscription();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("feed");
+  const [selectedSystem, setSelectedSystem] = useState<SystemId | "all">("all");
+
+  const isLoggedIn = !!session;
+  const currentPlan = getCurrentPlan();
+
+  // Handle URL parameters
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+
+    // Check if tab param is a system ID
+    if (tabParam && SYSTEMS.some((s) => s.id === tabParam)) {
+      setSelectedSystem(tabParam as SystemId);
+      setActiveTab("feed"); // Default to feed when selecting a system
+    }
+  }, [searchParams]);
 
   return (
     <main className="min-h-screen">
@@ -136,15 +155,9 @@ export default function CommunityPage() {
       <CommunityHero
         onJoin={() => {
           if (!isLoggedIn) window.location.href = "/register";
-          else
-            document
-              .getElementById("community-hub")
-              ?.scrollIntoView({ behavior: "smooth" });
+          else window.location.href = "/plans";
         }}
       />
-
-      {/* Plans — always shown */}
-      <CommunityPlans />
 
       {/* Gated community hub */}
       <section id="community-hub">
@@ -152,6 +165,38 @@ export default function CommunityPage() {
           <GateScreen />
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Current Plan Banner */}
+            {currentPlan === "free" && (
+              <div className="glass p-4 mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Lock size={20} style={{ color: "var(--warning-text)" }} />
+                  <div>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Free Plan - Limited Access
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      You can view content but need Starter+ to participate
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/plans"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:scale-105"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--purple), var(--blue))",
+                  }}
+                >
+                  Upgrade Plan
+                </Link>
+              </div>
+            )}
             {/* Stats */}
             <div className="glass flex flex-wrap items-center justify-around gap-6 p-5 mb-8">
               {[
@@ -177,6 +222,56 @@ export default function CommunityPage() {
               ))}
             </div>
 
+            {/*System Filter Pills*/}
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedSystem("all")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
+                  style={
+                    selectedSystem === "all"
+                      ? {
+                          background:
+                            "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                          color: "#fff",
+                        }
+                      : {
+                          background: "var(--glass-bg-subtle)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--text-muted)",
+                        }
+                  }
+                >
+                  All Systems
+                </button>
+                {SYSTEMS.map((system) => (
+                  <button
+                    key={system.id}
+                    onClick={() => setSelectedSystem(system.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
+                    style={
+                      selectedSystem === system.id
+                        ? {
+                            background: system.gradient,
+                            color: "#fff",
+                          }
+                        : {
+                            background: "var(--glass-bg-subtle)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--text-muted)",
+                          }
+                    }
+                  >
+                    <span>{system.icon}</span>
+                    <span className="hidden sm:inline">{system.label}</span>
+                    <span className="sm:hidden">
+                      {system.label.split(" ")[0]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Tabs */}
             <div className="mb-8">
               <CommunityTabs active={activeTab} onChange={setActiveTab} />
@@ -191,16 +286,54 @@ export default function CommunityPage() {
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25 }}
               >
-                {activeTab === "feed" && <CommunityFeed />}
-                {activeTab === "projects" && <CommunityProjects />}
-                {activeTab === "events" && <CommunityEvents />}
-                {activeTab === "resources" && <CommunityResources />}
-                {activeTab === "members" && <CommunityMembers />}
+                {activeTab === "feed" && (
+                  <CommunityFeed selectedSystem={selectedSystem} />
+                )}
+                {activeTab === "projects" && (
+                  <CommunityProjects selectedSystem={selectedSystem} />
+                )}
+                {activeTab === "events" && (
+                  <CommunityEvents selectedSystem={selectedSystem} />
+                )}
+                {activeTab === "resources" && (
+                  <CommunityResources selectedSystem={selectedSystem} />
+                )}
+                {activeTab === "members" && (
+                  <CommunityMembers selectedSystem={selectedSystem} />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
         )}
       </section>
     </main>
+  );
+}
+// Loading component
+function CommunityLoading() {
+  return (
+    <main className="min-h-screen">
+      <div className="animate-pulse">
+        <div className="h-96 bg-gray-200"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="h-20 bg-gray-200 rounded mb-6"></div>
+          <div className="flex gap-2 mb-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-8 w-24 bg-gray-200 rounded-full"></div>
+            ))}
+          </div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function CommunityPage() {
+  return (
+    <Suspense fallback={<CommunityLoading />}>
+      <CommunityPageContent />
+    </Suspense>
   );
 }

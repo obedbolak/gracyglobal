@@ -1,0 +1,30 @@
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { CartProvider } from "@/context/CartContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
+
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export default function Providers({ children }: ProvidersProps) {
+  return (
+    <SessionProvider>
+      <AuthProvider>
+        <SubscriptionProvider>
+          <ThemeProvider defaultTheme="light" storageKey="gracyglobal-theme">
+            <CurrencyProvider>
+              <CartProvider>
+                {children}
+              </CartProvider>
+            </CurrencyProvider>
+          </ThemeProvider>
+        </SubscriptionProvider>
+      </AuthProvider>
+    </SessionProvider>
+  );
+}

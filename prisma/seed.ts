@@ -2,7 +2,6 @@
 import {
   PrismaClient,
   UserRole,
-  CounselorType,
   JobCategory,
   JobType,
   MemberBadge,
@@ -313,7 +312,7 @@ async function main() {
       stock: 30,
       featured: true,
       rating: 4.8,
-      reviewCount: 142,
+      reviews: 142,
       badge: "Top Rated",
       description:
         "An artisan beauty serum that enhances your natural glow. Crafted with rare African oils.",
@@ -331,7 +330,7 @@ async function main() {
       stock: 20,
       featured: true,
       rating: 4.7,
-      reviewCount: 76,
+      reviews: 76,
       badge: "Premium",
       description:
         "A transformative skincare system targeting uneven tone, dullness, and fine lines.",
@@ -349,7 +348,7 @@ async function main() {
       stock: 45,
       featured: false,
       rating: 4.6,
-      reviewCount: 55,
+      reviews: 55,
       description:
         "A rich, whipped hair butter that defines curls and eliminates frizz.",
       images: [
@@ -366,7 +365,7 @@ async function main() {
       stock: 60,
       featured: true,
       rating: 4.4,
-      reviewCount: 38,
+      reviews: 38,
       description:
         "A powerful daily supplement packed with African superfoods.",
       images: [
@@ -383,7 +382,7 @@ async function main() {
       stock: 35,
       featured: false,
       rating: 4.5,
-      reviewCount: 62,
+      reviews: 62,
       description:
         "An intensive overnight face mask that repairs the skin barrier and fades dark spots.",
       images: [
@@ -400,7 +399,7 @@ async function main() {
       stock: 999,
       featured: true,
       rating: 4.7,
-      reviewCount: 203,
+      reviews: 203,
       badge: "Digital",
       description:
         "A comprehensive e-book covering how to start, grow, and scale a business in Africa.",
@@ -418,7 +417,7 @@ async function main() {
       stock: 999,
       featured: true,
       rating: 4.9,
-      reviewCount: 87,
+      reviews: 87,
       badge: "Bestseller",
       description:
         "A 6-module online course teaching budgeting, saving, and investing for the African context.",
@@ -436,7 +435,7 @@ async function main() {
       stock: 80,
       featured: false,
       rating: 4.6,
-      reviewCount: 44,
+      reviews: 44,
       description:
         "100% pure, sun-dried moringa leaf powder from Cameroonian farmers.",
       images: [
@@ -453,7 +452,7 @@ async function main() {
       stock: 40,
       featured: false,
       rating: 4.5,
-      reviewCount: 29,
+      reviews: 29,
       description:
         "Hand-poured scented candles made with raw shea butter and essential oils.",
       images: [
@@ -470,7 +469,7 @@ async function main() {
       stock: 120,
       featured: true,
       rating: 4.8,
-      reviewCount: 310,
+      reviews: 310,
       badge: "Farm Direct",
       description:
         "Cold-pressed, unrefined red palm oil from family farms in the Southwest Region.",
@@ -488,7 +487,7 @@ async function main() {
       stock: 200,
       featured: false,
       rating: 4.6,
-      reviewCount: 88,
+      reviews: 88,
       description:
         "Finely milled, sun-dried cassava flour from local Cameroonian farmers.",
       images: [
@@ -505,7 +504,7 @@ async function main() {
       stock: 75,
       featured: false,
       rating: 4.5,
-      reviewCount: 34,
+      reviews: 34,
       description:
         "A curated set of 5 heirloom pepper varieties for home gardens.",
       images: [
@@ -522,7 +521,7 @@ async function main() {
       stock: 55,
       featured: true,
       rating: 4.7,
-      reviewCount: 61,
+      reviews: 61,
       description:
         "A 6-piece eco-friendly bamboo kitchen set. Naturally antimicrobial and heat resistant.",
       images: [
@@ -539,7 +538,7 @@ async function main() {
       stock: 30,
       featured: false,
       rating: 4.4,
-      reviewCount: 22,
+      reviews: 22,
       description:
         "Vibrant Ankara-fabric throw pillows hand-sewn by artisans in Douala.",
       images: [
@@ -556,7 +555,7 @@ async function main() {
       stock: 18,
       featured: true,
       rating: 4.9,
-      reviewCount: 47,
+      reviews: 47,
       badge: "Handmade",
       description:
         "A bold, hand-woven tote bag using authentic Ghanaian kente strips.",
@@ -574,7 +573,7 @@ async function main() {
       stock: 40,
       featured: false,
       rating: 4.6,
-      reviewCount: 53,
+      reviews: 53,
       description:
         "A flowing, midi-length wrap dress in premium Ankara fabric.",
       images: [
@@ -591,7 +590,7 @@ async function main() {
       stock: 999,
       featured: true,
       rating: 4.8,
-      reviewCount: 119,
+      reviews: 119,
       badge: "New",
       description:
         "A 4-week intensive online program that builds confidence and charisma.",
@@ -609,7 +608,7 @@ async function main() {
       stock: 999,
       featured: false,
       rating: 4.9,
-      reviewCount: 64,
+      reviews: 64,
       description:
         "A transformative leadership program for young African professionals.",
       images: [
@@ -626,7 +625,7 @@ async function main() {
       stock: 25,
       featured: true,
       rating: 4.7,
-      reviewCount: 38,
+      reviews: 38,
       badge: "Eco",
       description:
         "A foldable 20W solar panel charger compatible with all USB devices.",
@@ -644,7 +643,7 @@ async function main() {
       stock: 50,
       featured: false,
       rating: 4.5,
-      reviewCount: 92,
+      reviews: 92,
       description:
         "True wireless earbuds with active noise cancellation and 24-hour battery life.",
       images: [
@@ -661,7 +660,7 @@ async function main() {
       stock: 999,
       featured: true,
       rating: 4.9,
-      reviewCount: 76,
+      reviews: 76,
       badge: "Pro Service",
       description:
         "A professional brand identity package including logo, colour palette, and typography guide.",
@@ -679,7 +678,7 @@ async function main() {
       stock: 999,
       featured: false,
       rating: 4.8,
-      reviewCount: 144,
+      reviews: 144,
       description:
         "A certified career coach rewrites your CV and cover letter tailored to your target role.",
       images: [

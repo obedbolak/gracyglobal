@@ -13,6 +13,6 @@ export default defineConfig({
   },
 
   migrations: {
-    seed: "npm run prisma/seed.ts",
+    seed: "npm run seed",
   },
 });

@@ -26,7 +26,7 @@ export async function GET() {
             id: true,
             specialty: true,
             rating: true,
-            reviewCount: true,
+            reviews: true,
             pricePerHour: true,
             available: true,
             verified: true,

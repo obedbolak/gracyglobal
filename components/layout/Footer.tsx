@@ -9,6 +9,7 @@ const links = {
     { label: "Remote Jobs", href: "/jobs" },
     { label: "Marketplace", href: "/marketplace" },
     { label: "Community", href: "/community" },
+    { label: "Plans", href: "/plans" },
   ],
   Company: [
     { label: "About Us", href: "/about" },

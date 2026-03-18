@@ -158,11 +158,12 @@ export default function CommunityHero({ onJoin }: { onJoin?: () => void }) {
                     Join This System
                     <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
-                  <Link href="/register"
+                  <button
+                    onClick={() => document.getElementById('community-hub')?.scrollIntoView({ behavior: 'smooth' })}
                     className="px-8 py-3.5 rounded-2xl text-sm font-bold text-white transition-all duration-200 hover:scale-105"
                     style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(10px)" }}>
                     View All Community
-                  </Link>
+                  </button>
                 </div>
               </motion.div>
             </AnimatePresence>

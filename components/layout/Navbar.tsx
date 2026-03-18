@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ShoppingBag } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { signOut } from "next-auth/react";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -19,7 +21,9 @@ const navLinks = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { count } = useCart();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -94,7 +98,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA + Theme toggle + Cart */}
+          {/* CTA + Theme toggle + Cart + Profile */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle size="sm" />
 
@@ -123,32 +127,111 @@ export default function Navbar() {
               )}
             </Link>
 
-            <Link
-              href="/login"
-              className="text-sm font-semibold transition-colors duration-200"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.color =
-                  "var(--accent-primary)")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.color =
-                  "var(--text-secondary)")
-              }
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="px-5 py-2 text-sm font-bold text-white rounded-xl transition-all duration-200 hover:scale-105"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
-              }}
-            >
-              Sign Up
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="relative p-2 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {user?.image ? (
+                    <img
+                      src={user.image}
+                      alt={user.name || "Profile"}
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User size={18} />
+                  )}
+                </button>
+
+                {/* Profile dropdown */}
+                {showProfileMenu && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 rounded-xl overflow-hidden shadow-lg"
+                    style={{
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <div className="p-3 border-b" style={{ borderColor: "var(--divider)" }}>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {user?.name || "User"}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {user?.email}
+                      </p>
+                    </div>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
+                      style={{ color: "var(--text-secondary)" }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "var(--btn-ghost-bg-hover)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                      }}
+                    >
+                      <User size={16} />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        signOut({ callbackUrl: "/" });
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
+                      style={{ color: "var(--error-text)" }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "var(--error-bg)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                      }}
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-semibold transition-colors duration-200"
+                  style={{ color: "var(--text-secondary)" }}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color =
+                      "var(--accent-primary)")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color =
+                      "var(--text-secondary)")
+                  }
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-5 py-2 text-sm font-bold text-white rounded-xl transition-all duration-200 hover:scale-105"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                    boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
+                  }}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -234,28 +317,63 @@ export default function Navbar() {
             className="flex flex-col gap-2.5 pt-3"
             style={{ borderTop: "1px solid var(--divider)" }}
           >
-            <Link
-              href="/login"
-              className="w-full text-center py-3 text-sm font-semibold rounded-xl transition-all"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-secondary)",
-              }}
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="w-full text-center py-3 text-sm font-bold text-white rounded-xl"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
-              }}
-            >
-              Sign Up
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <User size={16} />
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    signOut({ callbackUrl: "/" });
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all"
+                  style={{
+                    background: "var(--error-bg)",
+                    border: "1px solid var(--error-border)",
+                    color: "var(--error-text)",
+                  }}
+                >
+                  <LogOut size={16} />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="w-full text-center py-3 text-sm font-semibold rounded-xl transition-all"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="w-full text-center py-3 text-sm font-bold text-white rounded-xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                    boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
+                  }}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

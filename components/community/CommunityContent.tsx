@@ -3,7 +3,8 @@
 // ─── Projects ─────────────────────────────────────────────────────────────────
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Users, MapPin, Clock, Download, Search } from "lucide-react";
+import { Users, MapPin, Clock, Download, Search, Lock, Crown } from "lucide-react";
+import { useSubscription } from "@/context/SubscriptionContext";
 import {
   PROJECTS,
   EVENTS,
@@ -14,10 +15,11 @@ import {
 } from "@/data/community";
 import SystemPills from "./SystemPills";
 
-export function CommunityProjects() {
-  const [activeSystem, setActiveSystem] = useState<SystemId | "all">("all");
+export function CommunityProjects({ selectedSystem = "all" }: { selectedSystem?: SystemId | "all" }) {
+  const { canAccessFeature, getCurrentPlan } = useSubscription();
+  
   const filtered = PROJECTS.filter(
-    (p) => activeSystem === "all" || p.system === activeSystem,
+    (p) => selectedSystem === "all" || p.system === selectedSystem,
   );
   const system = (id: SystemId) => SYSTEMS.find((s) => s.id === id)!;
   const statusColor: Record<string, string> = {
@@ -31,9 +33,13 @@ export function CommunityProjects() {
     Completed: "var(--info-bg)",
   };
 
+  const canJoinProjects = canAccessFeature("join_projects");
+  const canLeadProjects = canAccessFeature("lead_projects");
+  const currentPlan = getCurrentPlan();
+
   return (
     <div>
-      <SystemPills active={activeSystem} onChangeAction={setActiveSystem} />
+      <SystemPills active={selectedSystem} onChangeAction={() => {}} />
       <div className="grid sm:grid-cols-2 gap-4">
         {filtered.map((proj, i) => {
           const sys = system(proj.system);
@@ -117,12 +123,33 @@ export function CommunityProjects() {
                   </span>
                 </div>
                 {proj.status === "Recruiting" && (
-                  <button
-                    className="text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105"
-                    style={{ background: sys.gradient }}
-                  >
-                    Join Project
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {canJoinProjects ? (
+                      <button
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105"
+                        style={{ background: sys.gradient }}
+                      >
+                        Join Project
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          disabled
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all opacity-60 cursor-not-allowed flex items-center gap-1.5"
+                          style={{
+                            background: "var(--glass-bg)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          <Lock size={10} /> View Only
+                        </button>
+                        <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
+                          {currentPlan === "free" ? "Starter+" : "Growth+"} required
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -134,10 +161,11 @@ export function CommunityProjects() {
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────
-export function CommunityEvents() {
-  const [activeSystem, setActiveSystem] = useState<SystemId | "all">("all");
+export function CommunityEvents({ selectedSystem = "all" }: { selectedSystem?: SystemId | "all" }) {
+  const { canAccessFeature, getCurrentPlan } = useSubscription();
+  
   const filtered = EVENTS.filter(
-    (e) => activeSystem === "all" || e.system === activeSystem,
+    (e) => selectedSystem === "all" || e.system === selectedSystem,
   );
   const system = (id: SystemId) => SYSTEMS.find((s) => s.id === id)!;
   const typeColor: Record<string, string> = {
@@ -151,9 +179,13 @@ export function CommunityEvents() {
     Hybrid: "var(--purple-dark)",
   };
 
+  const canRSVP = canAccessFeature("rsvp");
+  const hasEarlyAccess = canAccessFeature("early_access");
+  const currentPlan = getCurrentPlan();
+
   return (
     <div>
-      <SystemPills active={activeSystem} onChangeAction={setActiveSystem} />
+      <SystemPills active={selectedSystem} onChangeAction={() => {}} />
       <div className="flex flex-col gap-4">
         {filtered.map((ev, i) => {
           const sys = system(ev.system);
@@ -245,15 +277,41 @@ export function CommunityEvents() {
                 </div>
               </div>
               <div className="flex-shrink-0 flex flex-col justify-center">
-                <button
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
-                  style={{
-                    background: sys.gradient,
-                    boxShadow: `0 4px 12px ${sys.glow}`,
-                  }}
-                >
-                  RSVP
-                </button>
+                {canRSVP ? (
+                  <div className="flex flex-col gap-1">
+                    {hasEarlyAccess && (
+                      <span className="text-[10px] font-bold text-center" style={{ color: "var(--success-text)" }}>
+                        🎆 Early Access
+                      </span>
+                    )}
+                    <button
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
+                      style={{
+                        background: sys.gradient,
+                        boxShadow: `0 4px 12px ${sys.glow}`,
+                      }}
+                    >
+                      RSVP
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 items-center">
+                    <button
+                      disabled
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all opacity-60 cursor-not-allowed flex items-center gap-1.5"
+                      style={{
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Lock size={10} /> View Only
+                    </button>
+                    <span className="text-[10px] font-medium text-center" style={{ color: "var(--text-muted)" }}>
+                      Starter+ required
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           );
@@ -264,10 +322,11 @@ export function CommunityEvents() {
 }
 
 // ─── Resources ────────────────────────────────────────────────────────────────
-export function CommunityResources() {
-  const [activeSystem, setActiveSystem] = useState<SystemId | "all">("all");
+export function CommunityResources({ selectedSystem = "all" }: { selectedSystem?: SystemId | "all" }) {
+  const { canAccessFeature, getCurrentPlan } = useSubscription();
+  
   const filtered = RESOURCES.filter(
-    (r) => activeSystem === "all" || r.system === activeSystem,
+    (r) => selectedSystem === "all" || r.system === selectedSystem,
   );
   const system = (id: SystemId) => SYSTEMS.find((s) => s.id === id)!;
   const typeIcon: Record<string, string> = {
@@ -278,9 +337,13 @@ export function CommunityResources() {
     Report: "📊",
   };
 
+  const canDownloadBasic = canAccessFeature("basic_resources");
+  const canDownloadAll = canAccessFeature("all_resources");
+  const currentPlan = getCurrentPlan();
+
   return (
     <div>
-      <SystemPills active={activeSystem} onChangeAction={setActiveSystem} />
+      <SystemPills active={selectedSystem} onChangeAction={() => {}} />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((res, i) => {
           const sys = system(res.system);
@@ -342,12 +405,58 @@ export function CommunityResources() {
                 >
                   <Download size={11} /> {res.downloads.toLocaleString()}
                 </span>
-                <button
-                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105"
-                  style={{ background: sys.gradient }}
-                >
-                  <Download size={11} /> Get
-                </button>
+                {/* Premium resource check */}
+                {res.type === "Toolkit" || res.type === "Report" ? (
+                  canDownloadAll ? (
+                    <button
+                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105"
+                      style={{ background: sys.gradient }}
+                    >
+                      <Download size={11} /> Get
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        disabled
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all opacity-60 cursor-not-allowed"
+                        style={{
+                          background: "var(--glass-bg)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        <Lock size={10} /> Premium
+                      </button>
+                      <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
+                        Growth+ required
+                      </span>
+                    </div>
+                  )
+                ) : canDownloadBasic ? (
+                  <button
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105"
+                    style={{ background: sys.gradient }}
+                  >
+                    <Download size={11} /> Get
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled
+                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all opacity-60 cursor-not-allowed"
+                      style={{
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Lock size={10} /> View Only
+                    </button>
+                    <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
+                      Starter+ required
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           );
@@ -358,13 +467,14 @@ export function CommunityResources() {
 }
 
 // ─── Members ─────────────────────────────────────────────────────────────────
-export function CommunityMembers() {
+export function CommunityMembers({ selectedSystem = "all" }: { selectedSystem?: SystemId | "all" }) {
   const [search, setSearch] = useState("");
   const filtered = MEMBERS.filter(
     (m) =>
-      !search ||
+      (selectedSystem === "all" || m.systems.includes(selectedSystem)) &&
+      (!search ||
       m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.role.toLowerCase().includes(search.toLowerCase()),
+      m.role.toLowerCase().includes(search.toLowerCase())),
   );
   const badgeStyle: Record<string, { bg: string; text: string }> = {
     Pioneer: {

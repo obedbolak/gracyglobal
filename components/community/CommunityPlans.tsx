@@ -6,12 +6,43 @@ import { motion } from "framer-motion";
 import { Check, X, Zap } from "lucide-react";
 import { PLANS } from "@/data/plans";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useSubscription } from "@/context/SubscriptionContext";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type Billing = "monthly" | "annual" | "session";
 
 export default function CommunityPlans() {
   const [billing, setBilling] = useState<Billing>("monthly");
   const { convert, loading } = useCurrency();
+  const { subscribeToPlan, getCurrentPlan, loading: subLoading } = useSubscription();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [subscribingTo, setSubscribingTo] = useState<string | null>(null);
+
+  const currentPlan = getCurrentPlan();
+
+  async function handleSubscribe(planId: string) {
+    if (!session) {
+      router.push(`/login?redirect=/community&plan=${planId}`);
+      return;
+    }
+
+    setSubscribingTo(planId);
+    const billingType = billing === "monthly" ? "MONTHLY" : 
+                       billing === "annual" ? "ANNUAL" : "PER_SESSION";
+    
+    const result = await subscribeToPlan(planId, billingType);
+    
+    if (result.success) {
+      // Show success message or redirect
+      alert("Successfully subscribed to plan!");
+    } else {
+      alert(result.error || "Failed to subscribe");
+    }
+    
+    setSubscribingTo(null);
+  }
 
   function getPrice(plan: typeof PLANS[0]) {
     if (plan.priceMonthly === 0) return "Free";
@@ -160,8 +191,10 @@ export default function CommunityPlans() {
               </ul>
 
               {/* CTA */}
-              <Link href={plan.priceMonthly === 0 ? "/register" : "/register?plan=" + plan.id}
-                className="w-full text-center py-3 rounded-xl text-sm font-bold transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5"
+              <button
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={subscribingTo === plan.id || currentPlan === plan.id}
+                className="w-full text-center py-3 rounded-xl text-sm font-bold transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={plan.highlighted ? {
                   background: plan.gradient,
                   color: "#fff",
@@ -171,8 +204,10 @@ export default function CommunityPlans() {
                   border: "1px solid var(--glass-border)",
                   color: "var(--text-secondary)",
                 }}>
-                {plan.cta}
-              </Link>
+                {subscribingTo === plan.id ? "Subscribing..." :
+                 currentPlan === plan.id ? "Current Plan" :
+                 plan.priceMonthly === 0 ? "Get Started Free" : plan.cta}
+              </button>
             </motion.div>
           ))}
         </div>
