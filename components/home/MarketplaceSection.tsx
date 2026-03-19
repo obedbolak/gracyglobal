@@ -15,42 +15,39 @@ const trustBadges = [
 // Select 7 main categories to display
 const FEATURED_CATEGORIES = CATEGORY_GROUPS.slice(0, 7);
 
-// Category colors for visual variety
+// Category images from Pexels
+const CATEGORY_IMAGES: Record<string, string> = {
+  "Fashion & Apparel": "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Food & Beverages": "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Arts & Crafts": "https://images.pexels.com/photos/1266808/pexels-photo-1266808.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Beauty & Personal Care": "https://images.pexels.com/photos/3373736/pexels-photo-3373736.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Home & Living": "https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Electronics & Tech": "https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+  "Health & Wellness": "https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
+};
+
+// Category colors for visual variety (fallback overlays)
 const CATEGORY_COLORS = [
   {
-    gradient: "linear-gradient(135deg, #10b981, #059669)",
-    glow: "rgba(16, 185, 129, 0.3)",
-    bg: "rgba(16, 185, 129, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(16, 185, 129, 0.85), rgba(5, 150, 105, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", 
-    glow: "rgba(139, 92, 246, 0.3)",
-    bg: "rgba(139, 92, 246, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(124, 58, 237, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
-    glow: "rgba(245, 158, 11, 0.3)",
-    bg: "rgba(245, 158, 11, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(217, 119, 6, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #ef4444, #dc2626)",
-    glow: "rgba(239, 68, 68, 0.3)",
-    bg: "rgba(239, 68, 68, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(239, 68, 68, 0.85), rgba(220, 38, 38, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-    glow: "rgba(59, 130, 246, 0.3)",
-    bg: "rgba(59, 130, 246, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
-    glow: "rgba(6, 182, 212, 0.3)",
-    bg: "rgba(6, 182, 212, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(6, 182, 212, 0.85), rgba(8, 145, 178, 0.85))",
   },
   {
-    gradient: "linear-gradient(135deg, #ec4899, #db2777)",
-    glow: "rgba(236, 72, 153, 0.3)",
-    bg: "rgba(236, 72, 153, 0.1)",
+    overlay: "linear-gradient(135deg, rgba(236, 72, 153, 0.85), rgba(219, 39, 119, 0.85))",
   },
 ];
 
@@ -109,10 +106,11 @@ export default function MarketplaceSection() {
         </div>
 
         {/* Category cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {FEATURED_CATEGORIES.map((category, index) => {
             const colors = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
             const categoryCount = category.categories.length;
+            const imageUrl = CATEGORY_IMAGES[category.group] || `https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop`;
             
             return (
               <Link
@@ -120,62 +118,43 @@ export default function MarketplaceSection() {
                 href={`/marketplace?group=${encodeURIComponent(category.group)}`}
                 className="block group"
               >
-                <Card className="overflow-hidden hover:-translate-y-2 transition-all duration-300 group p-0 gap-0 h-full">
-                  {/* Icon section */}
+                <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
+                  {/* Image section */}
                   <div 
-                    className="relative p-4 sm:p-6 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px]"
-                    style={{ background: colors.bg }}
+                    className="relative aspect-square overflow-hidden"
                   >
-                    <div
-                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 transition-transform duration-300 group-hover:scale-110"
-                      style={{
-                        background: colors.gradient,
-                        boxShadow: `0 4px 14px ${colors.glow}`,
-                      }}
-                    >
-                      <span className="text-xl sm:text-2xl">{category.icon}</span>
+                    <img
+                      src={imageUrl}
+                      alt={category.group}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                    {/* Gradient overlay */}
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: colors.overlay }}
+                    />
+                    {/* Category icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="text-5xl drop-shadow-lg">{category.icon}</span>
                     </div>
-                    
-                    {/* Category count badge */}
-                    <Badge 
-                      variant="outline" 
-                      className="text-[10px] sm:text-xs font-medium px-2 py-0.5"
-                      style={{
-                        background: "rgba(255,255,255,0.9)",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                      }}
-                    >
-                      {categoryCount} categories
-                    </Badge>
                   </div>
 
                   {/* Info section */}
-                  <CardContent className="p-3 sm:p-4">
+                  <CardContent className="p-3">
                     <div
-                      className="font-bold text-xs sm:text-sm mb-2 text-center leading-tight"
+                      className="font-bold text-sm mb-1 text-center line-clamp-2 min-h-[40px]"
                       style={{ color: "var(--text-primary)" }}
                     >
                       {category.group}
                     </div>
                     
-                    {/* Sample categories */}
-                    <div className="text-center">
-                      <div
-                        className="text-[10px] sm:text-xs leading-relaxed mb-2 sm:mb-3 min-h-[24px] sm:min-h-[28px]"
+                    <div className="flex items-center justify-center gap-1 text-xs font-medium group-hover:gap-1.5 transition-all duration-200">
+                      <span style={{ color: "var(--text-muted)" }}>{categoryCount} items</span>
+                      <ArrowRight 
+                        size={12} 
+                        className="transition-transform duration-200 group-hover:translate-x-0.5"
                         style={{ color: "var(--text-muted)" }}
-                      >
-                        {category.categories.slice(0, 2).join(", ")}
-                        {categoryCount > 2 && ` +${categoryCount - 2} more`}
-                      </div>
-                      
-                      <div className="flex items-center justify-center gap-1 text-[10px] sm:text-xs font-medium group-hover:gap-2 transition-all duration-200">
-                        <span style={{ color: "var(--text-secondary)" }}>Explore</span>
-                        <ArrowRight 
-                          size={10} 
-                          className="sm:w-3 sm:h-3 transition-transform duration-200 group-hover:translate-x-0.5"
-                          style={{ color: "var(--text-secondary)" }}
-                        />
-                      </div>
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -194,11 +173,11 @@ export default function MarketplaceSection() {
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{
-                  background: "rgba(123,47,190,0.15)",
-                  border: "1px solid rgba(168,85,247,0.25)",
+                  background: "var(--purple-bg, rgba(123,47,190,0.15))",
+                  border: "1px solid var(--divider-strong)",
                 }}
               >
-                <Icon size={14} style={{ color: "var(--purple-light)" }} />
+                <Icon size={14} style={{ color: "var(--purple)" }} />
               </div>
               <Badge variant="outline">{label}</Badge>
             </div>
@@ -209,8 +188,8 @@ export default function MarketplaceSection() {
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
               style={{
-                background: "rgba(16,185,129,0.15)",
-                border: "1px solid rgba(16,185,129,0.25)",
+                background: "var(--success-bg, rgba(16,185,129,0.15))",
+                border: "1px solid var(--divider-strong)",
               }}
             >
               <span className="text-sm">🌍</span>

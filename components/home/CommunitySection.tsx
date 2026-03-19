@@ -5,6 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SYSTEMS } from "@/data/community";
 
+// System images from Unsplash
+const SYSTEM_IMAGES: Record<string, string> = {
+  "human-flourishing": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop",
+  "knowledge-skills": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=400&fit=crop",
+  "economic-empowerment": "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop",
+  "civic-leadership": "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=400&fit=crop",
+  "media-narrative": "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=400&fit=crop",
+  "creativity-culture": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=400&fit=crop",
+  "technology-intelligence": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop",
+};
+
 // Get badge variant based on system color
 const getBadgeVariant = (color: string) => {
   if (color.includes('#dc143c') || color.includes('scarlet')) return 'scarlet' as const;
@@ -25,92 +36,77 @@ export default function CommunitySection() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <h2
-              className="text-2xl font-extrabold mb-1"
-              style={{ color: "var(--text-primary)" }}
-            >
-              My Nation & I
-            </h2>
+            <div className="flex items-center gap-2.5 mb-1">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                }}
+              >
+                <Heart size={14} className="text-white" />
+              </div>
+              <h2
+                className="text-2xl font-extrabold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                My Nation & I
+              </h2>
+            </div>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               Building Stronger Communities Together
             </p>
           </div>
+          <Button asChild size="sm" variant="scarlet">
+            <Link href="/community">Explore All Systems</Link>
+          </Button>
         </div>
 
-        {/* Seven Systems Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-7">
-          {SYSTEMS.map((system) => (
-            <Link
-              key={system.id}
-              href={`/community?tab=${system.id}`}
-              className="block group"
-            >
-              <button
-                className="w-full py-3 px-2 rounded-xl text-white text-xs font-bold leading-tight text-center transition-all hover:scale-[1.03] hover:-translate-y-0.5 flex flex-col items-center gap-1"
-                style={{
-                  background: system.gradient,
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                }}
+        {/* Seven Systems Cards - 4 per row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {SYSTEMS.map((system) => {
+            const imageUrl = SYSTEM_IMAGES[system.id] || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop";
+            
+            return (
+              <Link
+                key={system.id}
+                href={`/community?tab=${system.id}`}
+                className="block group"
               >
-                <span className="text-lg">{system.icon}</span>
-                <span className="hidden sm:block text-center leading-tight">{system.label}</span>
-                <span className="sm:hidden">{system.label.split(' ')[0]}</span>
-              </button>
-            </Link>
-          ))}
-        </div>
+                <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
+                  {/* Image section with gradient overlay */}
+                  <div className="relative aspect-square overflow-hidden">
+                    <img
+                      src={imageUrl}
+                      alt={system.label}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                    {/* Gradient overlay */}
+                    <div 
+                      className="absolute inset-0"
+                      style={{ background: system.gradient, opacity: 0.75 }}
+                    />
+                    {/* Icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-4xl drop-shadow-lg transition-transform duration-300 group-hover:scale-110">
+                        {system.icon}
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Featured Systems Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
-          {SYSTEMS.slice(0, 3).map((system) => (
-            <Link
-              key={system.id}
-              href={`/community?tab=${system.id}`}
-              className="block group"
-            >
-              <Card className="overflow-hidden hover:-translate-y-1.5 transition-all duration-300 group p-0 gap-0">
-                <div
-                  className="h-32 relative overflow-hidden flex items-center justify-center"
-                  style={{ background: system.gradient }}
-                >
-                  <div className="text-4xl">{system.icon}</div>
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: "rgba(0,0,0,0.15)" }}
-                  />
-                  {/* Badge overlay */}
-                  <div className="absolute top-3 left-3">
-                    <Badge variant={getBadgeVariant(system.color)}>
+                  {/* Info section */}
+                  <CardContent className="p-3">
+                    <div
+                      className="text-sm font-bold text-center mb-1 line-clamp-2 min-h-[40px]"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {system.label}
-                    </Badge>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <div
-                    className="text-sm font-bold mb-1"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {system.label}
-                  </div>
-                  <div
-                    className="text-xs leading-relaxed"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {system.description}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
-
-        <Button asChild size="lg">
-          <Link href="/community">
-            <Heart size={15} />
-            Explore My Nation & I
-          </Link>
-        </Button>
       </div>
     </section>
   );
