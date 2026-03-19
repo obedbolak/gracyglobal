@@ -6,10 +6,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, ArrowRight } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useSubscription } from "@/context/SubscriptionContext";
 
 import CommunityHero from "@/components/community/CommunityHero";
-import CommunityPlans from "@/components/community/CommunityPlans";
 import CommunityTabs, {
   type TabId,
 } from "@/components/community/CommunityTabs";
@@ -60,7 +58,7 @@ function GateScreen() {
             style={{ color: "var(--text-muted)" }}
           >
             Discussions, projects, events, resources and members are available
-            to GracyGlobal members only.
+            to all registered members.
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
@@ -102,14 +100,14 @@ function GateScreen() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           <Link
-            href="/plans"
+            href="/register"
             className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
             style={{
               background: "linear-gradient(135deg, var(--purple), var(--blue))",
               boxShadow: "0 4px 16px rgba(123,47,190,0.4)",
             }}
           >
-            View Plans <ArrowRight size={15} />
+            Join Community <ArrowRight size={15} />
           </Link>
           <Link
             href="/login"
@@ -130,13 +128,11 @@ function GateScreen() {
 
 function CommunityPageContent() {
   const { data: session } = useSession();
-  const { canAccessFeature, getCurrentPlan } = useSubscription();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("feed");
   const [selectedSystem, setSelectedSystem] = useState<SystemId | "all">("all");
 
   const isLoggedIn = !!session;
-  const currentPlan = getCurrentPlan();
 
   // Handle URL parameters
   useEffect(() => {
@@ -155,48 +151,16 @@ function CommunityPageContent() {
       <CommunityHero
         onJoin={() => {
           if (!isLoggedIn) window.location.href = "/register";
-          else window.location.href = "/plans";
+          else window.location.href = "/community";
         }}
       />
 
-      {/* Gated community hub */}
+      {/* Community hub - freely accessible */}
       <section id="community-hub">
         {!isLoggedIn ? (
           <GateScreen />
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Current Plan Banner */}
-            {currentPlan === "free" && (
-              <div className="glass p-4 mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Lock size={20} style={{ color: "var(--warning-text)" }} />
-                  <div>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      Free Plan - Limited Access
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      You can view content but need Starter+ to participate
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href="/plans"
-                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:scale-105"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--purple), var(--blue))",
-                  }}
-                >
-                  Upgrade Plan
-                </Link>
-              </div>
-            )}
             {/* Stats */}
             <div className="glass flex flex-wrap items-center justify-around gap-6 p-5 mb-8">
               {[

@@ -14,7 +14,8 @@ const navLinks = [
   { label: "Remote Jobs", href: "/jobs" },
   { label: "My Nation & I", href: "/community" },
   { label: "Marketplace", href: "/marketplace" },
-  { label: "Blog", href: "/blog" },
+  { label: "Services", href: "/services" },
+  { label: "E-learning", href: "/learn" },
   { label: "Affiliate", href: "/affiliate" },
 ];
 
@@ -159,11 +160,20 @@ export default function Navbar() {
                       backdropFilter: "blur(12px)",
                     }}
                   >
-                    <div className="p-3 border-b" style={{ borderColor: "var(--divider)" }}>
-                      <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    <div
+                      className="p-3 border-b"
+                      style={{ borderColor: "var(--divider)" }}
+                    >
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {user?.name || "User"}
                       </p>
-                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--text-muted)" }}
+                      >
                         {user?.email}
                       </p>
                     </div>
@@ -173,10 +183,12 @@ export default function Navbar() {
                       className="flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
                       style={{ color: "var(--text-secondary)" }}
                       onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "var(--btn-ghost-bg-hover)";
+                        (e.currentTarget as HTMLElement).style.background =
+                          "var(--btn-ghost-bg-hover)";
                       }}
                       onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                        (e.currentTarget as HTMLElement).style.background =
+                          "transparent";
                       }}
                     >
                       <User size={16} />
@@ -190,10 +202,12 @@ export default function Navbar() {
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
                       style={{ color: "var(--error-text)" }}
                       onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "var(--error-bg)";
+                        (e.currentTarget as HTMLElement).style.background =
+                          "var(--error-bg)";
                       }}
                       onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                        (e.currentTarget as HTMLElement).style.background =
+                          "transparent";
                       }}
                     >
                       <LogOut size={16} />

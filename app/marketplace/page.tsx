@@ -22,6 +22,7 @@ import {
 } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import ServicesSection from "@/components/marketplace/ServicesSection";
 
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest" | "rating";
 
@@ -936,6 +937,9 @@ function MarketplacePageContent() {
             ))}
           </div>
         )}
+
+        {/* Services Section */}
+        <ServicesSection />
       </div>
     </main>
   );
