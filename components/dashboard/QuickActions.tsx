@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
 import { 
   Calendar,
   ShoppingCart,
@@ -26,32 +25,32 @@ export default function QuickActions({ role, isAffiliate, isCounselor }: QuickAc
       description: "Schedule a session",
       href: "/counselors",
       icon: Calendar,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "var(--blue)",
+      bgColor: "var(--info-bg)",
     },
     {
       title: "Browse Jobs",
       description: "Find opportunities",
       href: "/jobs",
       icon: Briefcase,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      color: "var(--purple)",
+      bgColor: "var(--glass-bg-subtle)",
     },
     {
       title: "Marketplace",
       description: "Shop products",
       href: "/marketplace",
       icon: ShoppingCart,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "var(--green)",
+      bgColor: "var(--success-bg)",
     },
     {
       title: "Community",
       description: "Connect & share",
       href: "/community",
       icon: MessageCircle,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: "var(--scarlet)",
+      bgColor: "var(--error-bg)",
     },
   ];
 
@@ -61,8 +60,8 @@ export default function QuickActions({ role, isAffiliate, isCounselor }: QuickAc
       description: "Manage referrals",
       href: "/affiliate",
       icon: Share2,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
+      color: "var(--purple)",
+      bgColor: "var(--glass-bg-subtle)",
     },
   ] : [];
 
@@ -72,8 +71,8 @@ export default function QuickActions({ role, isAffiliate, isCounselor }: QuickAc
       description: "Manage bookings",
       href: "/bookings",
       icon: Users,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
+      color: "var(--blue)",
+      bgColor: "var(--info-bg)",
     },
   ] : [];
 
@@ -83,16 +82,16 @@ export default function QuickActions({ role, isAffiliate, isCounselor }: QuickAc
       description: "Update your info",
       href: "/dashboard/settings",
       icon: Settings,
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
+      color: "var(--text-secondary)",
+      bgColor: "var(--glass-bg)",
     },
     {
       title: "Subscription",
       description: "Manage your plan",
       href: "/dashboard/subscription",
       icon: CreditCard,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
+      color: "var(--green)",
+      bgColor: "var(--success-bg)",
     },
   ];
 
@@ -104,21 +103,21 @@ export default function QuickActions({ role, isAffiliate, isCounselor }: QuickAc
         const Icon = action.icon;
         return (
           <Link key={index} href={action.href}>
-            <Card className="p-4 hover:shadow-lg transition-all duration-200 hover:scale-105 cursor-pointer">
+            <div className="p-4 rounded-2xl transition-all duration-200 hover:scale-105 cursor-pointer" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
               <div className="flex items-start space-x-3">
-                <div className={`p-2 rounded-lg ${action.bgColor}`}>
-                  <Icon className={`w-5 h-5 ${action.color}`} />
+                <div className="p-2 rounded-lg" style={{ background: action.bgColor }}>
+                  <Icon className="w-5 h-5" style={{ color: action.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm">
+                  <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
                     {action.title}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                     {action.description}
                   </p>
                 </div>
               </div>
-            </Card>
+            </div>
           </Link>
         );
       })}

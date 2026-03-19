@@ -91,10 +91,10 @@ export default function DashboardPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: "var(--blue)" }} />
+          <p style={{ color: "var(--text-secondary)" }}>Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -102,12 +102,13 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="mb-4" style={{ color: "var(--error-text)" }}>{error}</p>
           <button 
             onClick={fetchProfile}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 text-white rounded-lg transition-all"
+            style={{ background: "linear-gradient(135deg, var(--purple), var(--blue))" }}
           >
             Try Again
           </button>
@@ -118,8 +119,8 @@ export default function DashboardPage() {
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600">No profile data available</p>
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+        <p style={{ color: "var(--text-secondary)" }}>No profile data available</p>
       </div>
     );
   }
@@ -152,16 +153,16 @@ export default function DashboardPage() {
     }
   ];
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleBadgeStyle = (role: string) => {
     switch (role.toLowerCase()) {
       case 'admin':
-        return 'bg-red-100 text-red-800';
+        return { background: "var(--error-bg)", color: "var(--error-text)" };
       case 'counselor':
-        return 'bg-blue-100 text-blue-800';
+        return { background: "var(--info-bg)", color: "var(--blue)" };
       case 'volunteer':
-        return 'bg-green-100 text-green-800';
+        return { background: "var(--success-bg)", color: "var(--green)" };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { background: "var(--glass-bg)", color: "var(--text-secondary)" };
     }
   };
 
@@ -171,32 +172,32 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8" style={{ background: "var(--background)" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Welcome Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
                 Welcome back, {profile.name?.split(' ')[0] || 'User'}! 👋
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
                 Here's what's happening with your account today.
               </p>
             </div>
             <div className="hidden md:flex items-center space-x-4">
-              <Badge className={getRoleBadgeColor(profile.role)}>
-                <Crown className="w-3 h-3 mr-1" />
+              <span className="px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" style={getRoleBadgeStyle(profile.role)}>
+                <Crown className="w-3 h-3" />
                 {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
-              </Badge>
+              </span>
             </div>
           </div>
         </div>
 
         {/* Profile Summary Card */}
-        <Card className="p-6 mb-8">
+        <div className="p-6 mb-8 rounded-2xl" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
           <div className="flex items-start space-x-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "var(--glass-bg-subtle)" }}>
               {profile.image ? (
                 <img 
                   src={profile.image} 
@@ -204,24 +205,24 @@ export default function DashboardPage() {
                   className="w-16 h-16 rounded-full object-cover"
                 />
               ) : (
-                <User className="w-8 h-8 text-blue-600" />
+                <User className="w-8 h-8" style={{ color: "var(--blue)" }} />
               )}
             </div>
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
                   {profile.name || 'User'}
                 </h2>
-                <Badge className={getRoleBadgeColor(profile.role)}>
+                <span className="px-3 py-1 rounded-full text-sm font-semibold" style={getRoleBadgeStyle(profile.role)}>
                   {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
-                </Badge>
+                </span>
                 {!profile.emailVerified && (
-                  <Badge className="bg-yellow-100 text-yellow-800">
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}>
                     Email not verified
-                  </Badge>
+                  </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm" style={{ color: "var(--text-secondary)" }}>
                 <div className="flex items-center">
                   <Mail className="w-4 h-4 mr-2" />
                   {profile.email}
@@ -245,11 +246,11 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Stats Cards */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Activity</h2>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Your Activity</h2>
           <DashboardStats 
             bookings={profile._count.bookings}
             orders={profile._count.orders}
@@ -265,7 +266,7 @@ export default function DashboardPage() {
           {/* Left Column - Quick Actions & Subscription */}
           <div className="lg:col-span-2 space-y-8">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+              <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Quick Actions</h2>
               <QuickActions 
                 role={profile.role}
                 isAffiliate={!!profile.affiliate}
@@ -274,7 +275,7 @@ export default function DashboardPage() {
             </div>
             
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription Status</h2>
+              <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Subscription Status</h2>
               <SubscriptionStatus />
             </div>
           </div>

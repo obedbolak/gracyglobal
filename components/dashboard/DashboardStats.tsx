@@ -39,29 +39,29 @@ export default function DashboardStats({
       title: "Counseling Sessions",
       value: bookings,
       icon: Calendar,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "var(--blue)",
+      bgColor: "var(--info-bg)",
     },
     {
       title: "Orders Placed",
       value: orders,
       icon: ShoppingBag,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "var(--green)",
+      bgColor: "var(--success-bg)",
     },
     {
       title: "Job Applications",
       value: jobApplications,
       icon: Briefcase,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      color: "var(--purple)",
+      bgColor: "var(--glass-bg-subtle)",
     },
     {
       title: "Community Posts",
       value: communityPosts,
       icon: MessageSquare,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      color: "var(--scarlet)",
+      bgColor: "var(--error-bg)",
     },
   ];
 
@@ -70,15 +70,15 @@ export default function DashboardStats({
       title: "Rating",
       value: counselorProfile.rating.toFixed(1),
       icon: Star,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      color: "var(--yellow)",
+      bgColor: "var(--warning-bg)",
     },
     {
       title: "Reviews",
       value: counselorProfile.reviews,
       icon: MessageSquare,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
+      color: "var(--blue)",
+      bgColor: "var(--info-bg)",
     },
   ] : [];
 
@@ -87,15 +87,15 @@ export default function DashboardStats({
       title: "Referrals",
       value: affiliate.totalReferrals,
       icon: Users,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
+      color: "var(--purple)",
+      bgColor: "var(--glass-bg-subtle)",
     },
     {
       title: "Earnings",
       value: `${affiliate.totalEarnings.toLocaleString()} CFA`,
       icon: DollarSign,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
+      color: "var(--green)",
+      bgColor: "var(--success-bg)",
     },
   ] : [];
 
@@ -106,21 +106,28 @@ export default function DashboardStats({
       {allStats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+          <div
+            key={index}
+            className="p-6 rounded-2xl transition-all hover:scale-[1.02]"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-sm font-medium mb-1" style={{ color: "var(--text-muted)" }}>
                   {stat.title}
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
                   {stat.value}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                <Icon className={`w-6 h-6 ${stat.color}`} />
+              <div className="p-3 rounded-full" style={{ background: stat.bgColor }}>
+                <Icon className="w-6 h-6" style={{ color: stat.color }} />
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>
