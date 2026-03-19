@@ -128,7 +128,7 @@ export default function LessonPage({
           <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Lesson not accessible</h2>
           <p className="text-gray-600 mb-4">Please enroll in the course to access this lesson</p>
-          <Button onClick={() => router.push(`/learn/${params.id}`)}>
+          <Button onClick={() => router.push(`/learn/${id}`)}>
             Back to Course
           </Button>
         </div>
