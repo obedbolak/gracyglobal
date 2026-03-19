@@ -1,108 +1,74 @@
-// app/api/courses/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/courses — list all published courses
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
-    const level = searchParams.get("level");
-    const isFree = searchParams.get("isFree");
-    const featured = searchParams.get("featured");
+    const session = await getServerSession(authOptions);
+
+    if (session?.user?.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const courses = await prisma.course.findMany({
-      where: {
-        published: true,
-        ...(category && { category }),
-        ...(level && { level: level as any }),
-        ...(isFree !== null && { isFree: isFree === "true" }),
-        ...(featured !== null && { featured: featured === "true" }),
-      },
       include: {
-        sections: {
-          include: {
-            lessons: {
-              select: {
-                id: true,
-                title: true,
-                type: true,
-                duration: true,
-                order: true,
-                isFree: true,
-              },
-              orderBy: { order: "asc" },
-            },
-          },
-          orderBy: { order: "asc" },
-        },
-        liveSession: true,
         _count: {
-          select: { enrollments: true },
+          select: {
+            enrollments: true,
+            sections: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ courses });
+    return NextResponse.json({ success: true, data: courses });
   } catch (error) {
-    console.error("[GET /api/courses]", error);
+    console.error("Failed to fetch courses:", error);
     return NextResponse.json(
-      { error: "Failed to fetch courses" },
-      { status: 500 },
+      { success: false, error: "Failed to fetch courses" },
+      { status: 500 }
     );
   }
 }
 
-// POST /api/courses — create a new course (admin only)
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    const body = await req.json();
-    const {
-      title,
-      description,
-      thumbnail,
-      category,
-      level,
-      price,
-      isFree,
-      featured,
-    } = body;
-
-    if (!title || !description || !category) {
+    if (session?.user?.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
+    const data = await request.json();
+
     const course = await prisma.course.create({
       data: {
-        title,
-        description,
-        thumbnail,
-        category,
-        level,
-        price: price ?? 0,
-        isFree: isFree ?? price === 0,
-        featured: featured ?? false,
-        published: false,
+        title: data.title,
+        description: data.description,
+        thumbnail: data.thumbnail || null,
+        category: data.category,
+        level: data.level,
+        price: data.price,
+        isFree: data.isFree,
+        published: data.published,
+        featured: data.featured,
       },
     });
 
-    return NextResponse.json({ course }, { status: 201 });
+    return NextResponse.json({ success: true, data: course });
   } catch (error) {
-    console.error("[POST /api/courses]", error);
+    console.error("Failed to create course:", error);
     return NextResponse.json(
-      { error: "Failed to create course" },
-      { status: 500 },
+      { success: false, error: "Failed to create course" },
+      { status: 500 }
     );
   }
 }
