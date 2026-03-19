@@ -7,13 +7,14 @@ import { prisma } from "@/lib/prisma";
 // GET /api/live-sessions/[id] — get session details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     const liveSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         course: {
           select: { id: true, title: true, thumbnail: true },
@@ -33,7 +34,7 @@ export async function GET(
       const attendance = await prisma.liveAttendance.findUnique({
         where: {
           liveSessionId_userId: {
-            liveSessionId: params.id,
+            liveSessionId: id,
             userId: session.user.id,
           },
         },
@@ -62,16 +63,17 @@ export async function GET(
 // POST /api/live-sessions/[id] — register attendance
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const liveSession = await prisma.liveSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         course: { select: { id: true, isFree: true, price: true } },
       },
@@ -105,13 +107,13 @@ export async function POST(
     const attendance = await prisma.liveAttendance.upsert({
       where: {
         liveSessionId_userId: {
-          liveSessionId: params.id,
+          liveSessionId: id,
           userId: session.user.id,
         },
       },
       update: {},
       create: {
-        liveSessionId: params.id,
+        liveSessionId: id,
         userId: session.user.id,
       },
     });
@@ -129,9 +131,10 @@ export async function POST(
 // PATCH /api/live-sessions/[id] — update session status (admin only)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -140,7 +143,7 @@ export async function PATCH(
     const body = await req.json();
 
     const liveSession = await prisma.liveSession.update({
-      where: { id: params.id },
+      where: { id },
       data: body,
     });
 
