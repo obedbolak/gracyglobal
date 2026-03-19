@@ -93,7 +93,7 @@ export const counselors: Counselor[] = [
     name: "Wandia Gracious",
     role: "Relationship, Marriage & Trauma ",
     specialty: "Marriage Counseling",
-    rating: 4.8,
+    rating: 4.9,
     reviews: 98,
     price: 2500,
     img: "/images/ching.png",
