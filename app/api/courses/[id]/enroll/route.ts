@@ -7,16 +7,17 @@ import { prisma } from "@/lib/prisma";
 // POST /api/courses/[id]/enroll — enroll the current user in a course
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const course = await prisma.course.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!course) {
@@ -35,7 +36,7 @@ export async function POST(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
         },
       },
     });
@@ -60,7 +61,7 @@ export async function POST(
       const enrollment = await prisma.enrollment.create({
         data: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
           paidAmount: course.price,
           status: "ACTIVE",
         },
@@ -73,7 +74,7 @@ export async function POST(
     const enrollment = await prisma.enrollment.create({
       data: {
         userId: session.user.id,
-        courseId: params.id,
+        courseId: id,
         paidAmount: 0,
         status: "ACTIVE",
       },
@@ -89,9 +90,10 @@ export async function POST(
 // GET /api/courses/[id]/enroll — check enrollment status
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ enrolled: false });
@@ -101,7 +103,7 @@ export async function GET(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
         },
       },
       include: {

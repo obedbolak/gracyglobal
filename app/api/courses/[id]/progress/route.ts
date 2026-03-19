@@ -7,9 +7,10 @@ import { prisma } from "@/lib/prisma";
 // GET /api/courses/[id]/progress — get full progress for this course
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +20,7 @@ export async function GET(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
         },
       },
       include: {
@@ -79,9 +80,10 @@ export async function GET(
 // POST /api/courses/[id]/progress — mark a lesson as complete or update watch time
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -101,7 +103,7 @@ export async function POST(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
         },
       },
     });
@@ -135,7 +137,7 @@ export async function POST(
     // Check if entire course is now complete
     const allLessons = await prisma.lesson.findMany({
       where: {
-        section: { courseId: params.id },
+        section: { courseId: id },
       },
       select: { id: true },
     });

@@ -7,9 +7,10 @@ import { prisma } from "@/lib/prisma";
 // GET /api/courses/[id]/quiz?lessonId= — get quiz for a lesson
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,9 +68,10 @@ export async function GET(
 // POST /api/courses/[id]/quiz — submit quiz answers
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -90,7 +92,7 @@ export async function POST(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: params.id,
+          courseId: id,
         },
       },
     });
