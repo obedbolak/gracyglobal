@@ -19,7 +19,7 @@ interface Lesson {
   type: string;
   content: string | null;
   videoUrl: string | null;
-  duration: number | null;
+  duration: number;
   isFree: boolean;
   section: {
     id: string;
@@ -116,7 +116,7 @@ export default function LessonPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--blue)" }} />
       </div>
     );
   }
@@ -125,9 +125,9 @@ export default function LessonPage({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Lesson not accessible</h2>
-          <p className="text-gray-600 mb-4">Please enroll in the course to access this lesson</p>
+          <Lock className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--text-muted)" }} />
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Lesson not accessible</h2>
+          <p className="mb-4" style={{ color: "var(--text-secondary)" }}>Please enroll in the course to access this lesson</p>
           <Button onClick={() => router.push(`/learn/${id}`)}>
             Back to Course
           </Button>
@@ -137,7 +137,7 @@ export default function LessonPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8" style={{ background: "var(--background)" }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Button 
@@ -148,10 +148,10 @@ export default function LessonPage({
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back to Course
           </Button>
-          <div className="text-sm text-gray-600 mb-2">
+          <div className="text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             {lesson.section.course.title} / {lesson.section.title}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
+          <h1 className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{lesson.title}</h1>
         </div>
 
         <Card className="p-8 mb-6">
@@ -177,22 +177,25 @@ export default function LessonPage({
 
           {lesson.type === "QUIZ" && lesson.quiz && (
             <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-blue-900">
+              <div className="rounded-lg p-4 mb-6" style={{ background: "var(--badge-blue-bg)", border: "1px solid var(--divider-strong)" }}>
+                <p style={{ color: "var(--blue)" }}>
                   Passing score: {lesson.quiz.passingScore}%
                 </p>
               </div>
 
               {lesson.quiz.questions.map((question, idx) => (
                 <div key={question.id} className="space-y-3">
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
                     {idx + 1}. {question.question}
                   </h3>
                   <div className="space-y-2">
                     {question.options.map((option, optIdx) => (
                       <label 
                         key={optIdx}
-                        className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        className="flex items-center p-3 rounded-lg cursor-pointer transition-colors"
+                        style={{ border: "1px solid var(--divider)" }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--hover-bg)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                       >
                         <input
                           type="radio"
@@ -203,7 +206,7 @@ export default function LessonPage({
                           disabled={quizSubmitted}
                           className="mr-3"
                         />
-                        <span>{option}</span>
+                        <span style={{ color: "var(--text-primary)" }}>{option}</span>
                       </label>
                     ))}
                   </div>
@@ -211,11 +214,20 @@ export default function LessonPage({
               ))}
 
               {quizSubmitted && quizScore !== null && (
-                <div className={`p-4 rounded-lg ${quizScore >= lesson.quiz.passingScore ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                  <p className={`font-semibold ${quizScore >= lesson.quiz.passingScore ? 'text-green-900' : 'text-red-900'}`}>
+                <div 
+                  className="p-4 rounded-lg"
+                  style={{
+                    background: quizScore >= lesson.quiz.passingScore ? "var(--success-bg)" : "var(--error-bg)",
+                    border: `1px solid ${quizScore >= lesson.quiz.passingScore ? "var(--success)" : "var(--error)"}`
+                  }}
+                >
+                  <p 
+                    className="font-semibold"
+                    style={{ color: quizScore >= lesson.quiz.passingScore ? "var(--success)" : "var(--error)" }}
+                  >
                     Your score: {quizScore}%
                   </p>
-                  <p className={quizScore >= lesson.quiz.passingScore ? 'text-green-700' : 'text-red-700'}>
+                  <p style={{ color: quizScore >= lesson.quiz.passingScore ? "var(--success)" : "var(--error)" }}>
                     {quizScore >= lesson.quiz.passingScore ? 'Congratulations! You passed!' : 'Keep trying! You can retake the quiz.'}
                   </p>
                 </div>
@@ -241,7 +253,7 @@ export default function LessonPage({
           )}
 
           {lesson.progress?.completed && (
-            <div className="flex items-center justify-center text-green-600 font-semibold">
+            <div className="flex items-center justify-center font-semibold" style={{ color: "var(--success)" }}>
               <CheckCircle className="w-5 h-5 mr-2" />
               Completed
             </div>

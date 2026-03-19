@@ -49,16 +49,28 @@ export default function LearnSection() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-200 mb-4">
-            <BookOpen className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-blue-600">
+          <div 
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
+            style={{
+              background: "var(--badge-blue-bg)",
+              border: "1px solid var(--divider-strong)",
+            }}
+          >
+            <BookOpen className="w-4 h-4" style={{ color: "var(--blue)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--blue)" }}>
               E-Learning Platform
             </span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 
+            className="text-3xl md:text-4xl font-bold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
             Learn New Skills, Transform Your Future
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p 
+            className="text-lg max-w-2xl mx-auto"
+            style={{ color: "var(--text-secondary)" }}
+          >
             Access quality courses designed to empower you with in-demand skills
             and knowledge
           </p>
@@ -79,7 +91,10 @@ export default function LearnSection() {
                     }}
                   />
                   {course.isFree && (
-                    <Badge className="absolute top-4 right-4 bg-green-500 text-white">
+                    <Badge 
+                      className="absolute top-4 right-4 text-white"
+                      style={{ background: "var(--success)" }}
+                    >
                       Free
                     </Badge>
                   )}
@@ -93,13 +108,22 @@ export default function LearnSection() {
                       {course.level}
                     </Badge>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  <h3 
+                    className="text-xl font-semibold mb-2 group-hover:transition-colors"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     {course.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p 
+                    className="text-sm mb-4 line-clamp-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     {course.description}
                   </p>
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div 
+                    className="flex items-center justify-between text-sm mb-4"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
                       <span>{Math.round(course.duration / 60)}h</span>
@@ -109,15 +133,24 @@ export default function LearnSection() {
                       <span>{course.students.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <span className="text-xl font-bold text-gray-900">
+                  <div 
+                    className="flex items-center justify-between pt-4"
+                    style={{ borderTop: "1px solid var(--divider)" }}
+                  >
+                    <span 
+                      className="text-xl font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {course.isFree ? (
                         "Free"
                       ) : (
                         <>{course.price?.toLocaleString()} CFA</>
                       )}
                     </span>
-                    <span className="text-blue-600 font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                    <span 
+                      className="font-semibold flex items-center gap-1 group-hover:gap-2 transition-all"
+                      style={{ color: "var(--blue)" }}
+                    >
                       View Course
                       <ArrowRight className="w-4 h-4" />
                     </span>
@@ -132,7 +165,10 @@ export default function LearnSection() {
         <div className="text-center">
           <Link
             href="/learn"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
+            className="inline-flex items-center gap-2 px-8 py-4 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
+            style={{
+              background: "linear-gradient(135deg, var(--blue), var(--purple))",
+            }}
           >
             <BookOpen className="w-5 h-5" />
             Explore All Courses
@@ -141,7 +177,10 @@ export default function LearnSection() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 pt-12 border-t border-gray-200">
+        <div 
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 pt-12"
+          style={{ borderTop: "1px solid var(--divider)" }}
+        >
           {[
             { value: "50+", label: "Courses Available" },
             { value: "10K+", label: "Active Learners" },
@@ -149,10 +188,18 @@ export default function LearnSection() {
             { value: "4.8/5", label: "Average Rating" },
           ].map((stat, idx) => (
             <div key={idx} className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-1">
+              <div 
+                className="text-3xl font-bold mb-1"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {stat.value}
               </div>
-              <div className="text-sm text-gray-600">{stat.label}</div>
+              <div 
+                className="text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {stat.label}
+              </div>
             </div>
           ))}
         </div>

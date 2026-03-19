@@ -14,7 +14,8 @@ import {
   PlayCircle,
   FileText,
   Loader2,
-  Lock
+  Lock,
+  ChevronLeft
 } from "lucide-react";
 
 interface CourseDetail {
@@ -24,19 +25,19 @@ interface CourseDetail {
   thumbnail: string | null;
   category: string;
   level: string;
-  price: number;
+  price?: number;
   isFree: boolean;
+  duration: number;
+  students: number;
   sections: {
     id: string;
     title: string;
-    order: number;
     lessons: {
       id: string;
       title: string;
       type: string;
-      duration: number | null;
+      duration: number;
       isFree: boolean;
-      order: number;
     }[];
   }[];
   _count: {
@@ -105,7 +106,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--blue)" }} />
       </div>
     );
   }
@@ -114,7 +115,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Course not found</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Course not found</h2>
           <Button onClick={() => router.push("/learn")}>Back to Courses</Button>
         </div>
       </div>
@@ -127,8 +128,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen py-12" style={{ background: "var(--background)" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Button 
+          variant="outline" 
+          onClick={() => router.push("/learn")}
+          className="mb-6"
+        >
+          <ChevronLeft className="w-4 h-4 mr-2" />
+          Back to Courses
+        </Button>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="h-96 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-6 relative overflow-hidden">
@@ -141,34 +151,39 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               )}
             </div>
 
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">{course.title}</h1>
-            <p className="text-lg text-gray-600 mb-6">{course.description}</p>
+            <h1 className="text-4xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>{course.title}</h1>
+            <p className="text-lg mb-6" style={{ color: "var(--text-secondary)" }}>{course.description}</p>
 
             <div className="flex items-center gap-4 mb-8">
               <Badge>{course.category}</Badge>
               <Badge variant="outline">{course.level}</Badge>
-              <div className="flex items-center gap-1 text-gray-600">
+              <div className="flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
                 <Users className="w-4 h-4" />
                 {course._count.enrollments} students
               </div>
-              <div className="flex items-center gap-1 text-gray-600">
+              <div className="flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
                 <Clock className="w-4 h-4" />
                 {totalDuration} mins
               </div>
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900">Course Curriculum</h2>
+              <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Course Curriculum</h2>
               {course.sections.map((section) => (
                 <Card key={section.id} className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  <h3 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
                     {section.title}
                   </h3>
                   <div className="space-y-2">
                     {section.lessons.map((lesson) => (
                       <div 
                         key={lesson.id}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
+                        className="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors"
+                        style={{ 
+                          color: "var(--text-primary)"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--hover-bg)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                         onClick={() => {
                           if (course.isEnrolled || lesson.isFree) {
                             router.push(`/learn/${id}/lesson/${lesson.id}`);
@@ -177,15 +192,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                       >
                         <div className="flex items-center gap-3">
                           {getLessonIcon(lesson.type)}
-                          <span className="text-gray-900">{lesson.title}</span>
+                          <span>{lesson.title}</span>
                           {lesson.isFree && <Badge variant="outline">Preview</Badge>}
                         </div>
                         <div className="flex items-center gap-2">
                           {lesson.duration && (
-                            <span className="text-sm text-gray-500">{lesson.duration} min</span>
+                            <span className="text-sm" style={{ color: "var(--text-muted)" }}>{lesson.duration} min</span>
                           )}
                           {!course.isEnrolled && !lesson.isFree && (
-                            <Lock className="w-4 h-4 text-gray-400" />
+                            <Lock className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
                           )}
                         </div>
                       </div>
@@ -199,11 +214,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-6">
               <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-gray-900 mb-2">
-                  {course.isFree ? "Free" : `${course.price.toLocaleString()} CFA`}
+                <div className="text-4xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                  {course.isFree ? "Free" : `${(course.price || 0).toLocaleString()} CFA`}
                 </div>
                 {!course.isFree && (
-                  <p className="text-sm text-gray-600">One-time payment</p>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>One-time payment</p>
                 )}
               </div>
 
@@ -238,20 +253,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Total Lessons</span>
-                  <span className="font-semibold">{totalLessons}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Total Lessons</span>
+                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{totalLessons}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Duration</span>
-                  <span className="font-semibold">{Math.round(totalDuration / 60)}h {totalDuration % 60}m</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Duration</span>
+                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{Math.round(totalDuration / 60)}h {totalDuration % 60}m</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Level</span>
-                  <span className="font-semibold">{course.level}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Level</span>
+                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{course.level}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Students</span>
-                  <span className="font-semibold">{course._count.enrollments}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Students</span>
+                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{course._count.enrollments}</span>
                 </div>
               </div>
             </Card>
