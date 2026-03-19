@@ -161,7 +161,7 @@ export default function LearnPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-gray-900">
-                      {course.isFree ? "Free" : `${course.price.toLocaleString()} CFA`}
+                      {course.isFree ? "Free" : `${(course.price || 0).toLocaleString()} CFA`}
                     </span>
                     <Button onClick={() => router.push(`/learn/${course.id}`)}>
                       View Course
