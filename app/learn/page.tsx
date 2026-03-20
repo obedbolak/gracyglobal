@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -14,7 +14,7 @@ import {
 import { COURSES, COURSE_CATEGORIES } from "@/data/courses";
 import { useCurrency } from "@/hooks/useCurrency";
 
-export default function LearnPage() {
+function LearnPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
@@ -245,5 +245,20 @@ export default function LearnPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LearnPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+        <div className="text-center">
+          <BookOpen className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "var(--blue)" }} />
+          <p style={{ color: "var(--text-secondary)" }}>Loading courses...</p>
+        </div>
+      </div>
+    }>
+      <LearnPageContent />
+    </Suspense>
   );
 }
