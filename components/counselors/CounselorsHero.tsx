@@ -1,10 +1,90 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, Clock, Star } from "lucide-react";
 
 export default function CounselorsHero() {
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [hasCompletedInitial, setHasCompletedInitial] = useState(false);
+  const [isWaitingForNextCycle, setIsWaitingForNextCycle] = useState(false);
+  
+  const phrases = [
+    "Shouldn't Be Scary.",
+    "Can Change Everything.",
+    "Is Your First Step.",
+    "Shows Real Strength.",
+  ];
+  
+  const staticText = '"We Need to Talk" ';
+  
+  // Initial typing animation
+  useEffect(() => {
+    if (hasCompletedInitial) return;
+    
+    let index = 0;
+    const fullInitialText = staticText + phrases[0];
+    
+    const typingInterval = setInterval(() => {
+      if (index <= fullInitialText.length) {
+        setDisplayedText(fullInitialText.slice(0, index));
+        index++;
+      } else {
+        clearInterval(typingInterval);
+        setHasCompletedInitial(true);
+        // Wait 2 seconds before starting deletion
+        setTimeout(() => {
+          setIsDeleting(true);
+        }, 2000);
+      }
+    }, 50);
+
+    return () => clearInterval(typingInterval);
+  }, [hasCompletedInitial]);
+  
+  // Handle rotating text effect
+  useEffect(() => {
+    if (!hasCompletedInitial || isWaitingForNextCycle) return;
+    
+    const currentPhrase = phrases[currentPhraseIndex];
+    const dynamicPart = displayedText.slice(staticText.length);
+    
+    const timeout = setTimeout(() => {
+      if (isDeleting) {
+        // Delete current phrase
+        if (dynamicPart.length > 0) {
+          setDisplayedText(staticText + dynamicPart.slice(0, -1));
+        } else {
+          // Finished deleting, move to next phrase
+          setIsDeleting(false);
+          const nextIndex = (currentPhraseIndex + 1) % phrases.length;
+          setCurrentPhraseIndex(nextIndex);
+          
+          // If we've completed a full cycle (back to index 0), wait 30 seconds
+          if (nextIndex === 0) {
+            setIsWaitingForNextCycle(true);
+            setTimeout(() => {
+              setIsWaitingForNextCycle(false);
+            }, 30000); // 30 seconds
+          }
+        }
+      } else {
+        // Type new phrase
+        const targetPhrase = phrases[currentPhraseIndex];
+        if (dynamicPart.length < targetPhrase.length) {
+          setDisplayedText(staticText + targetPhrase.slice(0, dynamicPart.length + 1));
+        } else {
+          // Finished typing, wait before deleting
+          setTimeout(() => setIsDeleting(true), 2000);
+        }
+      }
+    }, isDeleting ? 30 : 50);
+    
+    return () => clearTimeout(timeout);
+  }, [displayedText, isDeleting, currentPhraseIndex, hasCompletedInitial, phrases, isWaitingForNextCycle]);
   return (
     <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
       {/* Background Image - Animated - Behind Hero Text */}
@@ -62,27 +142,51 @@ export default function CounselorsHero() {
             Professional Counseling
           </motion.div>
 
-          {/* Headline */}
+          {/* Headline with Typing Effect */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, delay: 0.1 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight min-h-[120px] sm:min-h-[140px] lg:min-h-[160px]"
             style={{ color: "var(--text-primary)" }}
           >
-            "We Need to Talk"{" "}
-            <span
-              style={{
-                background:
-                  "linear-gradient(90deg, var(--purple-light), var(--blue-light))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+            {displayedText.includes('"We Need to Talk"') ? (
+              <>
+                "We Need to Talk"{" "}
+                {displayedText.length > 18 && (
+                  <span
+                    style={{
+                      background:
+                        "linear-gradient(90deg, var(--purple-light), var(--blue-light))",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {displayedText.slice(18)}
+                  </span>
+                )}
+              </>
+            ) : (
+              displayedText
+            )}
+            <span 
+              className="inline-block w-0.5 h-[0.9em] ml-1"
+              style={{ 
+                background: "var(--purple)",
+                verticalAlign: "middle",
+                animation: "blink 1s infinite"
               }}
-            >
-              Shouldn't Be Scary.
-            </span>
+            />
           </motion.h1>
+          
+          {/* Blinking cursor animation */}
+          <style jsx>{`
+            @keyframes blink {
+              0%, 50% { opacity: 1; }
+              51%, 100% { opacity: 0; }
+            }
+          `}</style>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
