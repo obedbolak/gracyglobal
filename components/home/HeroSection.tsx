@@ -384,6 +384,23 @@ export default function HeroSection() {
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
+  
+  // Typing effect states
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [hasCompletedInitial, setHasCompletedInitial] = useState(false);
+  const [isWaitingForNextCycle, setIsWaitingForNextCycle] = useState(false);
+  
+  const phrases = [
+    "Creating Opportunities.",
+    "Building Futures.",
+    "Connecting People.",
+    "Driving Innovation.",
+  ];
+  
+  const staticText = "Empowering Lives. ";
+  const lastLine = "Transforming Communities.";
 
   const go = useCallback((next: number, direction: number) => {
     setDir(direction);
@@ -399,6 +416,71 @@ export default function HeroSection() {
     const t = setInterval(() => go(active + 1, 1), 5000);
     return () => clearInterval(t);
   }, [active, paused, go]);
+  
+  // Initial typing animation
+  useEffect(() => {
+    if (hasCompletedInitial) return;
+    
+    let index = 0;
+    const fullInitialText = staticText + phrases[0];
+    
+    const typingInterval = setInterval(() => {
+      if (index <= fullInitialText.length) {
+        setDisplayedText(fullInitialText.slice(0, index));
+        index++;
+      } else {
+        clearInterval(typingInterval);
+        setHasCompletedInitial(true);
+        // Wait 2 seconds before starting deletion
+        setTimeout(() => {
+          setIsDeleting(true);
+        }, 2000);
+      }
+    }, 50);
+
+    return () => clearInterval(typingInterval);
+  }, [hasCompletedInitial]);
+  
+  // Handle rotating text effect
+  useEffect(() => {
+    if (!hasCompletedInitial || isWaitingForNextCycle) return;
+    
+    const currentPhrase = phrases[currentPhraseIndex];
+    const dynamicPart = displayedText.slice(staticText.length);
+    
+    const timeout = setTimeout(() => {
+      if (isDeleting) {
+        // Delete current phrase
+        if (dynamicPart.length > 0) {
+          setDisplayedText(staticText + dynamicPart.slice(0, -1));
+        } else {
+          // Finished deleting, move to next phrase
+          setIsDeleting(false);
+          const nextIndex = (currentPhraseIndex + 1) % phrases.length;
+          setCurrentPhraseIndex(nextIndex);
+          
+          // If we've completed a full cycle (back to index 0), wait 30 seconds
+          if (nextIndex === 0) {
+            setIsWaitingForNextCycle(true);
+            setTimeout(() => {
+              setIsWaitingForNextCycle(false);
+            }, 30000); // 30 seconds
+          }
+        }
+      } else {
+        // Type new phrase
+        const targetPhrase = phrases[currentPhraseIndex];
+        if (dynamicPart.length < targetPhrase.length) {
+          setDisplayedText(staticText + targetPhrase.slice(0, dynamicPart.length + 1));
+        } else {
+          // Finished typing, wait before deleting
+          setTimeout(() => setIsDeleting(true), 2000);
+        }
+      }
+    }, isDeleting ? 30 : 50);
+    
+    return () => clearTimeout(timeout);
+  }, [displayedText, isDeleting, currentPhraseIndex, hasCompletedInitial, phrases, isWaitingForNextCycle]);
 
   const slide = slides[active];
   const Icon = slide.icon;
@@ -485,26 +567,61 @@ export default function HeroSection() {
           </div>
 
           <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight min-h-[180px] sm:min-h-[200px] lg:min-h-[220px]"
             style={{ color: "var(--text-primary)" }}
           >
-            Empowering Lives.{" "}
-            <span
-              style={{
-                background:
-                  "linear-gradient(90deg, var(--purple-light), var(--scarlet-light), var(--blue-light))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Creating Opportunities.
-            </span>
-            <br />
-            <span style={{ color: "var(--text-secondary)" }}>
-              Transforming Communities.
-            </span>
+            {displayedText.includes(staticText.trim()) ? (
+              <>
+                Empowering Lives.{" "}
+                <br />
+                {displayedText.length > staticText.length && (
+                  <span
+                    style={{
+                      background:
+                        "linear-gradient(90deg, var(--purple-light), var(--scarlet-light), var(--blue-light))",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {displayedText.slice(staticText.length)}
+                  </span>
+                )}
+                <span 
+                  className="inline-block w-0.5 h-[0.9em] ml-1"
+                  style={{ 
+                    background: "var(--purple)",
+                    verticalAlign: "middle",
+                    animation: "blink 1s infinite"
+                  }}
+                />
+                <br />
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {lastLine}
+                </span>
+              </>
+            ) : (
+              <>
+                {displayedText}
+                <span 
+                  className="inline-block w-0.5 h-[0.9em] ml-1"
+                  style={{ 
+                    background: "var(--purple)",
+                    verticalAlign: "middle",
+                    animation: "blink 1s infinite"
+                  }}
+                />
+              </>
+            )}
           </h1>
+          
+          {/* Blinking cursor animation */}
+          <style jsx>{`
+            @keyframes blink {
+              0%, 50% { opacity: 1; }
+              51%, 100% { opacity: 0; }
+            }
+          `}</style>
 
           <p
             className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-10"
