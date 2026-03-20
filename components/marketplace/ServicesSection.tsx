@@ -16,16 +16,25 @@ export default function ServicesSection() {
     : services.filter(s => s.group === selectedGroup);
 
   const getPricingDisplay = (service: typeof services[0]) => {
-    const { pricing } = service;
+    // Get the most popular option, or the first option if none marked as popular
+    const displayOption = service.options.find(opt => opt.popular) || service.options[0];
+    if (!displayOption) return "Contact for pricing";
+    
+    const { pricing } = displayOption;
     const displayAmount = currencyLoading ? pricing.amount : convert(pricing.amount);
     
     if (pricing.type === "monthly") {
-      return `${currency.symbol} ${displayAmount.toLocaleString()}/mo`;
+      return `${currency.symbol}${displayAmount.toLocaleString()}/mo`;
     } else if (pricing.type === "per-session") {
-      return `${currency.symbol} ${displayAmount.toLocaleString()}${pricing.label ? ` ${pricing.label}` : ""}`;
+      return `${currency.symbol}${displayAmount.toLocaleString()}${pricing.label ? ` ${pricing.label}` : ""}`;
     } else {
-      return `${currency.symbol} ${displayAmount.toLocaleString()}${pricing.label ? ` ${pricing.label}` : ""}`;
+      return `${currency.symbol}${displayAmount.toLocaleString()}${pricing.label ? ` ${pricing.label}` : ""}`;
     }
+  };
+
+  const getBasePricing = (service: typeof services[0]) => {
+    const displayOption = service.options.find(opt => opt.popular) || service.options[0];
+    return displayOption?.pricing.amount || 0;
   };
 
   return (
@@ -218,7 +227,7 @@ export default function ServicesSection() {
                     {getPricingDisplay(service)}
                   </span>
                   <span className="text-[10px] font-light" style={{ color: "var(--text-disabled)" }}>
-                    CFA {service.pricing.amount.toLocaleString()}
+                    CFA {getBasePricing(service).toLocaleString()}
                   </span>
                 </div>
                 <Link
