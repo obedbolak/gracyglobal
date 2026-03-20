@@ -2,15 +2,18 @@
 
 import { use, useState } from "react";
 import { getServiceById } from "@/data/services";
-import { Star, Clock, MapPin, Check, ChevronLeft, Calendar } from "lucide-react";
+import { Star, Clock, Check, ChevronLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function ServiceBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const service = getServiceById(id);
+  const { convert } = useCurrency();
 
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -37,10 +40,6 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
       </div>
     );
   }
-
-  const formatPrice = (amount: number) => {
-    return `₦${(amount / 1000).toFixed(0)}k`;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +140,7 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
 
                 {/* Includes */}
                 {service.includes && service.includes.length > 0 && (
-                  <div className="mb-6">
+                  <div>
                     <h3 className="text-sm font-bold mb-3" style={{ color: "var(--text-primary)" }}>
                       What's Included:
                     </h3>
@@ -157,25 +156,69 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
                     </div>
                   </div>
                 )}
-
-                {/* Pricing */}
-                <div className="p-4 rounded-xl" style={{ background: "var(--glass-bg-subtle)", border: "1px solid var(--glass-border)" }}>
-                  <div className="text-3xl font-black mb-1" style={{ color: "var(--text-primary)" }}>
-                    {formatPrice(service.pricing.amount)}
-                  </div>
-                  <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    {service.pricing.type === "monthly" && "per month"}
-                    {service.pricing.type === "one-time" && service.pricing.label}
-                    {service.pricing.type === "per-session" && service.pricing.label}
-                  </div>
-                  {service.pricing.yearlyAmount && (
-                    <div className="text-xs mt-2" style={{ color: "var(--green)" }}>
-                      Save {formatPrice(service.pricing.amount * 12 - service.pricing.yearlyAmount)} with yearly plan
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
+
+            {/* Service Options / Pricing Tiers */}
+            {service.options && service.options.length > 0 && (
+              <div className="rounded-2xl p-6" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
+                <h3 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
+                  Choose Your Plan
+                </h3>
+                <div className="space-y-3">
+                  {service.options.map((option) => (
+                    <div
+                      key={option.id}
+                      onClick={() => setSelectedOption(option.id)}
+                      className="p-4 rounded-xl cursor-pointer transition-all"
+                      style={{
+                        background: selectedOption === option.id ? "var(--glass-bg-subtle)" : "transparent",
+                        border: `2px solid ${selectedOption === option.id ? "var(--blue)" : "var(--glass-border)"}`,
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-bold" style={{ color: "var(--text-primary)" }}>
+                              {option.name}
+                            </h4>
+                            {option.popular && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                                style={{ background: "var(--info-bg)", color: "var(--blue)" }}
+                              >
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+                            {option.description}
+                          </p>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
+                              {convert(option.pricing.amount)}
+                            </span>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                              {option.pricing.type === "monthly" && "per month"}
+                              {option.pricing.type === "one-time" && option.pricing.label}
+                              {option.pricing.type === "per-session" && option.pricing.label}
+                            </span>
+                          </div>
+                          {option.pricing.yearlyAmount && (
+                            <p className="text-xs mt-1" style={{ color: "var(--green)" }}>
+                              Save {convert(option.pricing.amount * 12 - option.pricing.yearlyAmount)} with yearly plan
+                            </p>
+                          )}
+                        </div>
+                        {selectedOption === option.id && (
+                          <CheckCircle2 size={24} style={{ color: "var(--blue)" }} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Booking Form */}
@@ -325,13 +368,14 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
+                  disabled={!selectedOption}
+                  className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(135deg, var(--purple), var(--blue))",
-                    boxShadow: "0 4px 14px rgba(123,47,190,0.35)",
+                    background: selectedOption ? "linear-gradient(135deg, var(--purple), var(--blue))" : "var(--glass-bg)",
+                    boxShadow: selectedOption ? "0 4px 14px rgba(123,47,190,0.35)" : "none",
                   }}
                 >
-                  Confirm Booking
+                  {selectedOption ? "Confirm Booking" : "Select a plan to continue"}
                 </button>
 
                 <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>

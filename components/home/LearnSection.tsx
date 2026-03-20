@@ -1,47 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, Users, ArrowRight } from "lucide-react";
-
-const FEATURED_COURSES = [
-  {
-    id: "1",
-    title: "Introduction to Web Development",
-    description: "Learn HTML, CSS, and JavaScript from scratch",
-    category: "Technology",
-    level: "Beginner",
-    duration: 240,
-    students: 1250,
-    isFree: true,
-    thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=300&fit=crop",
-  },
-  {
-    id: "2",
-    title: "Digital Marketing Essentials",
-    description: "Master social media, SEO, and content marketing",
-    category: "Marketing",
-    level: "Intermediate",
-    duration: 180,
-    students: 890,
-    isFree: false,
-    price: 15000,
-    thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-  },
-  {
-    id: "3",
-    title: "Entrepreneurship in Africa",
-    description: "Build and scale your business across African markets",
-    category: "Business",
-    level: "Intermediate",
-    duration: 320,
-    students: 2100,
-    isFree: false,
-    price: 25000,
-    thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop",
-  },
-];
+import { BookOpen, ArrowRight } from "lucide-react";
+import { COURSE_CATEGORIES, COURSES } from "@/data/courses";
 
 export default function LearnSection() {
   return (
@@ -76,89 +37,56 @@ export default function LearnSection() {
           </p>
         </div>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {FEATURED_COURSES.map((course) => (
-            <Link key={course.id} href={`/learn/${course.id}`}>
-              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full group">
-                <div className="relative h-48 overflow-hidden">
-                  <div
-                    className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 group-hover:scale-110 transition-transform duration-300"
-                    style={{
-                      backgroundImage: `url(${course.thumbnail})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
-                  />
-                  {course.isFree && (
-                    <Badge 
-                      className="absolute top-4 right-4 text-white"
-                      style={{ background: "var(--success)" }}
-                    >
-                      Free
-                    </Badge>
-                  )}
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {COURSE_CATEGORIES.map((category) => {
+            const categoryCoursesCount = COURSES.filter(c => c.category === category.id).length;
+            
+            return (
+            <Link key={category.id} href={`/learn?category=${category.id}`}>
+              <div 
+                className="p-6 rounded-2xl transition-all duration-300 h-full group hover:scale-105"
+                style={{ 
+                  background: "var(--glass-bg)", 
+                  border: "1px solid var(--glass-border)"
+                }}
+              >
+                <div 
+                  className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl mb-4 transition-transform group-hover:scale-110"
+                  style={{ 
+                    background: `${category.color}15`,
+                    border: `2px solid ${category.color}30`
+                  }}
+                >
+                  {category.icon}
                 </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="outline" className="text-xs">
-                      {course.category}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {course.level}
-                    </Badge>
-                  </div>
-                  <h3 
-                    className="text-xl font-semibold mb-2 group-hover:transition-colors"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {course.title}
-                  </h3>
-                  <p 
-                    className="text-sm mb-4 line-clamp-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {course.description}
-                  </p>
-                  <div 
-                    className="flex items-center justify-between text-sm mb-4"
+                <h3 
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {category.name}
+                </h3>
+                <p 
+                  className="text-sm mb-4 line-clamp-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {category.description}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span 
+                    className="text-sm font-semibold"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{Math.round(course.duration / 60)}h</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{course.students.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div 
-                    className="flex items-center justify-between pt-4"
-                    style={{ borderTop: "1px solid var(--divider)" }}
-                  >
-                    <span 
-                      className="text-xl font-bold"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {course.isFree ? (
-                        "Free"
-                      ) : (
-                        <>{course.price?.toLocaleString()} CFA</>
-                      )}
-                    </span>
-                    <span 
-                      className="font-semibold flex items-center gap-1 group-hover:gap-2 transition-all"
-                      style={{ color: "var(--blue)" }}
-                    >
-                      View Course
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
-                  </div>
+                    {categoryCoursesCount} {categoryCoursesCount === 1 ? 'Course' : 'Courses'}
+                  </span>
+                  <ArrowRight 
+                    className="w-5 h-5 group-hover:translate-x-1 transition-transform" 
+                    style={{ color: category.color }}
+                  />
                 </div>
-              </Card>
+              </div>
             </Link>
-          ))}
+          )})}
         </div>
 
         {/* CTA */}

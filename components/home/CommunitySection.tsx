@@ -7,21 +7,20 @@ import { SYSTEMS } from "@/data/community";
 
 // System images from Unsplash
 const SYSTEM_IMAGES: Record<string, string> = {
-  "human-flourishing": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop",
-  "knowledge-skills": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=400&fit=crop",
-  "economic-empowerment": "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop",
-  "civic-leadership": "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=400&fit=crop",
-  "media-narrative": "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=400&fit=crop",
-  "creativity-culture": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=400&fit=crop",
-  "technology-intelligence": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop",
-};
-
-// Get badge variant based on system color
-const getBadgeVariant = (color: string) => {
-  if (color.includes('#dc143c') || color.includes('scarlet')) return 'scarlet' as const;
-  if (color.includes('#1a3adb') || color.includes('blue')) return 'blue' as const;
-  if (color.includes('#7b2fbe') || color.includes('purple')) return 'purple' as const;
-  return 'blue' as const;
+  "human-flourishing":
+    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop",
+  "knowledge-skills":
+    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=400&fit=crop",
+  "economic-empowerment":
+    "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop",
+  "civic-leadership":
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=400&fit=crop",
+  "media-narrative":
+    "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=400&fit=crop",
+  "creativity-culture":
+    "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=400&fit=crop",
+  "technology-intelligence":
+    "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop",
 };
 
 export default function CommunitySection() {
@@ -40,7 +39,8 @@ export default function CommunitySection() {
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                  background:
+                    "linear-gradient(135deg, var(--scarlet), var(--purple))",
                 }}
               >
                 <Heart size={14} className="text-white" />
@@ -64,8 +64,10 @@ export default function CommunitySection() {
         {/* Seven Systems Cards - 4 per row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {SYSTEMS.map((system) => {
-            const imageUrl = SYSTEM_IMAGES[system.id] || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop";
-            
+            const imageUrl =
+              SYSTEM_IMAGES[system.id] ||
+              "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop";
+
             return (
               <Link
                 key={system.id}
@@ -81,7 +83,7 @@ export default function CommunitySection() {
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     />
                     {/* Gradient overlay */}
-                    <div 
+                    <div
                       className="absolute inset-0"
                       style={{ background: system.gradient, opacity: 0.75 }}
                     />

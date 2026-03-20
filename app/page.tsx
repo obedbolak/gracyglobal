@@ -7,6 +7,7 @@ import CounselorsSection from "@/components/home/CounselorsSection";
 import JobsSection from "@/components/home/JobsSection";
 import CommunitySection from "@/components/home/CommunitySection";
 import MarketplaceSection from "@/components/home/MarketplaceSection";
+import ServicesSection from "@/components/home/ServicesSection";
 import LearnSection from "@/components/home/LearnSection";
 
 export default function HomePage() {
@@ -31,6 +32,9 @@ export default function HomePage() {
 
       {/* Learn Section - Full Width */}
       <LearnSection />
+
+      {/* Services Section - Full Width */}
+      <ServicesSection />
     </main>
   );
 }

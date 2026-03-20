@@ -1,20 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { services, SERVICE_CATEGORY_GROUPS, ServiceCategoryGroup } from "@/data/services";
 import { Star, Clock, MapPin, Check } from "lucide-react";
 import Link from "next/link";
 
 export default function ServicesPage() {
-  const [selectedGroup, setSelectedGroup] = useState<ServiceCategoryGroup | "All">("All");
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+  
+  const [selectedGroup, setSelectedGroup] = useState<ServiceCategoryGroup | "All">(
+    (categoryParam as ServiceCategoryGroup) || "All"
+  );
+
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedGroup(categoryParam as ServiceCategoryGroup);
+    }
+  }, [categoryParam]);
 
   const filteredServices = selectedGroup === "All" 
     ? services 
     : services.filter(s => s.group === selectedGroup);
-
-  const formatPrice = (amount: number) => {
-    return `₦${(amount / 1000).toFixed(0)}k`;
-  };
 
   return (
     <div className="min-h-screen pt-24 pb-16" style={{ background: "var(--background)" }}>
@@ -25,7 +33,7 @@ export default function ServicesPage() {
             Book Professional Services
           </h1>
           <p className="text-lg max-w-2xl mx-auto" style={{ color: "var(--text-secondary)" }}>
-            From home care to beauty services, book trusted professionals for all your needs
+            From home care to beauty services, explore our professional service categories
           </p>
         </div>
 
@@ -123,7 +131,7 @@ export default function ServicesPage() {
                 {/* Includes */}
                 {service.includes && service.includes.length > 0 && (
                   <div className="mb-4 space-y-1">
-                    {service.includes.slice(0, 2).map((item, idx) => (
+                    {service.includes.slice(0, 3).map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <Check size={14} className="mt-0.5" style={{ color: "var(--green)" }} />
                         <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
@@ -134,26 +142,16 @@ export default function ServicesPage() {
                   </div>
                 )}
 
-                {/* Price & CTA */}
-                <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--divider)" }}>
-                  <div>
-                    <div className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
-                      {formatPrice(service.pricing.amount)}
-                    </div>
-                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {service.pricing.type === "monthly" && "per month"}
-                      {service.pricing.type === "one-time" && service.pricing.label}
-                      {service.pricing.type === "per-session" && service.pricing.label}
-                    </div>
-                  </div>
+                {/* CTA */}
+                <div className="pt-4" style={{ borderTop: "1px solid var(--divider)" }}>
                   <Link
                     href={`/services/${service.id}`}
-                    className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
+                    className="w-full block text-center px-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
                     style={{
                       background: "linear-gradient(135deg, var(--purple), var(--blue))",
                     }}
                   >
-                    Book Now
+                    View Service & Book
                   </Link>
                 </div>
               </div>
