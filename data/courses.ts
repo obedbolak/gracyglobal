@@ -58,8 +58,6 @@ export const COURSE_CATEGORIES = [
 
 export type CourseCategory = (typeof COURSE_CATEGORIES)[number]["id"];
 
-export type CourseCategory = (typeof COURSE_CATEGORIES)[number]["id"];
-
 // ─── Course Interface ─────────────────────────────────────────────────────────
 
 export interface CourseData {
