@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { services, SERVICE_CATEGORY_GROUPS, ServiceCategoryGroup } from "@/data/services";
 import { Star, Clock, MapPin, Check } from "lucide-react";
 import Link from "next/link";
 
-export default function ServicesPage() {
+function ServicesPageContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
   
@@ -168,5 +168,22 @@ export default function ServicesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ServicesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "var(--blue)" }}>
+            <Star className="w-16 h-16" />
+          </div>
+          <p style={{ color: "var(--text-secondary)" }}>Loading services...</p>
+        </div>
+      </div>
+    }>
+      <ServicesPageContent />
+    </Suspense>
   );
 }
