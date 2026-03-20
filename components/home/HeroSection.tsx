@@ -409,6 +409,18 @@ export default function HeroSection() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
+      {/* Background Image - Animated - Behind Hero Content */}
+      <div 
+        className="absolute left-0 top-1/2 -translate-y-1/2 w-1/2 h-[700px] pointer-events-none z-[5] animate-float"
+        style={{
+          backgroundImage: "url(/images/community.png)",
+          backgroundSize: "contain",
+          backgroundPosition: "left center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.15,
+        }}
+      />
+      
       {/* Animated gradient background */}
       <AnimatePresence mode="sync">
         <motion.div

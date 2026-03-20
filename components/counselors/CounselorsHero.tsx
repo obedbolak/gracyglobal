@@ -7,6 +7,18 @@ import { ArrowRight, Shield, Clock, Star } from "lucide-react";
 export default function CounselorsHero() {
   return (
     <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
+      {/* Background Image - Animated - Behind Hero Text */}
+      <div 
+        className="absolute right-0 top-1/2 -translate-y-1/2 w-1/2 h-[600px] pointer-events-none z-0 animate-float"
+        style={{
+          backgroundImage: "url(/images/counsel.png)",
+          backgroundSize: "contain",
+          backgroundPosition: "right center",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.08,
+        }}
+      />
+      
       {/* Glow blobs */}
       <div
         className="absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full pointer-events-none"
