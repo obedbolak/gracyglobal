@@ -24,12 +24,13 @@ export const SERVICE_CATEGORY_GROUPS = [
       "Home Delivery",
       "Grocery & Personal Shopping",
       "Errand & Personal Assistance",
+      "Housing & Property Services",
     ],
   },
   {
     group: "Transport",
     icon: "🚗",
-    categories: ["Ride & Transport"],
+    categories: ["Ride & Transport", "Auto Repair & Roadside Assistance"],
   },
   {
     group: "Home Comfort",
@@ -39,7 +40,7 @@ export const SERVICE_CATEGORY_GROUPS = [
   {
     group: "Home Management",
     icon: "🧹",
-    categories: ["Home Cleaning & Maintenance", "Home Support"],
+    categories: ["Home Cleaning & Maintenance", "Home Support", "Home Maintenance & Repairs"],
   },
   {
     group: "Care Services",
@@ -55,7 +56,33 @@ export const SERVICE_CATEGORY_GROUPS = [
       "Skincare & Facials",
       "Nail Care",
       "Massage & Wellness Therapy",
+      "Personal Care & Lifestyle",
     ],
+  },
+  {
+    group: "Business & Professional",
+    icon: "💼",
+    categories: ["Business & Professional Services"],
+  },
+  {
+    group: "Technical Services",
+    icon: "💻",
+    categories: ["Technical & Digital Services"],
+  },
+  {
+    group: "Education",
+    icon: "🏫",
+    categories: ["Education & Training"],
+  },
+  {
+    group: "Legal & Administrative",
+    icon: "📄",
+    categories: ["Administrative & Legal Services"],
+  },
+  {
+    group: "Marketplace",
+    icon: "🛍️",
+    categories: ["Marketplace & Sourcing"],
   },
   {
     group: "Priority Access",
@@ -660,6 +687,321 @@ export const services: Service[] = [
         name: "Monthly Wellness",
         description: "4 massage sessions per month",
         pricing: { type: "monthly", amount: 40000, yearlyAmount: 400000 },
+      },
+    ],
+  },
+
+  // ── Housing & Property ──
+  {
+    id: "svc-housing-property",
+    name: "Housing & Property Services",
+    description:
+      "Complete housing support including house hunting, rental search, property inspection, rent negotiation, and relocation assistance.",
+    images: [
+      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80",
+    ],
+    category: "Housing & Property Services",
+    group: "Home & Errand",
+    featured: true,
+    rating: 4.7,
+    reviews: 89,
+    badge: "Relocation",
+    includes: ["House hunting", "Property inspection", "Rent negotiation", "Short-stay apartments", "Relocation support"],
+    availability: "Mon–Sat, 9am–6pm",
+    options: [
+      {
+        id: "housing-search",
+        name: "Property Search",
+        description: "Comprehensive house hunting and rental search assistance",
+        pricing: { type: "one-time", amount: 15000, label: "Per search" },
+      },
+      {
+        id: "housing-inspection",
+        name: "Property Inspection",
+        description: "Professional property inspection and assessment",
+        pricing: { type: "per-session", amount: 8000, label: "Per property" },
+      },
+      {
+        id: "housing-relocation",
+        name: "Full Relocation Package",
+        description: "Complete relocation support including search, inspection, and negotiation",
+        pricing: { type: "one-time", amount: 50000, label: "Per package" },
+        popular: true,
+      },
+    ],
+  },
+
+  // ── Auto Repair & Roadside ──
+  {
+    id: "svc-auto-repair",
+    name: "Auto Repair & Roadside Assistance",
+    description:
+      "Complete auto repair services including mobile mechanics, diagnostics, oil changes, tire services, towing, and emergency roadside assistance.",
+    images: [
+      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=600&q=80",
+    ],
+    category: "Auto Repair & Roadside Assistance",
+    group: "Transport",
+    featured: true,
+    rating: 4.6,
+    reviews: 156,
+    badge: "24/7 Emergency",
+    includes: ["Mobile mechanic", "Car diagnostics", "Oil change", "Tire services", "Towing", "Battery service"],
+    availability: "24/7",
+    options: [
+      {
+        id: "auto-basic",
+        name: "Basic Service",
+        description: "Oil change and basic maintenance",
+        pricing: { type: "per-session", amount: 8000, label: "Per service" },
+      },
+      {
+        id: "auto-diagnostic",
+        name: "Diagnostic & Repair",
+        description: "Full diagnostic and repair service",
+        pricing: { type: "per-session", amount: 15000, label: "Per service" },
+        popular: true,
+      },
+      {
+        id: "auto-emergency",
+        name: "Emergency Roadside",
+        description: "24/7 emergency towing and roadside assistance",
+        pricing: { type: "per-session", amount: 12000, label: "Per call" },
+      },
+    ],
+  },
+
+  // ── Home Maintenance & Repairs ──
+  {
+    id: "svc-home-repairs",
+    name: "Home Maintenance & Repairs",
+    description:
+      "Professional home repair services including plumbing, electrical work, carpentry, AC repair, and generator maintenance.",
+    images: [
+      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
+    ],
+    category: "Home Maintenance & Repairs",
+    group: "Home Management",
+    featured: true,
+    rating: 4.7,
+    reviews: 124,
+    includes: ["Plumbing", "Electrical work", "Carpentry", "AC & fridge repair", "Generator maintenance"],
+    availability: "Mon–Sat, 7am–7pm",
+    options: [
+      {
+        id: "repair-basic",
+        name: "Basic Repair",
+        description: "Single repair service (plumbing, electrical, etc.)",
+        pricing: { type: "per-session", amount: 5000, label: "Per repair" },
+      },
+      {
+        id: "repair-monthly",
+        name: "Monthly Maintenance",
+        description: "Monthly home maintenance package (up to 4 repairs)",
+        pricing: { type: "monthly", amount: 18000, yearlyAmount: 180000 },
+        popular: true,
+      },
+      {
+        id: "repair-emergency",
+        name: "Emergency Repair",
+        description: "Same-day emergency repair service",
+        pricing: { type: "per-session", amount: 10000, label: "Per repair" },
+      },
+    ],
+  },
+
+  // ── Business & Professional ──
+  {
+    id: "svc-business-professional",
+    name: "Business & Professional Services",
+    description:
+      "Professional business services including CV writing, document preparation, business registration, accounting, and digital marketing.",
+    images: [
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80",
+    ],
+    category: "Business & Professional Services",
+    group: "Business & Professional",
+    featured: true,
+    rating: 4.8,
+    reviews: 98,
+    includes: ["CV writing", "Document typing", "Business registration", "Accounting", "Digital marketing"],
+    availability: "Mon–Fri, 8am–6pm",
+    options: [
+      {
+        id: "business-cv",
+        name: "CV Writing",
+        description: "Professional CV and cover letter writing",
+        pricing: { type: "one-time", amount: 10000, label: "Per CV" },
+      },
+      {
+        id: "business-registration",
+        name: "Business Registration",
+        description: "Complete business registration and setup",
+        pricing: { type: "one-time", amount: 50000, label: "Per registration" },
+        popular: true,
+      },
+      {
+        id: "business-monthly",
+        name: "Monthly Accounting",
+        description: "Monthly bookkeeping and accounting services",
+        pricing: { type: "monthly", amount: 30000, yearlyAmount: 300000 },
+      },
+    ],
+  },
+
+  // ── Technical & Digital ──
+  {
+    id: "svc-technical-digital",
+    name: "Technical & Digital Services",
+    description:
+      "Tech support including phone repair, laptop repair, Wi-Fi installation, software installation, and cyber café services.",
+    images: [
+      "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&q=80",
+    ],
+    category: "Technical & Digital Services",
+    group: "Technical Services",
+    featured: true,
+    rating: 4.6,
+    reviews: 142,
+    includes: ["Phone repair", "Laptop repair", "Wi-Fi installation", "Software installation", "Tech support"],
+    availability: "Mon–Sat, 9am–7pm",
+    options: [
+      {
+        id: "tech-repair",
+        name: "Device Repair",
+        description: "Phone or laptop repair service",
+        pricing: { type: "per-session", amount: 8000, label: "Per repair" },
+        popular: true,
+      },
+      {
+        id: "tech-installation",
+        name: "Installation Service",
+        description: "Wi-Fi or software installation",
+        pricing: { type: "per-session", amount: 5000, label: "Per installation" },
+      },
+      {
+        id: "tech-support",
+        name: "Monthly Tech Support",
+        description: "Unlimited tech support and maintenance",
+        pricing: { type: "monthly", amount: 15000, yearlyAmount: 150000 },
+      },
+    ],
+  },
+
+  // ── Education & Training ──
+  {
+    id: "svc-education-training",
+    name: "Education & Training",
+    description:
+      "Professional tutoring and training services including private tutoring, language training, computer training, and exam preparation.",
+    images: [
+      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&q=80",
+    ],
+    category: "Education & Training",
+    group: "Education",
+    featured: true,
+    rating: 4.9,
+    reviews: 167,
+    badge: "Top Rated",
+    includes: ["Private tutoring", "Language training", "Computer training", "Exam prep", "Online courses"],
+    availability: "Mon–Sat, 8am–8pm",
+    options: [
+      {
+        id: "edu-tutoring",
+        name: "Private Tutoring",
+        description: "One-on-one tutoring session",
+        pricing: { type: "per-session", amount: 5000, label: "Per hour" },
+      },
+      {
+        id: "edu-monthly",
+        name: "Monthly Package",
+        description: "8 tutoring sessions per month",
+        pricing: { type: "monthly", amount: 35000, yearlyAmount: 350000 },
+        popular: true,
+      },
+      {
+        id: "edu-exam",
+        name: "Exam Preparation",
+        description: "Intensive exam preparation course",
+        pricing: { type: "one-time", amount: 50000, label: "Per course" },
+      },
+    ],
+  },
+
+  // ── Administrative & Legal ──
+  {
+    id: "svc-admin-legal",
+    name: "Administrative & Legal Services",
+    description:
+      "Professional administrative and legal support including ID/passport processing, visa assistance, legal consultation, and document legalization.",
+    images: [
+      "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&q=80",
+    ],
+    category: "Administrative & Legal Services",
+    group: "Legal & Administrative",
+    featured: true,
+    rating: 4.7,
+    reviews: 76,
+    includes: ["ID/passport processing", "Visa assistance", "Legal consultation", "Document legalization", "Tax support"],
+    availability: "Mon–Fri, 9am–5pm",
+    options: [
+      {
+        id: "admin-document",
+        name: "Document Processing",
+        description: "ID, passport, or visa application assistance",
+        pricing: { type: "one-time", amount: 20000, label: "Per application" },
+      },
+      {
+        id: "admin-legal",
+        name: "Legal Consultation",
+        description: "One-hour legal consultation session",
+        pricing: { type: "per-session", amount: 15000, label: "Per hour" },
+        popular: true,
+      },
+      {
+        id: "admin-package",
+        name: "Full Service Package",
+        description: "Complete document processing and legal support",
+        pricing: { type: "one-time", amount: 75000, label: "Per package" },
+      },
+    ],
+  },
+
+  // ── Marketplace & Sourcing ──
+  {
+    id: "svc-marketplace-sourcing",
+    name: "Marketplace & Sourcing",
+    description:
+      "Product sourcing and marketplace services including price negotiation, import/export help, wholesale sourcing, and second-hand items.",
+    images: [
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80",
+    ],
+    category: "Marketplace & Sourcing",
+    group: "Marketplace",
+    featured: true,
+    rating: 4.6,
+    reviews: 93,
+    includes: ["Product sourcing", "Price negotiation", "Import/export help", "Wholesale sourcing", "Second-hand items"],
+    availability: "Mon–Sat, 9am–6pm",
+    options: [
+      {
+        id: "market-sourcing",
+        name: "Product Sourcing",
+        description: "Find and source specific products",
+        pricing: { type: "per-session", amount: 10000, label: "Per item" },
+      },
+      {
+        id: "market-wholesale",
+        name: "Wholesale Sourcing",
+        description: "Bulk product sourcing and negotiation",
+        pricing: { type: "one-time", amount: 50000, label: "Per order" },
+        popular: true,
+      },
+      {
+        id: "market-import",
+        name: "Import/Export Service",
+        description: "Complete import/export assistance",
+        pricing: { type: "one-time", amount: 100000, label: "Per shipment" },
       },
     ],
   },
