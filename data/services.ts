@@ -30,7 +30,7 @@ export const SERVICE_CATEGORY_GROUPS = [
   {
     group: "Transport",
     icon: "🚗",
-    categories: ["Ride & Transport", "Auto Repair & Roadside Assistance"],
+    categories: ["Ride & Transport", "Car Rental", "Auto Repair & Roadside Assistance"],
   },
   {
     group: "Home Comfort",
@@ -687,6 +687,52 @@ export const services: Service[] = [
         name: "Monthly Wellness",
         description: "4 massage sessions per month",
         pricing: { type: "monthly", amount: 40000, yearlyAmount: 400000 },
+      },
+    ],
+  },
+
+  // ── Car Rental ──
+  {
+    id: "svc-car-rental",
+    name: "Car Rental Service",
+    description:
+      "Flexible car rental options for daily, weekly, or monthly needs. Economy, sedan, SUV, and luxury vehicles available with or without driver.",
+    images: [
+      "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80",
+    ],
+    category: "Car Rental",
+    group: "Transport",
+    featured: true,
+    rating: 4.7,
+    reviews: 187,
+    badge: "Flexible",
+    includes: ["Insurance coverage", "24/7 roadside assistance", "Unlimited mileage", "Fuel options"],
+    availability: "Daily, 24/7",
+    options: [
+      {
+        id: "rental-daily",
+        name: "Daily Rental",
+        description: "Economy or sedan car for one day",
+        pricing: { type: "per-session", amount: 15000, label: "Per day" },
+        popular: true,
+      },
+      {
+        id: "rental-weekly",
+        name: "Weekly Rental",
+        description: "7-day car rental with discounted rate",
+        pricing: { type: "one-time", amount: 90000, label: "Per week" },
+      },
+      {
+        id: "rental-monthly",
+        name: "Monthly Rental",
+        description: "30-day car rental with best rates",
+        pricing: { type: "monthly", amount: 300000, yearlyAmount: 3000000 },
+      },
+      {
+        id: "rental-driver",
+        name: "With Driver",
+        description: "Car rental with professional driver (daily)",
+        pricing: { type: "per-session", amount: 25000, label: "Per day" },
       },
     ],
   },
