@@ -48,6 +48,11 @@ const menuItems = [
     icon: Users,
   },
   {
+    label: "Users",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
     label: "Live Sessions",
     href: "/admin/live-sessions",
     icon: Video,
