@@ -165,7 +165,7 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
                 <h3 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
                   Choose Your Plan
                 </h3>
-                <div className="space-y-3">
+                <div className={service.category === "Housing & Property Services" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-3"}>
                   {service.options.map((option) => (
                     <div
                       key={option.id}
@@ -176,42 +176,42 @@ export default function ServiceBookingPage({ params }: { params: Promise<{ id: s
                         border: `2px solid ${selectedOption === option.id ? "var(--blue)" : "var(--glass-border)"}`,
                       }}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold" style={{ color: "var(--text-primary)" }}>
-                              {option.name}
-                            </h4>
-                            {option.popular && (
-                              <span
-                                className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                                style={{ background: "var(--info-bg)", color: "var(--blue)" }}
-                              >
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>
-                            {option.description}
-                          </p>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
-                              {convert(option.pricing.amount)}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+                            {option.name}
+                          </h4>
+                          {option.popular && (
+                            <span
+                              className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                              style={{ background: "var(--info-bg)", color: "var(--blue)" }}
+                            >
+                              Popular
                             </span>
-                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                              {option.pricing.type === "monthly" && "per month"}
-                              {option.pricing.type === "one-time" && option.pricing.label}
-                              {option.pricing.type === "per-session" && option.pricing.label}
-                            </span>
-                          </div>
-                          {option.pricing.yearlyAmount && (
-                            <p className="text-xs mt-1" style={{ color: "var(--green)" }}>
-                              Save {convert(option.pricing.amount * 12 - option.pricing.yearlyAmount)} with yearly plan
-                            </p>
                           )}
                         </div>
+                        <p className="text-xs mb-3 line-clamp-2" style={{ color: "var(--text-muted)" }}>
+                          {option.description}
+                        </p>
+                        <div className="flex items-baseline gap-2 mb-2">
+                          <span className="text-lg font-black" style={{ color: "var(--text-primary)" }}>
+                            {convert(option.pricing.amount)}
+                          </span>
+                          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                            {option.pricing.type === "monthly" && "per month"}
+                            {option.pricing.type === "one-time" && option.pricing.label}
+                            {option.pricing.type === "per-session" && option.pricing.label}
+                          </span>
+                        </div>
+                        {option.pricing.yearlyAmount && (
+                          <p className="text-xs" style={{ color: "var(--green)" }}>
+                            Save {convert(option.pricing.amount * 12 - option.pricing.yearlyAmount)} yearly
+                          </p>
+                        )}
                         {selectedOption === option.id && (
-                          <CheckCircle2 size={24} style={{ color: "var(--blue)" }} />
+                          <div className="mt-3 flex justify-center">
+                            <CheckCircle2 size={20} style={{ color: "var(--blue)" }} />
+                          </div>
                         )}
                       </div>
                     </div>
