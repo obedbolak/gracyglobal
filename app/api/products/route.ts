@@ -1,21 +1,22 @@
 // app/api/products/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parsePagination } from "@/lib/api";
 
-// ── GET /api/products — list products ────────────────────────────────────────
-// Query params: category, featured, minPrice, maxPrice, search, page, limit
+// ── GET /api/products ─────────────────────────────────────────────────────────
+// Query params: category, group, featured, minPrice, maxPrice, search, sort, page, limit
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
     const { skip, limit, page } = parsePagination(sp);
 
     const category = sp.get("category");
+    const group = sp.get("group");
     const featured = sp.get("featured");
     const search = sp.get("search");
+    const sort = sp.get("sort") ?? "featured";
     const minPrice = sp.get("minPrice")
       ? parseInt(sp.get("minPrice")!)
       : undefined;
@@ -23,16 +24,20 @@ export async function GET(req: NextRequest) {
       ? parseInt(sp.get("maxPrice")!)
       : undefined;
 
+    // ── Where clause ──────────────────────────────────────────────────────────
     const where: any = { active: true, stock: { gt: 0 } };
 
     if (category) where.category = { equals: category, mode: "insensitive" };
+    if (group) where.group = { equals: group, mode: "insensitive" };
     if (featured === "true") where.featured = true;
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
       ];
     }
+
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.price = {
         ...(minPrice !== undefined ? { gte: minPrice } : {}),
@@ -40,13 +45,26 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    // ── Order clause ──────────────────────────────────────────────────────────
+    const orderBy: any[] = (() => {
+      switch (sort) {
+        case "price-asc":
+          return [{ price: "asc" }];
+        case "price-desc":
+          return [{ price: "desc" }];
+        case "newest":
+          return [{ createdAt: "desc" }];
+        case "rating":
+          return [{ rating: "desc" }];
+        case "featured":
+        default:
+          return [{ featured: "desc" }, { createdAt: "desc" }];
+      }
+    })();
+
+    // ── Query ─────────────────────────────────────────────────────────────────
     const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-      }),
+      prisma.product.findMany({ where, skip, take: limit, orderBy }),
       prisma.product.count({ where }),
     ]);
 
@@ -66,33 +84,17 @@ export async function GET(req: NextRequest) {
 // ── POST /api/products — create product (ADMIN ONLY) ─────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    console.log("📦 POST /api/products - Starting...");
-
-    // Check authentication
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      console.log("❌ No session found");
+    if (!session?.user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (session.user.role !== "ADMIN") {
-      console.log("❌ User is not admin:", session.user.role);
+    if (session.user.role !== "ADMIN")
       return NextResponse.json(
-        { error: "Forbidden - Admin access required" },
+        { error: "Forbidden - Admin required" },
         { status: 403 },
       );
-    }
 
     const data = await req.json();
-    console.log("📝 Received data:", {
-      name: data.name,
-      category: data.category,
-      price: data.price,
-      stock: data.stock,
-    });
 
-    // Validate required fields
     if (
       !data.name ||
       !data.description ||
@@ -111,27 +113,25 @@ export async function POST(req: NextRequest) {
         name: data.name,
         description: data.description,
         price: parseInt(data.price),
-        images: data.images || [],
+        images: data.images ?? [],
         category: data.category,
-        group: data.group || "",
+        group: data.group ?? "",
         stock: parseInt(data.stock),
-        featured: data.featured || false,
+        featured: data.featured ?? false,
         active: data.active ?? true,
         rating: 0,
         reviews: 0,
-        badge: data.badge || null,
-        benefits: data.benefits || [],
-        ingredients: data.ingredients || [],
+        badge: data.badge ?? null,
+        benefits: data.benefits ?? [],
+        ingredients: data.ingredients ?? [],
       },
     });
 
-    console.log("✅ Product created:", product.id);
-
     return NextResponse.json({ product }, { status: 201 });
   } catch (error: any) {
-    console.error("❌ Create product error:", error);
+    console.error("[POST /api/products]", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create product" },
+      { error: error.message ?? "Failed to create product" },
       { status: 500 },
     );
   }

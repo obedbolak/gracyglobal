@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, Suspense, useRef } from "react";
+import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,15 +14,17 @@ import {
 } from "lucide-react";
 
 import {
-  products,
   CATEGORY_GROUPS,
   ALL_CATEGORIES,
   type ProductCategory,
   type CategoryGroup,
 } from "@/data/products";
+import { useProducts } from "@/hooks/UseProducts";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
 import ServicesSection from "@/components/marketplace/ServicesSection";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest" | "rating";
 
@@ -34,14 +36,15 @@ const SORT_LABELS: Record<SortOption, string> = {
   rating: "Top Rated",
 };
 
-// All prices in XAF
 const XAF_MIN = 0;
-const XAF_MAX = Math.max(...products.map((p) => p.price));
+const XAF_MAX_DEFAULT = 1_000_000; // used before products load
 
-// ─── Dual range slider ────────────────────────────────────────────────────────
+// ─── Price range slider ───────────────────────────────────────────────────────
+
 function PriceRangeSlider({
   minXAF,
   maxXAF,
+  xafMax,
   onMinChange,
   onMaxChange,
   rate,
@@ -50,24 +53,22 @@ function PriceRangeSlider({
 }: {
   minXAF: number;
   maxXAF: number;
+  xafMax: number;
   onMinChange: (v: number) => void;
   onMaxChange: (v: number) => void;
   rate: number;
   symbol: string;
   loading: boolean;
 }) {
-  const STEP = 500; // XAF step
+  const STEP = 500;
   const toDisplay = (xaf: number) => (loading ? xaf : Math.round(xaf * rate));
-
   const dispMin = toDisplay(minXAF);
   const dispMax = toDisplay(maxXAF);
-
-  const minPct = (minXAF / XAF_MAX) * 100;
-  const maxPct = (maxXAF / XAF_MAX) * 100;
+  const minPct = xafMax > 0 ? (minXAF / xafMax) * 100 : 0;
+  const maxPct = xafMax > 0 ? (maxXAF / xafMax) * 100 : 100;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Live price badges */}
       <div className="flex items-center justify-between">
         <span
           className="text-xs font-bold px-2.5 py-1 rounded-lg"
@@ -92,14 +93,11 @@ function PriceRangeSlider({
         </span>
       </div>
 
-      {/* Slider track */}
       <div className="relative h-6 flex items-center">
-        {/* Grey base */}
         <div
           className="absolute inset-x-0 h-1.5 rounded-full"
           style={{ background: "var(--glass-bg-subtle)" }}
         />
-        {/* Coloured active range */}
         <div
           className="absolute h-1.5 rounded-full pointer-events-none"
           style={{
@@ -109,11 +107,10 @@ function PriceRangeSlider({
           }}
         />
 
-        {/* Min thumb — sits below max when near right edge */}
         <input
           type="range"
           min={XAF_MIN}
-          max={XAF_MAX}
+          max={xafMax}
           step={STEP}
           value={minXAF}
           onChange={(e) => {
@@ -121,13 +118,12 @@ function PriceRangeSlider({
             if (v < maxXAF - STEP) onMinChange(v);
           }}
           className="absolute inset-0 w-full appearance-none bg-transparent cursor-pointer"
-          style={{ zIndex: minXAF >= XAF_MAX - STEP * 2 ? 5 : 3 }}
+          style={{ zIndex: minXAF >= xafMax - STEP * 2 ? 5 : 3 }}
         />
-        {/* Max thumb */}
         <input
           type="range"
           min={XAF_MIN}
-          max={XAF_MAX}
+          max={xafMax}
           step={STEP}
           value={maxXAF}
           onChange={(e) => {
@@ -139,125 +135,122 @@ function PriceRangeSlider({
         />
       </div>
 
-      {/* Min / Max labels */}
       <div
         className="flex items-center justify-between text-[10px]"
         style={{ color: "var(--text-disabled)" }}
       >
         <span>{symbol} 0</span>
         <span>
-          {symbol} {toDisplay(XAF_MAX).toLocaleString()}
+          {symbol} {toDisplay(xafMax).toLocaleString()}
         </span>
       </div>
 
       <style>{`
         input[type="range"] { pointer-events: none; }
         input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          pointer-events: all;
-          width: 20px; height: 20px;
-          border-radius: 50%;
-          background: white;
-          border: 2.5px solid var(--purple);
+          -webkit-appearance: none; pointer-events: all;
+          width: 20px; height: 20px; border-radius: 50%;
+          background: white; border: 2.5px solid var(--purple);
           box-shadow: 0 2px 10px rgba(123,47,190,0.4);
-          cursor: grab;
-          transition: transform 0.1s, box-shadow 0.1s;
+          cursor: grab; transition: transform 0.1s, box-shadow 0.1s;
         }
         input[type="range"]::-webkit-slider-thumb:active {
-          cursor: grabbing;
-          transform: scale(1.2);
+          cursor: grabbing; transform: scale(1.2);
           box-shadow: 0 4px 16px rgba(123,47,190,0.55);
         }
         input[type="range"]::-moz-range-thumb {
-          pointer-events: all;
-          width: 20px; height: 20px;
-          border-radius: 50%;
-          background: white;
+          pointer-events: all; width: 20px; height: 20px;
+          border-radius: 50%; background: white;
           border: 2.5px solid var(--purple);
-          box-shadow: 0 2px 10px rgba(123,47,190,0.4);
-          cursor: grab;
+          box-shadow: 0 2px 10px rgba(123,47,190,0.4); cursor: grab;
         }
       `}</style>
     </div>
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Skeleton card ────────────────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="glass flex flex-col overflow-hidden animate-pulse">
+      <div className="h-52 bg-gray-200 dark:bg-gray-700" />
+      <div className="p-5 flex flex-col gap-3">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+        <div className="flex justify-between items-center mt-2">
+          <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page content ────────────────────────────────────────────────────────
+
 function MarketplacePageContent() {
   const { addToCart, count } = useCart();
   const { convert, rate, currency, loading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
   const topRef = useRef<HTMLDivElement>(null);
 
+  // ── Filter state ───────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState<CategoryGroup | "All">("All");
   const [category, setCategory] = useState<ProductCategory | "All">("All");
   const [sort, setSort] = useState<SortOption>("featured");
   const [minPriceXAF, setMinPriceXAF] = useState(XAF_MIN);
-  const [maxPriceXAF, setMaxPriceXAF] = useState(XAF_MAX);
+  const [maxPriceXAF, setMaxPriceXAF] = useState(XAF_MAX_DEFAULT);
+  const [xafMax, setXafMax] = useState(XAF_MAX_DEFAULT); // ceiling from DB
   const [showFilters, setShowFilters] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
 
-  // Handle URL parameters on mount
+  // ── Fetch from DB via hook ─────────────────────────────────────────────────
+  const { products, total, isLoading, error } = useProducts({
+    search: search || undefined,
+    group: group !== "All" ? group : undefined,
+    category: category !== "All" ? category : undefined,
+    sort,
+    minPrice: minPriceXAF > XAF_MIN ? minPriceXAF : undefined,
+    maxPrice: maxPriceXAF < xafMax ? maxPriceXAF : undefined,
+    limit: 50,
+  });
+
+  // ── On first load: set price ceiling from real DB max ─────────────────────
+  //    Fetch all products once (no filters) to derive the real max price.
+  const { products: allProducts } = useProducts({ limit: 200 });
   useEffect(() => {
-    const groupParam = searchParams.get('group');
-    const categoryParam = searchParams.get('category');
-    const searchParam = searchParams.get('search');
-    const sortParam = searchParams.get('sort') as SortOption;
-    
-    if (groupParam && CATEGORY_GROUPS.some(g => g.group === groupParam)) {
+    if (allProducts.length > 0) {
+      const max = Math.max(...allProducts.map((p) => p.price));
+      setXafMax(max);
+      setMaxPriceXAF(max);
+    }
+  }, [allProducts.length]);
+
+  // ── URL params on mount ────────────────────────────────────────────────────
+  useEffect(() => {
+    const groupParam = searchParams.get("group");
+    const categoryParam = searchParams.get("category");
+    const searchParam = searchParams.get("search");
+    const sortParam = searchParams.get("sort") as SortOption;
+
+    if (groupParam && CATEGORY_GROUPS.some((g) => g.group === groupParam))
       setGroup(groupParam as CategoryGroup);
-    }
-    
-    if (categoryParam && ALL_CATEGORIES.includes(categoryParam as ProductCategory)) {
+    if (
+      categoryParam &&
+      ALL_CATEGORIES.includes(categoryParam as ProductCategory)
+    )
       setCategory(categoryParam as ProductCategory);
-    }
-    
-    if (searchParam) {
-      setSearch(searchParam);
-    }
-    
-    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam)) {
+    if (searchParam) setSearch(searchParam);
+    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam))
       setSort(sortParam);
-    }
-    
-    // Scroll to top using ref after filters are applied
-    if (topRef.current) {
-      topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [searchParams]);
 
-  const filtered = useMemo(() => {
-    let result = [...products];
-    if (search)
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.description.toLowerCase().includes(search.toLowerCase()),
-      );
-    if (group !== "All") result = result.filter((p) => p.group === group);
-    if (category !== "All")
-      result = result.filter((p) => p.category === category);
-    result = result.filter(
-      (p) => p.price >= minPriceXAF && p.price <= maxPriceXAF,
-    );
-    switch (sort) {
-      case "featured":
-        result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-        break;
-      case "price-asc":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "price-desc":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-    }
-    return result;
-  }, [search, group, category, sort, minPriceXAF, maxPriceXAF]);
-
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function handleAddToCart(product: (typeof products)[0]) {
     addToCart(product);
     setAddedId(product.id);
@@ -269,7 +262,7 @@ function MarketplacePageContent() {
     category !== "All" ||
     sort !== "featured" ||
     minPriceXAF > XAF_MIN ||
-    maxPriceXAF < XAF_MAX;
+    maxPriceXAF < xafMax;
 
   function clearAll() {
     setSearch("");
@@ -277,7 +270,7 @@ function MarketplacePageContent() {
     setCategory("All");
     setSort("featured");
     setMinPriceXAF(XAF_MIN);
-    setMaxPriceXAF(XAF_MAX);
+    setMaxPriceXAF(xafMax);
   }
 
   const dispMin = currencyLoading
@@ -287,12 +280,12 @@ function MarketplacePageContent() {
     ? maxPriceXAF
     : Math.round(maxPriceXAF * rate);
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
-        {/* ── Top bar ── */}
+        {/* Top bar */}
         <div ref={topRef} className="flex items-center gap-3 mb-3">
-          {/* Search */}
           <div className="relative flex-1">
             <Search
               size={15}
@@ -322,7 +315,6 @@ function MarketplacePageContent() {
             />
           </div>
 
-          {/* Filters button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex-shrink-0"
@@ -348,31 +340,9 @@ function MarketplacePageContent() {
               </span>
             )}
           </button>
-
-          {/* Cart */}
-          {/* <Link
-            href="/marketplace/cart"
-            className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-105 flex-shrink-0"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
-            }}
-          >
-            <ShoppingBag size={14} />
-            <span className="hidden sm:inline">Cart</span>
-            {count > 0 && (
-              <span
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
-                style={{ background: "var(--purple)" }}
-              >
-                {count > 9 ? "9+" : count}
-              </span>
-            )}
-          </Link> */}
         </div>
 
-        {/* ── Filters panel ── */}
+        {/* Filters panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -382,53 +352,69 @@ function MarketplacePageContent() {
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               className="fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto"
             >
-              {/* Backdrop */}
-              <div 
+              <div
                 className="fixed inset-0 bg-black/20 backdrop-blur-sm"
                 onClick={() => setShowFilters(false)}
               />
-              
-              {/* Sidebar */}
               <div className="relative glass h-full p-5 flex flex-col gap-5">
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3" style={{ borderBottom: "1px solid var(--divider)" }}>
-                  <h3 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>Filters</h3>
+                <div
+                  className="flex items-center justify-between pb-3"
+                  style={{ borderBottom: "1px solid var(--divider)" }}
+                >
+                  <h3
+                    className="font-bold text-lg"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Filters
+                  </h3>
                   <button
                     onClick={() => setShowFilters(false)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                    style={{ background: "var(--glass-bg-subtle)", color: "var(--text-muted)" }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: "var(--glass-bg-subtle)",
+                      color: "var(--text-muted)",
+                    }}
                   >
                     <X size={16} />
                   </button>
                 </div>
 
                 {/* Results count */}
-                <div className="px-3 py-2 rounded-lg" style={{ background: "var(--badge-blue-bg)" }}>
-                  <p className="text-sm font-medium" style={{ color: "var(--blue-dark)" }}>
-                    {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
+                <div
+                  className="px-3 py-2 rounded-lg"
+                  style={{ background: "var(--badge-blue-bg)" }}
+                >
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: "var(--blue-dark)" }}
+                  >
+                    {isLoading
+                      ? "Loading…"
+                      : `${total} product${total !== 1 ? "s" : ""} found`}
                   </p>
                 </div>
-                {/* Category + Sort */}
-                <div className="grid sm:grid-cols-2 gap-5">
-                  {/* Two-level category select */}
-                  <div className="flex flex-col gap-3">
-                    {/* Group select */}
-                    <div>
-                      <p
-                        className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                        style={{ color: "var(--text-disabled)" }}
-                      >
-                        Department
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
+
+                {/* Department */}
+                <div>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                    style={{ color: "var(--text-disabled)" }}
+                  >
+                    Department
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[{ group: "All", icon: "" }, ...CATEGORY_GROUPS].map(
+                      (g) => (
                         <button
+                          key={g.group}
                           onClick={() => {
-                            setGroup("All");
+                            setGroup(g.group as any);
                             setCategory("All");
                           }}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
                           style={
-                            group === "All"
+                            group === g.group
                               ? {
                                   background:
                                     "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -441,129 +427,62 @@ function MarketplacePageContent() {
                                 }
                           }
                         >
-                          {group === "All" && (
+                          {group === g.group && (
                             <Check size={9} strokeWidth={3} />
-                          )}{" "}
-                          All
+                          )}
+                          {g.icon && <span>{g.icon}</span>}
+                          {g.group}
                         </button>
-                        {CATEGORY_GROUPS.map((g) => (
-                          <button
-                            key={g.group}
-                            onClick={() => {
-                              setGroup(g.group as any);
-                              setCategory("All");
-                            }}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
-                            style={
-                              group === g.group
-                                ? {
-                                    background:
-                                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                                    color: "#fff",
-                                  }
-                                : {
-                                    background: "var(--glass-bg-subtle)",
-                                    border: "1px solid var(--glass-border)",
-                                    color: "var(--text-muted)",
-                                  }
-                            }
-                          >
-                            {group === g.group && (
-                              <Check size={9} strokeWidth={3} />
-                            )}
-                            <span>{g.icon}</span> {g.group}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Sub-category select — only shows when a group is selected */}
-                    {group !== "All" && (
-                      <div>
-                        <p
-                          className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                          style={{ color: "var(--text-disabled)" }}
-                        >
-                          Sub-category
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            onClick={() => setCategory("All")}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
-                            style={
-                              category === "All"
-                                ? {
-                                    background:
-                                      "linear-gradient(135deg, var(--purple), var(--blue))",
-                                    color: "#fff",
-                                  }
-                                : {
-                                    background: "var(--glass-bg-subtle)",
-                                    border: "1px solid var(--glass-border)",
-                                    color: "var(--text-muted)",
-                                  }
-                            }
-                          >
-                            {category === "All" && (
-                              <Check size={9} strokeWidth={3} />
-                            )}{" "}
-                            All in {group}
-                          </button>
-                          {CATEGORY_GROUPS.find(
-                            (g) => g.group === group,
-                          )?.categories.map((cat) => (
-                            <button
-                              key={cat}
-                              onClick={() => setCategory(cat as any)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
-                              style={
-                                category === cat
-                                  ? {
-                                      background:
-                                        "linear-gradient(135deg, var(--purple), var(--blue))",
-                                      color: "#fff",
-                                    }
-                                  : {
-                                      background: "var(--glass-bg-subtle)",
-                                      border: "1px solid var(--glass-border)",
-                                      color: "var(--text-muted)",
-                                    }
-                              }
-                            >
-                              {category === cat && (
-                                <Check size={9} strokeWidth={3} />
-                              )}{" "}
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      ),
                     )}
                   </div>
+                </div>
 
-                  {/* Sort */}
+                {/* Sub-category */}
+                {group !== "All" && (
                   <div>
                     <p
-                      className="text-[10px] font-bold uppercase tracking-widest mb-2.5"
+                      className="text-[10px] font-bold uppercase tracking-widest mb-2"
                       style={{ color: "var(--text-disabled)" }}
                     >
-                      Sort By
+                      Sub-category
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        Object.entries(SORT_LABELS) as [SortOption, string][]
-                      ).map(([v, l]) => (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setCategory("All")}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={
+                          category === "All"
+                            ? {
+                                background:
+                                  "linear-gradient(135deg, var(--purple), var(--blue))",
+                                color: "#fff",
+                              }
+                            : {
+                                background: "var(--glass-bg-subtle)",
+                                border: "1px solid var(--glass-border)",
+                                color: "var(--text-muted)",
+                              }
+                        }
+                      >
+                        {category === "All" && (
+                          <Check size={9} strokeWidth={3} />
+                        )}{" "}
+                        All in {group}
+                      </button>
+                      {CATEGORY_GROUPS.find(
+                        (g) => g.group === group,
+                      )?.categories.map((cat) => (
                         <button
-                          key={v}
-                          onClick={() => setSort(v)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
+                          key={cat}
+                          onClick={() => setCategory(cat as any)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
                           style={
-                            sort === v
+                            category === cat
                               ? {
                                   background:
                                     "linear-gradient(135deg, var(--purple), var(--blue))",
                                   color: "#fff",
-                                  boxShadow: "0 3px 10px rgba(123,47,190,0.25)",
                                 }
                               : {
                                   background: "var(--glass-bg-subtle)",
@@ -572,11 +491,50 @@ function MarketplacePageContent() {
                                 }
                           }
                         >
-                          {sort === v && <Check size={10} strokeWidth={3} />}
-                          {l}
+                          {category === cat && (
+                            <Check size={9} strokeWidth={3} />
+                          )}{" "}
+                          {cat}
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Sort */}
+                <div>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-widest mb-2.5"
+                    style={{ color: "var(--text-disabled)" }}
+                  >
+                    Sort By
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      Object.entries(SORT_LABELS) as [SortOption, string][]
+                    ).map(([v, l]) => (
+                      <button
+                        key={v}
+                        onClick={() => setSort(v)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={
+                          sort === v
+                            ? {
+                                background:
+                                  "linear-gradient(135deg, var(--purple), var(--blue))",
+                                color: "#fff",
+                                boxShadow: "0 3px 10px rgba(123,47,190,0.25)",
+                              }
+                            : {
+                                background: "var(--glass-bg-subtle)",
+                                border: "1px solid var(--glass-border)",
+                                color: "var(--text-muted)",
+                              }
+                        }
+                      >
+                        {sort === v && <Check size={10} strokeWidth={3} />} {l}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -591,6 +549,7 @@ function MarketplacePageContent() {
                   <PriceRangeSlider
                     minXAF={minPriceXAF}
                     maxXAF={maxPriceXAF}
+                    xafMax={xafMax}
                     onMinChange={setMinPriceXAF}
                     onMaxChange={setMaxPriceXAF}
                     rate={rate || 1}
@@ -599,12 +558,15 @@ function MarketplacePageContent() {
                   />
                 </div>
 
-                {/* Footer row */}
-                <div className="mt-auto pt-4" style={{ borderTop: "1px solid var(--divider)" }}>
+                {/* Footer */}
+                <div
+                  className="mt-auto pt-4"
+                  style={{ borderTop: "1px solid var(--divider)" }}
+                >
                   <div className="flex gap-3">
                     <button
                       onClick={clearAll}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold"
                       style={{
                         background: "var(--glass-bg-subtle)",
                         border: "1px solid var(--glass-border)",
@@ -615,9 +577,10 @@ function MarketplacePageContent() {
                     </button>
                     <button
                       onClick={() => setShowFilters(false)}
-                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200"
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white"
                       style={{
-                        background: "linear-gradient(135deg, var(--purple), var(--blue))",
+                        background:
+                          "linear-gradient(135deg, var(--purple), var(--blue))",
                       }}
                     >
                       Apply Filters
@@ -629,7 +592,7 @@ function MarketplacePageContent() {
           )}
         </AnimatePresence>
 
-        {/* Active chips */}
+        {/* Active filter chips */}
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-4">
             {group !== "All" && (
@@ -659,7 +622,7 @@ function MarketplacePageContent() {
                   color: "var(--blue-dark)",
                 }}
               >
-                {category}
+                {category}{" "}
                 <button onClick={() => setCategory("All")}>
                   <X size={10} />
                 </button>
@@ -673,13 +636,13 @@ function MarketplacePageContent() {
                   color: "var(--purple-dark)",
                 }}
               >
-                {SORT_LABELS[sort]}
+                {SORT_LABELS[sort]}{" "}
                 <button onClick={() => setSort("featured")}>
                   <X size={10} />
                 </button>
               </span>
             )}
-            {(minPriceXAF > XAF_MIN || maxPriceXAF < XAF_MAX) && (
+            {(minPriceXAF > XAF_MIN || maxPriceXAF < xafMax) && (
               <span
                 className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 style={{
@@ -692,7 +655,7 @@ function MarketplacePageContent() {
                 <button
                   onClick={() => {
                     setMinPriceXAF(XAF_MIN);
-                    setMaxPriceXAF(XAF_MAX);
+                    setMaxPriceXAF(xafMax);
                   }}
                 >
                   <X size={10} />
@@ -704,20 +667,24 @@ function MarketplacePageContent() {
 
         {/* Quick filter bar */}
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
-          <span className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Quick filters:</span>
-          
-          {/* Department pills */}
+          <span
+            className="text-xs font-medium whitespace-nowrap"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Quick filters:
+          </span>
           <div className="flex gap-2">
             <button
               onClick={() => {
                 setGroup("All");
                 setCategory("All");
               }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
               style={
                 group === "All"
                   ? {
-                      background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                      background:
+                        "linear-gradient(135deg, var(--scarlet), var(--purple))",
                       color: "#fff",
                     }
                   : {
@@ -736,11 +703,12 @@ function MarketplacePageContent() {
                   setGroup(g.group as any);
                   setCategory("All");
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
                 style={
                   group === g.group
                     ? {
-                        background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                        background:
+                          "linear-gradient(135deg, var(--scarlet), var(--purple))",
                         color: "#fff",
                       }
                     : {
@@ -750,20 +718,19 @@ function MarketplacePageContent() {
                       }
                 }
               >
-                <span>{g.icon}</span> {g.group.split(' ')[0]}
+                <span>{g.icon}</span> {g.group.split(" ")[0]}
               </button>
             ))}
-            
             <button
               onClick={() => setShowFilters(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
               style={{
                 background: "var(--glass-bg)",
                 border: "1px solid var(--glass-border)",
                 color: "var(--text-secondary)",
               }}
             >
-              More filters...
+              More filters…
             </button>
           </div>
         </div>
@@ -773,11 +740,31 @@ function MarketplacePageContent() {
           className="text-xs font-medium mb-5"
           style={{ color: "var(--text-muted)" }}
         >
-          {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
+          {isLoading
+            ? "Loading products…"
+            : `${total} product${total !== 1 ? "s" : ""} found`}
         </p>
 
+        {/* Error state */}
+        {error && (
+          <div className="glass flex flex-col items-center justify-center py-16 text-center gap-3 mb-6">
+            <p className="font-bold" style={{ color: "var(--text-primary)" }}>
+              Failed to load products
+            </p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {error.message}
+            </p>
+          </div>
+        )}
+
         {/* Grid */}
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : products.length === 0 && !error ? (
           <div className="glass flex flex-col items-center justify-center py-24 text-center gap-4">
             <ShoppingBag size={32} style={{ color: "var(--text-disabled)" }} />
             <p className="font-bold" style={{ color: "var(--text-primary)" }}>
@@ -802,7 +789,7 @@ function MarketplacePageContent() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((product, i) => (
+            {products.map((product, i) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 24 }}
@@ -908,7 +895,7 @@ function MarketplacePageContent() {
                           backgroundClip: "text",
                         }}
                       >
-                        {currencyLoading ? "..." : convert(product.price)}
+                        {currencyLoading ? "…" : convert(product.price)}
                       </span>
                       <span
                         className="text-[10px] font-light"
@@ -938,40 +925,34 @@ function MarketplacePageContent() {
           </div>
         )}
 
-        {/* Services Section */}
         <ServicesSection />
       </div>
     </main>
   );
 }
 
-// Loading component for Suspense
+// ─── Loading fallback ─────────────────────────────────────────────────────────
+
 function MarketplaceLoading() {
   return (
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
-        <div className="animate-pulse">
-          <div className="h-10 bg-gray-200 rounded-xl mb-4"></div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="glass p-5">
-                <div className="h-52 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                <div className="flex justify-between items-center">
-                  <div className="h-6 w-20 bg-gray-200 rounded"></div>
-                  <div className="h-8 w-24 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div
+          className="h-10 rounded-xl mb-4 animate-pulse"
+          style={{ background: "var(--glass-bg)" }}
+        />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       </div>
     </main>
   );
 }
 
-// Main export with Suspense wrapper
+// ─── Export ───────────────────────────────────────────────────────────────────
+
 export default function MarketplacePage() {
   return (
     <Suspense fallback={<MarketplaceLoading />}>

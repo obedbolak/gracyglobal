@@ -16,22 +16,115 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { getProductById, products } from "@/data/products";
+import { useProduct, useProducts } from "@/hooks/UseProducts";
 import { useCart } from "@/context/CartContext";
+import { useCurrency } from "@/hooks/useCurrency";
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function ProductDetailSkeleton() {
+  return (
+    <main className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 animate-pulse">
+        <div
+          className="h-5 w-32 rounded-lg mb-8"
+          style={{ background: "var(--glass-bg)" }}
+        />
+        <div className="grid lg:grid-cols-2 gap-10 mb-20">
+          {/* Image skeleton */}
+          <div className="flex flex-col gap-3">
+            <div
+              className="h-96 rounded-2xl"
+              style={{ background: "var(--glass-bg)" }}
+            />
+            <div className="flex gap-3">
+              {[...Array(2)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-20 rounded-xl"
+                  style={{ background: "var(--glass-bg)" }}
+                />
+              ))}
+            </div>
+          </div>
+          {/* Details skeleton */}
+          <div className="flex flex-col gap-5">
+            <div className="flex gap-2">
+              <div
+                className="h-6 w-24 rounded-full"
+                style={{ background: "var(--glass-bg)" }}
+              />
+              <div
+                className="h-6 w-16 rounded-full"
+                style={{ background: "var(--glass-bg)" }}
+              />
+            </div>
+            <div>
+              <div
+                className="h-10 w-3/4 rounded-lg mb-3"
+                style={{ background: "var(--glass-bg)" }}
+              />
+              <div
+                className="h-8 w-32 rounded-lg"
+                style={{ background: "var(--glass-bg)" }}
+              />
+            </div>
+            <div
+              className="h-4 w-48 rounded-lg"
+              style={{ background: "var(--glass-bg)" }}
+            />
+            <div className="flex flex-col gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-3 rounded-lg"
+                  style={{
+                    background: "var(--glass-bg)",
+                    width: `${85 - i * 10}%`,
+                  }}
+                />
+              ))}
+            </div>
+            <div
+              className="h-12 rounded-xl"
+              style={{ background: "var(--glass-bg)" }}
+            />
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { addToCart } = useCart();
+  const { convert, loading: currencyLoading } = useCurrency();
 
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
-  const product = getProductById(id);
 
+  // ── Fetch product from DB ──────────────────────────────────────────────────
+  const { product, isLoading, error } = useProduct(id);
+
+  // ── Fetch related products (same category, excluding current) ──────────────
+  const { products: related } = useProducts({
+    category: product?.category as any,
+    limit: 4,
+  });
+  const relatedFiltered = related.filter((p) => p.id !== id).slice(0, 3);
+
+  // ── Local UI state ─────────────────────────────────────────────────────────
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
 
-  if (!product) {
+  // ── Loading / error states ─────────────────────────────────────────────────
+  if (isLoading) return <ProductDetailSkeleton />;
+
+  if (error || !product) {
     return (
       <main className="min-h-screen">
         <div className="max-w-lg mx-auto px-4 py-32 text-center">
@@ -39,8 +132,13 @@ export default function ProductDetailPage() {
             className="text-lg font-bold mb-4"
             style={{ color: "var(--text-primary)" }}
           >
-            Product not found.
+            {error ? "Failed to load product." : "Product not found."}
           </p>
+          {error && (
+            <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+              {error.message}
+            </p>
+          )}
           <Link
             href="/marketplace"
             className="text-sm font-semibold"
@@ -59,10 +157,6 @@ export default function ProductDetailPage() {
     setTimeout(() => setAdded(false), 2000);
   }
 
-  const related = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 3);
-
   return (
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -76,7 +170,7 @@ export default function ProductDetailPage() {
         </button>
 
         <div className="grid lg:grid-cols-2 gap-10 mb-20">
-          {/* Images */}
+          {/* ── Images ── */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -115,7 +209,7 @@ export default function ProductDetailPage() {
             )}
           </motion.div>
 
-          {/* Details */}
+          {/* ── Details ── */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -154,18 +248,26 @@ export default function ProductDetailPage() {
               >
                 {product.name}
               </h1>
-              <span
-                className="text-3xl font-extrabold"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                CFA {product.price.toLocaleString()}
-              </span>
+              <div className="flex items-baseline gap-3">
+                <span
+                  className="text-3xl font-extrabold"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {currencyLoading ? "…" : convert(product.price)}
+                </span>
+                <span
+                  className="text-sm font-light"
+                  style={{ color: "var(--text-disabled)" }}
+                >
+                  CFA {product.price.toLocaleString()}
+                </span>
+              </div>
             </div>
 
             {/* Rating */}
@@ -203,7 +305,7 @@ export default function ProductDetailPage() {
             </p>
 
             {/* Benefits */}
-            {product.benefits && (
+            {product.benefits && product.benefits.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {product.benefits.map((b) => (
                   <span
@@ -237,7 +339,7 @@ export default function ProductDetailPage() {
               >
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-10 h-10 flex items-center justify-center transition-colors duration-200 hover:opacity-70"
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   <Minus size={14} />
@@ -250,7 +352,7 @@ export default function ProductDetailPage() {
                 </span>
                 <button
                   onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-                  className="w-10 h-10 flex items-center justify-center transition-colors duration-200 hover:opacity-70"
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   <Plus size={14} />
@@ -332,7 +434,7 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Ingredients */}
-        {product.ingredients && (
+        {product.ingredients && product.ingredients.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -364,7 +466,7 @@ export default function ProductDetailPage() {
         )}
 
         {/* Related products */}
-        {related.length > 0 && (
+        {relatedFiltered.length > 0 && (
           <div>
             <h2
               className="text-xl font-extrabold mb-6"
@@ -373,7 +475,7 @@ export default function ProductDetailPage() {
               You May Also Like
             </h2>
             <div className="grid sm:grid-cols-3 gap-5">
-              {related.map((p, i) => (
+              {relatedFiltered.map((p, i) => (
                 <motion.div
                   key={p.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -402,7 +504,7 @@ export default function ProductDetailPage() {
                       className="text-sm font-extrabold"
                       style={{ color: "var(--accent-primary)" }}
                     >
-                      CFA {p.price.toLocaleString()}
+                      {currencyLoading ? "…" : convert(p.price)}
                     </p>
                   </div>
                 </motion.div>
