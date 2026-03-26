@@ -159,6 +159,21 @@ export default function LoginPage() {
           }}
         />
 
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-lg"
+            style={{
+              background: "linear-gradient(135deg, var(--purple), var(--blue))",
+            }}
+          >
+            G
+          </div>
+          <span className="font-extrabold text-white text-xl tracking-tight">
+            GRACY GLOBAL
+          </span>
+        </div>
+
         {/* Centre quote */}
         <div className="relative z-10">
           <p className="text-4xl font-extrabold text-white leading-tight mb-6 tracking-tight">
