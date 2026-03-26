@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Edit, Trash2, Plus } from "lucide-react";
+import DeleteProductButton from "@/components/ui/deleteButton";
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
@@ -116,9 +117,7 @@ export default async function ProductsPage() {
                     >
                       <Edit className="w-4 h-4" />
                     </Link>
-                    <button className="p-2 hover:bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <DeleteProductButton id={product.id} name={product.name} />
                   </div>
                 </td>
               </tr>
