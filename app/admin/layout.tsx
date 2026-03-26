@@ -24,8 +24,6 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
-      <AdminHeader user={session.user} />
-
       <div className="flex">
         <AdminSidebar />
 

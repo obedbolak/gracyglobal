@@ -1,14 +1,19 @@
+// app/(auth)/login/page.tsx
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Chrome } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || null;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -26,35 +31,89 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (res?.error) {
+      if (res?.error) {
+        setLoading(false);
+        setError("Invalid email or password. Please try again.");
+        return;
+      }
+
+      if (res?.ok) {
+        // Fetch user session to get role
+        const sessionResponse = await fetch("/api/auth/session");
+        const session = await sessionResponse.json();
+
+        if (session?.user) {
+          // Role-based redirect
+          const role = session.user.role;
+
+          let redirectUrl = "/dashboard"; // Default
+
+          if (callbackUrl) {
+            redirectUrl = callbackUrl;
+          } else {
+            switch (role) {
+              case "ADMIN":
+                redirectUrl = "/admin";
+                break;
+              case "COUNSELOR":
+                redirectUrl = "/counselor/dashboard";
+                break;
+              case "VOLUNTEER":
+                redirectUrl = "/volunteer/dashboard";
+                break;
+              default:
+                redirectUrl = "/dashboard";
+            }
+          }
+
+          window.location.href = redirectUrl;
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }
+    } catch (err) {
       setLoading(false);
-      setError("Invalid email or password. Please try again.");
-    } else if (res?.ok) {
-      // Use window.location for full page reload to ensure session is loaded
-      window.location.href = "/dashboard";
+      setError("Something went wrong. Please try again.");
     }
   }
 
   async function handleGoogle() {
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+
+    // Determine callback based on role (will be handled after OAuth)
+    const callback = callbackUrl || "/dashboard";
+    await signIn("google", { callbackUrl: callback });
   }
 
   async function handleForgotPassword(e: React.FormEvent) {
     e.preventDefault();
     setForgotLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      // TODO: Implement actual password reset API
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      if (response.ok) {
+        setForgotSuccess(true);
+      } else {
+        setError("Failed to send reset link. Please try again.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setForgotLoading(false);
-      setForgotSuccess(true);
-    }, 2000);
+    }
   }
 
   return (
@@ -99,9 +158,6 @@ export default function LoginPage() {
               "linear-gradient(145deg, rgba(255,255,255,0.07) 0%, transparent 60%)",
           }}
         />
-
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3"></div>
 
         {/* Centre quote */}
         <div className="relative z-10">
@@ -278,7 +334,7 @@ export default function LoginPage() {
                 <div
                   className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center"
                   style={{
-                    background: "linear-gradient(135deg, var(--green), var(--blue))",
+                    background: "linear-gradient(135deg, #10b981, var(--blue))",
                   }}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -301,7 +357,8 @@ export default function LoginPage() {
                   className="text-sm mb-8"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Check your email for the password reset link. It may take a few minutes to arrive.
+                  Check your email for the password reset link. It may take a
+                  few minutes to arrive.
                 </p>
               </motion.div>
             ) : (
@@ -315,9 +372,10 @@ export default function LoginPage() {
                   className="text-sm mb-4"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we'll send you a link to reset
+                  your password.
                 </p>
-                
+
                 <div className="relative">
                   <Mail
                     size={15}
@@ -330,32 +388,14 @@ export default function LoginPage() {
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
-                      outline: "none",
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = "var(--input-border-focus)";
-                      e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = "var(--input-border)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
+                    className="glass-input w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white text-sm font-bold transition-all duration-200 hover:scale-[1.01] disabled:opacity-60 mt-2"
-                  style={{
-                    background: "linear-gradient(135deg, var(--purple), var(--blue))",
-                    boxShadow: "0 4px 20px rgba(123,47,190,0.4)",
-                  }}
+                  className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl mt-2"
                 >
                   {forgotLoading ? (
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -388,22 +428,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                  style={{
-                    background: "var(--input-bg)",
-                    border: "1px solid var(--input-border)",
-                    color: "var(--text-primary)",
-                    outline: "none",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor =
-                      "var(--input-border-focus)";
-                    e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--input-border)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
+                  className="glass-input w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl"
                 />
               </div>
 
@@ -420,27 +445,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-11 pr-12 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                  style={{
-                    background: "var(--input-bg)",
-                    border: "1px solid var(--input-border)",
-                    color: "var(--text-primary)",
-                    outline: "none",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor =
-                      "var(--input-border-focus)";
-                    e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--input-border)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
+                  className="glass-input w-full pl-11 pr-12 py-3.5 text-sm rounded-2xl"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
                   style={{ color: "var(--text-disabled)" }}
                 >
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -449,18 +459,17 @@ export default function LoginPage() {
 
               {/* Remember me + Forgot */}
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2.5 cursor-pointer group">
+                <label className="flex items-center gap-2.5 cursor-pointer">
                   <div
                     onClick={() => setRemember(!remember)}
-                    className="w-4.5 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 flex-shrink-0"
+                    className="w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200"
                     style={{
                       background: remember
                         ? "linear-gradient(135deg, var(--purple), var(--blue))"
                         : "var(--input-bg)",
-                      border: remember ? "none" : "1px solid var(--input-border)",
-                      boxShadow: remember
-                        ? "0 2px 8px rgba(123,47,190,0.35)"
-                        : "none",
+                      border: remember
+                        ? "none"
+                        : "1px solid var(--input-border)",
                     }}
                   >
                     {remember && (
@@ -485,7 +494,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-xs font-semibold transition-colors duration-200"
+                  className="text-xs font-semibold"
                   style={{ color: "var(--accent-primary)" }}
                 >
                   Forgot password?
@@ -496,12 +505,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white text-sm font-bold transition-all duration-200 hover:scale-[1.01] hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 mt-2"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--purple), var(--blue))",
-                  boxShadow: "0 4px 20px rgba(123,47,190,0.4)",
-                }}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl mt-2"
               >
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -516,15 +520,15 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p
-            className="text-center text-xs mt-8 leading-relaxed"
+            className="text-center text-xs mt-8"
             style={{ color: "var(--text-disabled)" }}
           >
             By signing in you agree to our{" "}
-            <Link href="/terms" className="underline underline-offset-2">
+            <Link href="/terms" className="underline">
               Terms
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="underline underline-offset-2">
+            <Link href="/privacy" className="underline">
               Privacy Policy
             </Link>
             .
