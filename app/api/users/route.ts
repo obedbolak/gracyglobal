@@ -1,0 +1,48 @@
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search");
+    const excludeCounselors = searchParams.get("excludeCounselors") === "true";
+
+    const users = await prisma.user.findMany({
+      where: {
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+        }),
+        // Exclude users who already have a counselor profile
+        ...(excludeCounselors && {
+          counselor: null,
+        }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        country: true,
+        role: true,
+      },
+      orderBy: { name: "asc" },
+      take: 10, // Limit results for search dropdown
+    });
+
+    return NextResponse.json({ users });
+  } catch (error: any) {
+    console.error("GET /api/users error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

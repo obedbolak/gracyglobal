@@ -185,7 +185,7 @@ export default function CreateCounselorForm() {
     try {
       // Step 1: Update user role to COUNSELOR
       const roleResponse = await fetch(`/api/users/${selectedUser.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: "COUNSELOR" }),
       });
