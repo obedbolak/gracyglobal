@@ -8,13 +8,20 @@ import { ArrowRight, Star } from "lucide-react";
 export default function ServicesSection() {
   // Service category images mapping
   const categoryImages: Record<string, string> = {
-    "Home & Errand": "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=600&q=80",
-    "Transport": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80",
-    "Home Comfort": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
-    "Home Management": "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
-    "Care Services": "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&q=80",
-    "Beauty & Wellness": "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&q=80",
-    "Priority Access": "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&q=80",
+    "Home & Errand":
+      "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=600&q=80",
+    Transport:
+      "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80",
+    "Home Comfort":
+      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
+    "Home Management":
+      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
+    "Care Services":
+      "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&q=80",
+    "Beauty & Wellness":
+      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&q=80",
+    "Priority Access":
+      "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&q=80",
   };
 
   return (
@@ -28,11 +35,18 @@ export default function ServicesSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-4xl font-black mb-4" style={{ color: "var(--text-primary)" }}>
+            <h2
+              className="text-4xl font-black mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
               Professional Services
             </h2>
-            <p className="text-lg max-w-2xl mx-auto" style={{ color: "var(--text-secondary)" }}>
-              From home care to beauty services, book trusted professionals for all your needs
+            <p
+              className="text-lg max-w-2xl mx-auto"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              From home care to beauty services, book trusted professionals for
+              all your needs
             </p>
           </motion.div>
         </div>
@@ -47,7 +61,9 @@ export default function ServicesSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Link href={`/services?category=${encodeURIComponent(group.group)}`}>
+              <Link
+                href={`/services?category=${encodeURIComponent(group.group)}`}
+              >
                 <div
                   className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02]"
                   style={{
@@ -65,10 +81,11 @@ export default function ServicesSection() {
                     <div
                       className="absolute inset-0"
                       style={{
-                        background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)",
+                        background:
+                          "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)",
                       }}
                     />
-                    
+
                     {/* Icon Badge */}
                     <div
                       className="absolute top-3 left-3 w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
@@ -83,13 +100,20 @@ export default function ServicesSection() {
 
                   {/* Content */}
                   <div className="p-5">
-                    <h3 className="text-lg font-bold mb-2 group-hover:opacity-80 transition-opacity" style={{ color: "var(--text-primary)" }}>
+                    <h3
+                      className="text-lg font-bold mb-2 group-hover:opacity-80 transition-opacity"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {group.group}
                     </h3>
-                    <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
-                      {group.categories.length} service{group.categories.length > 1 ? 's' : ''} available
+                    <p
+                      className="text-sm mb-3"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {group.categories.length} service
+                      {group.categories.length > 1 ? "s" : ""} available
                     </p>
-                    
+
                     {/* Categories List */}
                     <div className="flex flex-wrap gap-1 mb-4">
                       {group.categories.slice(0, 2).map((cat, idx) => (
@@ -118,7 +142,10 @@ export default function ServicesSection() {
                     </div>
 
                     {/* CTA */}
-                    <div className="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all" style={{ color: "var(--blue)" }}>
+                    <div
+                      className="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all"
+                      style={{ color: "var(--blue)" }}
+                    >
                       Explore Services
                       <ArrowRight size={16} />
                     </div>
