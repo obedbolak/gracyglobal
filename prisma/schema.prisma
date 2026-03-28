@@ -6,23 +6,23 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 // ─── USER ────────────────────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          UserRole  @default(USER)
-  country       String?
-  phone         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String           @id @default(cuid())
+  name            String?
+  email           String           @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String?
+  role            UserRole         @default(USER)
+  country         String?
+  phone           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  serviceBookings ServiceBooking[]
 
   // Relations
   accounts         Account[]
@@ -94,13 +94,13 @@ model VerificationToken {
 
 model Plan {
   id                String   @id @default(cuid())
-  name              String   @unique  // "free" | "starter" | "growth" | "elite"
-  displayName       String            // "Free" | "Starter" | "Growth" | "Elite / Pro"
+  name              String   @unique // "free" | "starter" | "growth" | "elite"
+  displayName       String // "Free" | "Starter" | "Growth" | "Elite / Pro"
   description       String
-  priceMonthly      Int      @default(0)  // CFA
-  priceAnnual       Int      @default(0)  // CFA per month billed annually
-  pricePerSession   Int?                  // CFA per session (null = unlimited)
-  counselorSessions Int      @default(0)  // sessions per month (0 = unlimited)
+  priceMonthly      Int      @default(0) // CFA
+  priceAnnual       Int      @default(0) // CFA per month billed annually
+  pricePerSession   Int? // CFA per session (null = unlimited)
+  counselorSessions Int      @default(0) // sessions per month (0 = unlimited)
   highlighted       Boolean  @default(false)
   active            Boolean  @default(true)
   sortOrder         Int      @default(0)
@@ -148,7 +148,7 @@ enum SubscriptionStatus {
 model SubscriptionPayment {
   id             String        @id @default(cuid())
   subscriptionId String
-  amount         Int           // CFA
+  amount         Int // CFA
   method         PayoutMethod
   reference      String?
   status         PaymentStatus @default(PENDING)
@@ -422,7 +422,7 @@ model Affiliate {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   referrals AffiliateReferral[]
   payouts   AffiliatePayout[]
 
@@ -530,8 +530,8 @@ model Lesson {
   title       String
   type        LessonType
   content     String?    @db.Text // TEXT lessons
-  videoUrl    String?              // VIDEO lessons
-  duration    Int?                 // minutes
+  videoUrl    String? // VIDEO lessons
+  duration    Int? // minutes
   order       Int
   isFree      Boolean    @default(false) // preview lesson
   publishedAt DateTime?
@@ -570,7 +570,7 @@ model QuizQuestion {
   quizId   String
   question String   @db.Text
   options  String[]
-  answer   Int      // index of correct option
+  answer   Int // index of correct option
   order    Int
 
   quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
@@ -582,8 +582,8 @@ model QuizAttempt {
   id          String   @id @default(cuid())
   quizId      String
   userId      String
-  answers     Int[]    // selected option indexes
-  score       Int      // percentage
+  answers     Int[] // selected option indexes
+  score       Int // percentage
   passed      Boolean
   attemptedAt DateTime @default(now())
 
@@ -671,3 +671,75 @@ model LessonProgress {
   @@unique([enrollmentId, lessonId])
   @@map("lesson_progress")
 }
+
+// ─── SERVICES ────────────────────────────────────────────────────────────────
+
+model Service {
+  id           String   @id @default(cuid())
+  name         String
+  description  String   @db.Text
+  images       String[]
+  category     String
+  group        String
+  featured     Boolean  @default(false)
+  rating       Float    @default(0)
+  reviews      Int      @default(0)
+  badge        String?
+  includes     String[] // what's covered in the service
+  availability String? // e.g. "Mon–Sat, 7am–8pm"
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  options  ServiceOption[]
+  bookings ServiceBooking[]
+
+  @@map("services")
+}
+
+model ServiceOption {
+  id           String      @id @default(cuid())
+  serviceId    String
+  name         String
+  description  String      @db.Text
+  pricingType  PricingType
+  amount       Int // base price in XAF
+  yearlyAmount Int? // for monthly subscriptions with yearly discount
+  label        String? // e.g. "Per ride", "Per session"
+  duration     String? // e.g. "2 hours", "Full day"
+  popular      Boolean     @default(false)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+
+  service  Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  bookings ServiceBooking[]
+
+  @@map("service_options")
+}
+
+enum PricingType {
+  MONTHLY
+  ONE_TIME
+  PER_SESSION
+}
+
+model ServiceBooking {
+  id              String        @id @default(cuid())
+  userId          String
+  serviceId       String
+  serviceOptionId String?
+  status          BookingStatus @default(PENDING)
+  scheduledAt     DateTime?
+  totalPrice      Int
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceOption ServiceOption? @relation(fields: [serviceOptionId], references: [id], onDelete: SetNull)
+
+  @@map("service_bookings")
+}
+
+// Update User model - add this relation:

@@ -11,8 +11,13 @@ interface PageProps {
 export default async function EditServicePage({ params }: PageProps) {
   const { id } = await params;
 
-  const service = await prisma.product.findUnique({
+  const service = await prisma.service.findUnique({
     where: { id },
+    include: {
+      options: {
+        orderBy: { amount: "asc" },
+      },
+    },
   });
 
   if (!service) {

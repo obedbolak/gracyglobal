@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { hash } from "bcryptjs";
 import * as dotenv from "dotenv";
+import { PricingType } from "@prisma/client";
 
 dotenv.config();
 
@@ -192,6 +193,301 @@ async function main() {
 
     console.log(`✅ Test account: ${acc.email} (${acc.planName})`);
   }
+
+  // ── SERVICES ────────────────────────────────────────────────────────────────
+  console.log("🛎️  Seeding services...");
+
+  await prisma.serviceBooking.deleteMany();
+  await prisma.serviceOption.deleteMany();
+  await prisma.service.deleteMany();
+
+  const servicesData = [
+    // ── Service 1: Home Delivery ──────────────────────────────────────────────
+    {
+      id: "svc-home-delivery",
+      name: "Home Delivery Service",
+      description:
+        "Fast, reliable delivery of packages, documents, and purchases straight to your door. Same-day and scheduled delivery available.",
+      images: [
+        "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=600&q=80",
+      ],
+      category: "Home Delivery",
+      group: "Home & Errand",
+      featured: true,
+      rating: 4.6,
+      reviews: 112,
+      badge: "Popular",
+      includes: [
+        "Live tracking",
+        "SMS alerts",
+        "Proof of delivery",
+        "Insurance coverage",
+      ],
+      availability: "Mon–Sat, 7am–8pm",
+      options: [
+        {
+          id: "delivery-single",
+          name: "Single Delivery",
+          description: "One-time delivery within city limits",
+          pricingType: PricingType.ONE_TIME,
+          amount: 1500,
+          label: "Per delivery",
+        },
+        {
+          id: "delivery-monthly",
+          name: "Monthly Plan",
+          description: "Up to 10 deliveries per month with priority service",
+          pricingType: PricingType.MONTHLY,
+          amount: 12000,
+          yearlyAmount: 120000,
+          popular: true,
+        },
+        {
+          id: "delivery-unlimited",
+          name: "Unlimited Plan",
+          description: "Unlimited local deliveries with same-day guarantee",
+          pricingType: PricingType.MONTHLY,
+          amount: 25000,
+          yearlyAmount: 250000,
+        },
+      ],
+    },
+
+    // ── Service 2: Meal Preparation ───────────────────────────────────────────
+    {
+      id: "svc-meal-preparation",
+      name: "Meal Preparation Service",
+      description:
+        "A personal cook comes to your home to prepare fresh, healthy meals. Choose your menu, dietary needs, and schedule — we handle the rest.",
+      images: [
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
+      ],
+      category: "Meal Preparation",
+      group: "Home Comfort",
+      featured: true,
+      rating: 4.8,
+      reviews: 97,
+      badge: "Top Rated",
+      includes: [
+        "Custom menu planning",
+        "Ingredients sourced",
+        "Kitchen cleanup",
+        "Dietary accommodations",
+      ],
+      availability: "Daily, 7am–7pm",
+      options: [
+        {
+          id: "meal-basic",
+          name: "Basic Plan",
+          description: "4 cooking sessions per month",
+          pricingType: PricingType.MONTHLY,
+          amount: 25000,
+          yearlyAmount: 250000,
+        },
+        {
+          id: "meal-standard",
+          name: "Standard Plan",
+          description: "8 cooking sessions per month with meal planning",
+          pricingType: PricingType.MONTHLY,
+          amount: 45000,
+          yearlyAmount: 450000,
+          popular: true,
+        },
+        {
+          id: "meal-premium",
+          name: "Premium Plan",
+          description: "12 cooking sessions per month with specialty cuisine",
+          pricingType: PricingType.MONTHLY,
+          amount: 65000,
+          yearlyAmount: 650000,
+        },
+      ],
+    },
+
+    // ── Service 3: Child Care ─────────────────────────────────────────────────
+    {
+      id: "svc-child-care",
+      name: "Child Care Service",
+      description:
+        "Trusted, background-checked caregivers provide attentive, nurturing care for your children at home. Includes activities, meals, and school-run assistance.",
+      images: [
+        "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&q=80",
+      ],
+      category: "Child Care",
+      group: "Care Services",
+      featured: true,
+      rating: 4.9,
+      reviews: 78,
+      badge: "Trusted",
+      includes: [
+        "Background-checked carer",
+        "Activity planning",
+        "School run support",
+        "Meal prep for kids",
+      ],
+      availability: "Mon–Sat, 6am–8pm",
+      options: [
+        {
+          id: "childcare-occasional",
+          name: "Occasional Care",
+          description: "Hourly childcare for occasional needs",
+          pricingType: PricingType.PER_SESSION,
+          amount: 3000,
+          label: "Per hour",
+        },
+        {
+          id: "childcare-parttime",
+          name: "Part-Time Care",
+          description: "20 hours per week of childcare",
+          pricingType: PricingType.MONTHLY,
+          amount: 45000,
+          yearlyAmount: 450000,
+          popular: true,
+        },
+        {
+          id: "childcare-fulltime",
+          name: "Full-Time Care",
+          description: "40 hours per week with dedicated caregiver",
+          pricingType: PricingType.MONTHLY,
+          amount: 80000,
+          yearlyAmount: 800000,
+        },
+      ],
+    },
+
+    // ── Service 4: Home Cleaning ──────────────────────────────────────────────
+    {
+      id: "svc-home-cleaning",
+      name: "Home Cleaning & Maintenance",
+      description:
+        "Professional home cleaning covering all rooms, floors, kitchens, and bathrooms. Deep cleaning and routine maintenance packages available.",
+      images: [
+        "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
+      ],
+      category: "Home Cleaning & Maintenance",
+      group: "Home Management",
+      featured: true,
+      rating: 4.6,
+      reviews: 145,
+      badge: null,
+      includes: [
+        "All rooms covered",
+        "Eco-friendly products",
+        "Minor repairs",
+        "Quality guarantee",
+      ],
+      availability: "Mon–Sat, 7am–6pm",
+      options: [
+        {
+          id: "cleaning-basic",
+          name: "Basic Cleaning",
+          description: "2 cleaning visits per month",
+          pricingType: PricingType.MONTHLY,
+          amount: 20000,
+          yearlyAmount: 200000,
+        },
+        {
+          id: "cleaning-standard",
+          name: "Standard Cleaning",
+          description: "4 cleaning visits per month (weekly)",
+          pricingType: PricingType.MONTHLY,
+          amount: 35000,
+          yearlyAmount: 350000,
+          popular: true,
+        },
+        {
+          id: "cleaning-deep",
+          name: "Deep Cleaning",
+          description: "One-time deep cleaning service",
+          pricingType: PricingType.ONE_TIME,
+          amount: 25000,
+          label: "Per session",
+        },
+      ],
+    },
+
+    // ── Service 5: Ride & Transport ───────────────────────────────────────────
+    {
+      id: "svc-ride-transport",
+      name: "Ride & Transport Service",
+      description:
+        "Safe, comfortable rides for daily commutes, airport transfers, school runs, or special occasions. Book in advance or on-demand.",
+      images: [
+        "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80",
+      ],
+      category: "Ride & Transport",
+      group: "Transport",
+      featured: true,
+      rating: 4.8,
+      reviews: 203,
+      badge: "On-Demand",
+      includes: [
+        "Professional driver",
+        "Clean vehicle",
+        "Door-to-door",
+        "GPS tracking",
+      ],
+      availability: "Daily, 5am–11pm",
+      options: [
+        {
+          id: "ride-single",
+          name: "Single Ride",
+          description: "One-time ride within city limits",
+          pricingType: PricingType.ONE_TIME,
+          amount: 3500,
+          label: "Per ride",
+          popular: true,
+        },
+        {
+          id: "ride-airport",
+          name: "Airport Transfer",
+          description: "Airport pickup or drop-off service",
+          pricingType: PricingType.ONE_TIME,
+          amount: 8000,
+          label: "Per trip",
+        },
+        {
+          id: "ride-monthly",
+          name: "Monthly Commute",
+          description: "Daily commute package (up to 40 rides/month)",
+          pricingType: PricingType.MONTHLY,
+          amount: 120000,
+          yearlyAmount: 1200000,
+        },
+      ],
+    },
+  ];
+
+  for (const serviceData of servicesData) {
+    const { options, ...serviceFields } = serviceData;
+
+    const service = await prisma.service.create({
+      data: {
+        ...serviceFields,
+        active: true,
+      },
+    });
+
+    for (const option of options) {
+      await prisma.serviceOption.create({
+        data: {
+          ...option,
+          serviceId: service.id,
+          active: true,
+        },
+      });
+    }
+
+    console.log(
+      `✅ Service seeded: ${service.name} (${options.length} options)`,
+    );
+  }
+
+  const totalServices = await prisma.service.count();
+  const totalOptions = await prisma.serviceOption.count();
+  console.log(
+    `🛎️  ${totalServices} services with ${totalOptions} options seeded\n`,
+  );
 
   // ── Counselor users ─────────────────────────────────────────────────────────
   const counselorUsers = [

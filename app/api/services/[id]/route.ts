@@ -1,0 +1,147 @@
+// app/api/services/[id]/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+// GET /api/services/:id - Get single service
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const service = await prisma.service.findUnique({
+      where: { id },
+      include: {
+        options: {
+          where: { active: true },
+          orderBy: { amount: "asc" },
+        },
+        bookings: {
+          take: 10,
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: { bookings: true },
+        },
+      },
+    });
+
+    if (!service) {
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ service });
+  } catch (error: any) {
+    console.error("GET /api/services/[id] error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// PUT /api/services/:id - Update service (admin only)
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const data = await req.json();
+
+    const existing = await prisma.service.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    const service = await prisma.service.update({
+      where: { id },
+      data: {
+        name: data.name ?? existing.name,
+        description: data.description ?? existing.description,
+        images: data.images ?? existing.images,
+        category: data.category ?? existing.category,
+        group: data.group ?? existing.group,
+        featured: data.featured ?? existing.featured,
+        active: data.active ?? existing.active,
+        badge: data.badge ?? existing.badge,
+        includes: data.includes ?? existing.includes,
+        availability: data.availability ?? existing.availability,
+        rating: data.rating ?? existing.rating,
+        reviews: data.reviews ?? existing.reviews,
+      },
+      include: {
+        options: true,
+      },
+    });
+
+    return NextResponse.json({ service });
+  } catch (error: any) {
+    console.error("PUT /api/services/[id] error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE /api/services/:id - Delete service (admin only)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const existing = await prisma.service.findUnique({
+      where: { id },
+      include: { _count: { select: { bookings: true } } },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    // Check if service has active bookings
+    if (existing._count.bookings > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete service with active bookings. Deactivate instead.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await prisma.service.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      message: "Service deleted successfully",
+    });
+  } catch (error: any) {
+    console.error("DELETE /api/services/[id] error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

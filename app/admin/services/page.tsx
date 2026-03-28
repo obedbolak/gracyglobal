@@ -2,14 +2,19 @@
 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Edit, Trash2, Plus, Eye } from "lucide-react";
+import { Plus, Package } from "lucide-react";
+import { ServiceActions } from "./_components/ServiceActions";
 
 export default async function ServicesPage() {
-  const services = await prisma.product.findMany({
-    where: {
-      // Assuming services are products with specific categories or groups
-      // Adjust this filter based on how you distinguish services
-      group: { not: "" }, // or any other criteria
+  const services = await prisma.service.findMany({
+    include: {
+      options: {
+        where: { active: true },
+        orderBy: { amount: "asc" },
+      },
+      _count: {
+        select: { bookings: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -22,7 +27,7 @@ export default async function ServicesPage() {
             Services
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
-            Manage spiritual and wellness services
+            Manage all service offerings and pricing options
           </p>
         </div>
 
@@ -35,6 +40,34 @@ export default async function ServicesPage() {
         </Link>
       </div>
 
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass p-4 rounded-xl">
+          <p className="text-sm text-[var(--text-muted)]">Total Services</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">
+            {services.length}
+          </p>
+        </div>
+        <div className="glass p-4 rounded-xl">
+          <p className="text-sm text-[var(--text-muted)]">Active Services</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">
+            {services.filter((s) => s.active).length}
+          </p>
+        </div>
+        <div className="glass p-4 rounded-xl">
+          <p className="text-sm text-[var(--text-muted)]">Featured</p>
+          <p className="text-2xl font-bold text-[var(--purple)] mt-1">
+            {services.filter((s) => s.featured).length}
+          </p>
+        </div>
+        <div className="glass p-4 rounded-xl">
+          <p className="text-sm text-[var(--text-muted)]">Total Bookings</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">
+            {services.reduce((acc, s) => acc + s._count.bookings, 0)}
+          </p>
+        </div>
+      </div>
+
       {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((service) => (
@@ -43,14 +76,19 @@ export default async function ServicesPage() {
             className="glass rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
           >
             {/* Service Image */}
-            {service.images[0] && (
+            {service.images[0] ? (
               <div className="relative h-48">
                 <img
                   src={service.images[0]}
                   alt={service.name}
                   className="w-full h-full object-cover"
                 />
-                {service.featured && (
+                {service.badge && (
+                  <div className="absolute top-3 left-3 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                    {service.badge}
+                  </div>
+                )}
+                {service.featured && !service.badge && (
                   <div className="absolute top-3 left-3 px-3 py-1 bg-[var(--purple)] text-white text-xs font-semibold rounded-full">
                     Featured
                   </div>
@@ -67,6 +105,10 @@ export default async function ServicesPage() {
                   </span>
                 </div>
               </div>
+            ) : (
+              <div className="h-48 bg-gradient-to-br from-[var(--purple-faint)] to-[var(--glass-bg)] flex items-center justify-center">
+                <Package className="w-16 h-16 text-[var(--text-muted)] opacity-50" />
+              </div>
             )}
 
             {/* Service Info */}
@@ -80,46 +122,75 @@ export default async function ServicesPage() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-[var(--divider)]">
+              {/* Category & Group */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-1 bg-[var(--purple-faint)] text-[var(--purple)] text-xs rounded-full">
+                  {service.group}
+                </span>
+                <span className="px-2 py-1 bg-[var(--glass-bg)] text-[var(--text-secondary)] text-xs rounded-full">
+                  {service.category}
+                </span>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[var(--divider)]">
                 <div>
-                  <p className="text-xs text-[var(--text-muted)]">Category</p>
-                  <p className="text-sm font-medium text-[var(--text-secondary)]">
-                    {service.category}
+                  <p className="text-xs text-[var(--text-muted)]">Options</p>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                    {service.options.length}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-[var(--text-muted)]">Price</p>
-                  <p className="text-lg font-bold text-[var(--purple)]">
-                    {service.price.toLocaleString()} XAF
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Bookings</p>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                    {service._count.bookings}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Rating</p>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                    ⭐ {service.rating.toFixed(1)}
                   </p>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-2 pt-3">
-                <Link
-                  href={`/services/${service.id}`}
-                  className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2 rounded-lg text-sm"
-                >
-                  <Eye className="w-4 h-4" />
-                  View
-                </Link>
-                <Link
-                  href={`/admin/services/${service.id}/edit`}
-                  className="flex-1 btn-primary flex items-center justify-center gap-2 py-2 rounded-lg text-sm"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </Link>
-                <button className="p-2 hover:bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Price Range */}
+              {service.options.length > 0 && (
+                <div className="pt-3 border-t border-[var(--divider)]">
+                  <p className="text-xs text-[var(--text-muted)] mb-1">
+                    Price Range
+                  </p>
+                  <p className="text-lg font-bold text-[var(--purple)]">
+                    {Math.min(
+                      ...service.options.map((o) => o.amount),
+                    ).toLocaleString()}{" "}
+                    -{" "}
+                    {Math.max(
+                      ...service.options.map((o) => o.amount),
+                    ).toLocaleString()}{" "}
+                    XAF
+                  </p>
+                </div>
+              )}
+
+              {/* Availability */}
+              {service.availability && (
+                <div className="text-xs text-[var(--text-muted)]">
+                  📅 {service.availability}
+                </div>
+              )}
+
+              {/* Actions - Now a Client Component */}
+              <ServiceActions
+                serviceId={service.id}
+                serviceName={service.name}
+              />
             </div>
           </div>
         ))}
       </div>
 
+      {/* Empty State */}
       {services.length === 0 && (
         <div className="glass rounded-xl p-12 text-center">
           <div className="max-w-md mx-auto">
@@ -130,7 +201,8 @@ export default async function ServicesPage() {
               No services yet
             </h3>
             <p className="text-[var(--text-muted)] mb-6">
-              Create your first service to get started
+              Create your first service to start offering your services to
+              customers
             </p>
             <Link
               href="/admin/services/create"

@@ -1,5 +1,4 @@
 // components/admin/EditServiceForm.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -7,90 +6,59 @@ import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Trash2, Plus, X } from "lucide-react";
 import Link from "next/link";
+import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
+
+// Extract categories
+const SERVICE_CATEGORIES = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
+const SERVICE_GROUPS = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  description: string;
+  pricingType: string;
+  amount: number;
+  yearlyAmount: number | null;
+  label: string | null;
+  duration: string | null;
+  popular: boolean;
+  active: boolean;
+}
 
 interface Service {
   id: string;
   name: string;
   description: string;
-  price: number;
+  images: string[];
   category: string;
   group: string;
-  stock: number;
-  images: string[];
   featured: boolean;
   active: boolean;
-  benefits: string[];
-  ingredients: string[];
+  badge: string | null;
+  includes: string[];
+  availability: string | null;
+  options: ServiceOption[];
 }
 
 interface EditServiceFormProps {
   service: Service;
 }
 
-const serviceCategories = [
-  "Spiritual Counseling",
-  "Meditation & Mindfulness",
-  "Energy Healing",
-  "Tarot & Oracle Reading",
-  "Astrology",
-  "Life Coaching",
-  "Relationship Guidance",
-  "Wellness Consultation",
-  "Ritual & Ceremony",
-  "Other",
-];
-
-const spiritSystems = [
-  "Ancestral Wisdom",
-  "Chakra Energy",
-  "Divine Feminine",
-  "Elemental Magic",
-  "Lunar Cycles",
-  "Sacred Geometry",
-  "Crystal Healing",
-  "Sound Therapy",
-];
-
 export default function EditServiceForm({ service }: EditServiceFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Parse service details from ingredients field
-  const parsedDetails = {
-    duration:
-      service.ingredients
-        .find((i) => i.startsWith("Duration:"))
-        ?.split(": ")[1]
-        ?.split(" ")[0] || "60",
-    sessionType:
-      service.ingredients
-        .find((i) => i.startsWith("Session Type:"))
-        ?.split(": ")[1] || "VIDEO",
-    whatToExpect: service.ingredients
-      .filter((i) => i.startsWith("Expect:"))
-      .map((i) => i.replace("Expect: ", "")),
-    requirements: service.ingredients
-      .filter((i) => i.startsWith("Requirement:"))
-      .map((i) => i.replace("Requirement: ", "")),
-  };
-
   const [formData, setFormData] = useState({
     name: service.name,
     description: service.description,
-    price: service.price.toString(),
     category: service.category,
     group: service.group,
-    duration: parsedDetails.duration,
-    sessionType: parsedDetails.sessionType,
+    badge: service.badge || "",
+    availability: service.availability || "",
     featured: service.featured,
     active: service.active,
-    benefits: service.benefits.length > 0 ? service.benefits : [""],
-    whatToExpect:
-      parsedDetails.whatToExpect.length > 0 ? parsedDetails.whatToExpect : [""],
-    requirements:
-      parsedDetails.requirements.length > 0 ? parsedDetails.requirements : [""],
-    spiritSystems: [] as string[],
+    includes: service.includes.length > 0 ? service.includes : [""],
   });
 
   const [images, setImages] = useState<
@@ -102,52 +70,116 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
     })),
   );
 
+  const [options, setOptions] = useState(
+    service.options.map((opt) => ({
+      id: opt.id,
+      name: opt.name,
+      description: opt.description,
+      pricingType: opt.pricingType,
+      amount: opt.amount.toString(),
+      yearlyAmount: opt.yearlyAmount?.toString() || "",
+      label: opt.label || "",
+      duration: opt.duration || "",
+      popular: opt.popular,
+      isExisting: true,
+    })),
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/services/${service.id}`, {
+      // Update service
+      const serviceResponse = await fetch(`/api/services/${service.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: parseInt(formData.price),
+          images: images.map((img) => img.url),
           category: formData.category,
           group: formData.group,
-          images: images.map((img) => img.url),
           featured: formData.featured,
           active: formData.active,
-          benefits: formData.benefits.filter((b) => b.trim()),
-          ingredients: [
-            `Duration: ${formData.duration} minutes`,
-            `Session Type: ${formData.sessionType}`,
-            ...formData.whatToExpect
-              .filter((w) => w.trim())
-              .map((w) => `Expect: ${w}`),
-            ...formData.requirements
-              .filter((r) => r.trim())
-              .map((r) => `Requirement: ${r}`),
-          ],
-          stock: 999,
+          badge: formData.badge || null,
+          includes: formData.includes.filter((i) => i.trim()),
+          availability: formData.availability || null,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update service");
+      if (!serviceResponse.ok) {
+        const error = await serviceResponse.json();
+        throw new Error(error.error || "Failed to update service");
+      }
+
+      // Delete removed options
+      const existingOptionIds = service.options.map((o) => o.id);
+      const currentOptionIds = options
+        .filter((o) => o.isExisting)
+        .map((o) => o.id);
+      const deletedIds = existingOptionIds.filter(
+        (id) => !currentOptionIds.includes(id),
+      );
+
+      for (const id of deletedIds) {
+        await fetch(`/api/services/${service.id}/options/${id}`, {
+          method: "DELETE",
+        });
+      }
+
+      // Update or create options
+      for (const option of options) {
+        if (!option.name || !option.amount) continue;
+
+        const optionData = {
+          name: option.name,
+          description: option.description,
+          pricingType: option.pricingType,
+          amount: parseInt(option.amount),
+          yearlyAmount: option.yearlyAmount
+            ? parseInt(option.yearlyAmount)
+            : null,
+          label: option.label || null,
+          duration: option.duration || null,
+          popular: option.popular,
+        };
+
+        if (option.isExisting && option.id) {
+          // Update existing
+          await fetch(`/api/services/${service.id}/options/${option.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(optionData),
+          });
+        } else {
+          // Create new
+          await fetch(`/api/services/${service.id}/options`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(optionData),
+          });
+        }
+      }
 
       router.push("/admin/services");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Failed to update service");
+      alert(error.message || "Failed to update service");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this service?")) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete "${service.name}"? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
 
     setDeleting(true);
 
@@ -156,55 +188,67 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Failed to delete service");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete service");
+      }
 
       router.push("/admin/services");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Failed to delete service");
+      alert(error.message || "Failed to delete service");
       setDeleting(false);
     }
   };
 
-  const addField = (field: "benefits" | "whatToExpect" | "requirements") => {
-    setFormData({
-      ...formData,
-      [field]: [...formData[field], ""],
-    });
+  const addInclude = () => {
+    setFormData({ ...formData, includes: [...formData.includes, ""] });
   };
 
-  const updateField = (
-    field: "benefits" | "whatToExpect" | "requirements",
-    index: number,
-    value: string,
-  ) => {
-    const updated = [...formData[field]];
+  const updateInclude = (index: number, value: string) => {
+    const updated = [...formData.includes];
     updated[index] = value;
-    setFormData({ ...formData, [field]: updated });
+    setFormData({ ...formData, includes: updated });
   };
 
-  const removeField = (
-    field: "benefits" | "whatToExpect" | "requirements",
-    index: number,
-  ) => {
+  const removeInclude = (index: number) => {
     setFormData({
       ...formData,
-      [field]: formData[field].filter((_, i) => i !== index),
+      includes: formData.includes.filter((_, i) => i !== index),
     });
   };
 
-  const toggleSpiritSystem = (system: string) => {
-    setFormData({
-      ...formData,
-      spiritSystems: formData.spiritSystems.includes(system)
-        ? formData.spiritSystems.filter((s) => s !== system)
-        : [...formData.spiritSystems, system],
-    });
+  const addOption = () => {
+    setOptions([
+      ...options,
+      {
+        id: "",
+        name: "",
+        description: "",
+        pricingType: "PER_SESSION",
+        amount: "",
+        yearlyAmount: "",
+        label: "",
+        duration: "",
+        popular: false,
+        isExisting: false,
+      },
+    ]);
+  };
+
+  const updateOption = (index: number, field: string, value: any) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], [field]: value };
+    setOptions(updated);
+  };
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index));
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link
@@ -218,7 +262,7 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
               Edit Service
             </h1>
             <p className="text-[var(--text-muted)] mt-1">
-              Update service information
+              Update service information and pricing options
             </p>
           </div>
         </div>
@@ -226,7 +270,7 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--error-bg)] text-[var(--error-text)] hover:bg-[var(--error-border)]"
+          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--error-bg)] text-[var(--error-text)] hover:bg-[var(--error-border)] disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4" />
           {deleting ? "Deleting..." : "Delete"}
@@ -286,6 +330,27 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                Service Group *
+              </label>
+              <select
+                required
+                value={formData.group}
+                onChange={(e) =>
+                  setFormData({ ...formData, group: e.target.value })
+                }
+                className="glass-input w-full px-4 py-3"
+              >
+                <option value="">Select group</option>
+                {SERVICE_GROUPS.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Category *
               </label>
               <select
@@ -297,130 +362,66 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
                 className="glass-input w-full px-4 py-3"
               >
                 <option value="">Select category</option>
-                {serviceCategories.map((cat) => (
+                {SERVICE_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Group/Tag
+                Badge (Optional)
               </label>
               <input
                 type="text"
-                value={formData.group}
+                value={formData.badge}
                 onChange={(e) =>
-                  setFormData({ ...formData, group: e.target.value })
+                  setFormData({ ...formData, badge: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
+                placeholder="e.g., Popular, Top Rated"
               />
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Price (XAF) *
+                Availability (Optional)
               </label>
               <input
-                type="number"
-                required
-                min="0"
-                value={formData.price}
+                type="text"
+                value={formData.availability}
                 onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
+                  setFormData({ ...formData, availability: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
+                placeholder="e.g., Mon–Sat, 7am–8pm"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Duration (minutes) *
-              </label>
-              <input
-                type="number"
-                required
-                min="15"
-                step="15"
-                value={formData.duration}
-                onChange={(e) =>
-                  setFormData({ ...formData, duration: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Session Type *
-              </label>
-              <select
-                required
-                value={formData.sessionType}
-                onChange={(e) =>
-                  setFormData({ ...formData, sessionType: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
-              >
-                <option value="VIDEO">Video Call</option>
-                <option value="TEXT">Text/Chat</option>
-                <option value="IN_PERSON">In-Person</option>
-              </select>
             </div>
           </div>
         </div>
 
-        {/* Spirit Systems */}
+        {/* What's Included */}
         <div className="glass p-6 rounded-xl space-y-4">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Spirit Systems
+            What's Included
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {spiritSystems.map((system) => (
-              <label
-                key={system}
-                className={`
-                  flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all
-                  ${
-                    formData.spiritSystems.includes(system)
-                      ? "border-[var(--purple)] bg-[var(--purple-faint)] text-[var(--purple)]"
-                      : "border-[var(--divider)] hover:border-[var(--purple-light)]"
-                  }
-                `}
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.spiritSystems.includes(system)}
-                  onChange={() => toggleSpiritSystem(system)}
-                  className="sr-only"
-                />
-                <span className="text-sm font-medium">{system}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Benefits */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Benefits
-          </h2>
-          {formData.benefits.map((benefit, index) => (
+          {formData.includes.map((include, index) => (
             <div key={index} className="flex gap-2">
               <input
                 type="text"
-                value={benefit}
-                onChange={(e) => updateField("benefits", index, e.target.value)}
+                value={include}
+                onChange={(e) => updateInclude(index, e.target.value)}
                 className="glass-input flex-1 px-4 py-3"
+                placeholder="e.g., Live tracking, SMS alerts"
               />
-              {formData.benefits.length > 1 && (
+              {formData.includes.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => removeField("benefits", index)}
+                  onClick={() => removeInclude(index)}
                   className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -430,43 +431,7 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
           ))}
           <button
             type="button"
-            onClick={() => addField("benefits")}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Add Benefit
-          </button>
-        </div>
-
-        {/* What to Expect */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            What to Expect
-          </h2>
-          {formData.whatToExpect.map((item, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="text"
-                value={item}
-                onChange={(e) =>
-                  updateField("whatToExpect", index, e.target.value)
-                }
-                className="glass-input flex-1 px-4 py-3"
-              />
-              {formData.whatToExpect.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeField("whatToExpect", index)}
-                  className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => addField("whatToExpect")}
+            onClick={addInclude}
             className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
           >
             <Plus className="w-4 h-4" />
@@ -474,40 +439,178 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
           </button>
         </div>
 
-        {/* Requirements */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Requirements (Optional)
-          </h2>
-          {formData.requirements.map((req, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="text"
-                value={req}
-                onChange={(e) =>
-                  updateField("requirements", index, e.target.value)
-                }
-                className="glass-input flex-1 px-4 py-3"
-              />
-              {formData.requirements.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeField("requirements", index)}
-                  className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
+        {/* Service Options */}
+        <div className="glass p-6 rounded-xl space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                Pricing Options
+              </h2>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                Manage pricing tiers for this service
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addOption}
+              className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
+            >
+              <Plus className="w-4 h-4" />
+              Add Option
+            </button>
+          </div>
+
+          {options.map((option, index) => (
+            <div
+              key={index}
+              className="p-4 border-2 border-[var(--divider)] rounded-lg space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-[var(--text-primary)]">
+                  {option.isExisting
+                    ? `${option.name || `Option ${index + 1}`}`
+                    : `New Option ${index + 1}`}
+                </h3>
+                {options.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeOption(index)}
+                    className="p-2 text-[var(--error-text)] hover:bg-[var(--error-bg)] rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Option Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={option.name}
+                    onChange={(e) =>
+                      updateOption(index, "name", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Pricing Type *
+                  </label>
+                  <select
+                    value={option.pricingType}
+                    onChange={(e) =>
+                      updateOption(index, "pricingType", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                  >
+                    <option value="PER_SESSION">Per Session</option>
+                    <option value="ONE_TIME">One Time</option>
+                    <option value="MONTHLY">Monthly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  value={option.description}
+                  onChange={(e) =>
+                    updateOption(index, "description", e.target.value)
+                  }
+                  rows={2}
+                  className="glass-input w-full px-4 py-3 resize-none"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Price (XAF) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={option.amount}
+                    onChange={(e) =>
+                      updateOption(index, "amount", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                  />
+                </div>
+
+                {option.pricingType === "MONTHLY" && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                      Yearly Price (XAF)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={option.yearlyAmount}
+                      onChange={(e) =>
+                        updateOption(index, "yearlyAmount", e.target.value)
+                      }
+                      className="glass-input w-full px-4 py-3"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Label
+                  </label>
+                  <input
+                    type="text"
+                    value={option.label}
+                    onChange={(e) =>
+                      updateOption(index, "label", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="e.g., Per delivery"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    value={option.duration}
+                    onChange={(e) =>
+                      updateOption(index, "duration", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="e.g., 2 hours"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={option.popular}
+                  onChange={(e) =>
+                    updateOption(index, "popular", e.target.checked)
+                  }
+                  className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+                />
+                <span className="text-sm text-[var(--text-secondary)]">
+                  Mark as popular option
+                </span>
+              </label>
             </div>
           ))}
-          <button
-            type="button"
-            onClick={() => addField("requirements")}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Add Requirement
-          </button>
         </div>
 
         {/* Settings */}
@@ -529,6 +632,9 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
               <span className="text-[var(--text-secondary)] font-medium">
                 Featured Service
               </span>
+              <p className="text-xs text-[var(--text-muted)]">
+                Display prominently on the services page
+              </p>
             </div>
           </label>
 
@@ -542,9 +648,12 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
               className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
             />
             <div>
-              <span className="text-[var(--text-secondary)] font-medium">
+              <span className="text-[var(--text-secondary)} font-medium">
                 Active
               </span>
+              <p className="text-xs text-[var(--text-muted)]">
+                Make this service available for booking
+              </p>
             </div>
           </label>
         </div>
@@ -554,7 +663,7 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
           <button
             type="submit"
             disabled={loading || images.length === 0}
-            className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50"
+            className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5" />
             {loading ? "Updating..." : "Update Service"}

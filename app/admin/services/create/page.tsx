@@ -1,5 +1,4 @@
 // app/admin/services/create/page.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -7,136 +6,162 @@ import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Plus, X } from "lucide-react";
 import Link from "next/link";
+import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
 
-const serviceCategories = [
-  "Spiritual Counseling",
-  "Meditation & Mindfulness",
-  "Energy Healing",
-  "Tarot & Oracle Reading",
-  "Astrology",
-  "Life Coaching",
-  "Relationship Guidance",
-  "Wellness Consultation",
-  "Ritual & Ceremony",
-  "Other",
-];
-
-const spiritSystems = [
-  "Ancestral Wisdom",
-  "Chakra Energy",
-  "Divine Feminine",
-  "Elemental Magic",
-  "Lunar Cycles",
-  "Sacred Geometry",
-  "Crystal Healing",
-  "Sound Therapy",
-];
+// Extract all unique categories
+const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
+const serviceGroups = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
 
 export default function CreateServicePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    category: "",
-    group: "",
-    duration: "", // in minutes
-    sessionType: "VIDEO", // VIDEO, TEXT, IN_PERSON
-    featured: false,
-    active: true,
-    benefits: [""],
-    whatToExpect: [""],
-    requirements: [""],
-    spiritSystems: [] as string[],
-  });
   const [images, setImages] = useState<
     Array<{ url: string; publicId: string }>
   >([]);
 
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "",
+    group: "",
+    badge: "",
+    availability: "",
+    featured: false,
+    active: true,
+    includes: [""],
+  });
+
+  const [options, setOptions] = useState([
+    {
+      name: "",
+      description: "",
+      pricingType: "PER_SESSION",
+      amount: "",
+      yearlyAmount: "",
+      label: "",
+      duration: "",
+      popular: false,
+    },
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (images.length === 0) {
+      alert("Please upload at least one image");
+      return;
+    }
+
+    if (options.length === 0 || !options[0].name) {
+      alert("Please add at least one service option");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("/api/services", {
+      // Create service
+      const serviceResponse = await fetch("/api/services", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: parseInt(formData.price),
+          images: images.map((img) => img.url),
           category: formData.category,
           group: formData.group,
-          images: images.map((img) => img.url),
           featured: formData.featured,
           active: formData.active,
-          benefits: formData.benefits.filter((b) => b.trim()),
-          ingredients: [
-            // Store service details in ingredients field
-            `Duration: ${formData.duration} minutes`,
-            `Session Type: ${formData.sessionType}`,
-            ...formData.whatToExpect
-              .filter((w) => w.trim())
-              .map((w) => `Expect: ${w}`),
-            ...formData.requirements
-              .filter((r) => r.trim())
-              .map((r) => `Requirement: ${r}`),
-          ],
-          stock: 999, // Services have unlimited "stock"
+          badge: formData.badge || null,
+          includes: formData.includes.filter((i) => i.trim()),
+          availability: formData.availability || null,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create service");
+      if (!serviceResponse.ok) {
+        const error = await serviceResponse.json();
+        throw new Error(error.error || "Failed to create service");
+      }
+
+      const { service } = await serviceResponse.json();
+
+      // Create service options
+      for (const option of options) {
+        if (!option.name || !option.amount) continue;
+
+        await fetch(`/api/services/${service.id}/options`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: option.name,
+            description: option.description,
+            pricingType: option.pricingType,
+            amount: parseInt(option.amount),
+            yearlyAmount: option.yearlyAmount
+              ? parseInt(option.yearlyAmount)
+              : null,
+            label: option.label || null,
+            duration: option.duration || null,
+            popular: option.popular,
+          }),
+        });
+      }
 
       router.push("/admin/services");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Failed to create service");
+      alert(error.message || "Failed to create service");
     } finally {
       setLoading(false);
     }
   };
 
-  const addField = (field: "benefits" | "whatToExpect" | "requirements") => {
-    setFormData({
-      ...formData,
-      [field]: [...formData[field], ""],
-    });
+  const addInclude = () => {
+    setFormData({ ...formData, includes: [...formData.includes, ""] });
   };
 
-  const updateField = (
-    field: "benefits" | "whatToExpect" | "requirements",
-    index: number,
-    value: string,
-  ) => {
-    const updated = [...formData[field]];
+  const updateInclude = (index: number, value: string) => {
+    const updated = [...formData.includes];
     updated[index] = value;
-    setFormData({ ...formData, [field]: updated });
+    setFormData({ ...formData, includes: updated });
   };
 
-  const removeField = (
-    field: "benefits" | "whatToExpect" | "requirements",
-    index: number,
-  ) => {
+  const removeInclude = (index: number) => {
     setFormData({
       ...formData,
-      [field]: formData[field].filter((_, i) => i !== index),
+      includes: formData.includes.filter((_, i) => i !== index),
     });
   };
 
-  const toggleSpiritSystem = (system: string) => {
-    setFormData({
-      ...formData,
-      spiritSystems: formData.spiritSystems.includes(system)
-        ? formData.spiritSystems.filter((s) => s !== system)
-        : [...formData.spiritSystems, system],
-    });
+  const addOption = () => {
+    setOptions([
+      ...options,
+      {
+        name: "",
+        description: "",
+        pricingType: "PER_SESSION",
+        amount: "",
+        yearlyAmount: "",
+        label: "",
+        duration: "",
+        popular: false,
+      },
+    ]);
+  };
+
+  const updateOption = (index: number, field: string, value: any) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], [field]: value };
+    setOptions(updated);
+  };
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index));
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center gap-4">
         <Link
           href="/admin/services"
@@ -149,7 +174,7 @@ export default function CreateServicePage() {
             Create Service
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
-            Add a new spiritual or wellness service
+            Add a new service offering with pricing options
           </p>
         </div>
       </div>
@@ -158,7 +183,7 @@ export default function CreateServicePage() {
         {/* Service Images */}
         <div className="glass p-6 rounded-xl">
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-            Service Images
+            Service Images *
           </h2>
           <MultiImageUpload
             folder="services"
@@ -185,7 +210,7 @@ export default function CreateServicePage() {
                 setFormData({ ...formData, name: e.target.value })
               }
               className="glass-input w-full px-4 py-3"
-              placeholder="e.g., Tarot Card Reading Session"
+              placeholder="e.g., Home Delivery Service"
             />
           </div>
 
@@ -208,6 +233,27 @@ export default function CreateServicePage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                Service Group *
+              </label>
+              <select
+                required
+                value={formData.group}
+                onChange={(e) =>
+                  setFormData({ ...formData, group: e.target.value })
+                }
+                className="glass-input w-full px-4 py-3"
+              >
+                <option value="">Select group</option>
+                {serviceGroups.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Category *
               </label>
               <select
@@ -226,130 +272,59 @@ export default function CreateServicePage() {
                 ))}
               </select>
             </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Group/Tag
+                Badge (Optional)
               </label>
               <input
                 type="text"
-                value={formData.group}
+                value={formData.badge}
                 onChange={(e) =>
-                  setFormData({ ...formData, group: e.target.value })
+                  setFormData({ ...formData, badge: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
-                placeholder="e.g., Premium, Beginner-Friendly"
+                placeholder="e.g., Popular, Top Rated"
               />
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Price (XAF) *
+                Availability (Optional)
               </label>
               <input
-                type="number"
-                required
-                min="0"
-                value={formData.price}
+                type="text"
+                value={formData.availability}
                 onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
+                  setFormData({ ...formData, availability: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
-                placeholder="0"
+                placeholder="e.g., Mon–Sat, 7am–8pm"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Duration (minutes) *
-              </label>
-              <input
-                type="number"
-                required
-                min="15"
-                step="15"
-                value={formData.duration}
-                onChange={(e) =>
-                  setFormData({ ...formData, duration: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
-                placeholder="60"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Session Type *
-              </label>
-              <select
-                required
-                value={formData.sessionType}
-                onChange={(e) =>
-                  setFormData({ ...formData, sessionType: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
-              >
-                <option value="VIDEO">Video Call</option>
-                <option value="TEXT">Text/Chat</option>
-                <option value="IN_PERSON">In-Person</option>
-              </select>
             </div>
           </div>
         </div>
 
-        {/* Spirit Systems */}
+        {/* What's Included */}
         <div className="glass p-6 rounded-xl space-y-4">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Spirit Systems
+            What's Included
           </h2>
-          <p className="text-sm text-[var(--text-muted)]">
-            Select the spiritual systems this service aligns with
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {spiritSystems.map((system) => (
-              <label
-                key={system}
-                className={`
-                  flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all
-                  ${
-                    formData.spiritSystems.includes(system)
-                      ? "border-[var(--purple)] bg-[var(--purple-faint)] text-[var(--purple)]"
-                      : "border-[var(--divider)] hover:border-[var(--purple-light)]"
-                  }
-                `}
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.spiritSystems.includes(system)}
-                  onChange={() => toggleSpiritSystem(system)}
-                  className="sr-only"
-                />
-                <span className="text-sm font-medium">{system}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Benefits */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Benefits
-          </h2>
-          {formData.benefits.map((benefit, index) => (
+          {formData.includes.map((include, index) => (
             <div key={index} className="flex gap-2">
               <input
                 type="text"
-                value={benefit}
-                onChange={(e) => updateField("benefits", index, e.target.value)}
+                value={include}
+                onChange={(e) => updateInclude(index, e.target.value)}
                 className="glass-input flex-1 px-4 py-3"
-                placeholder="e.g., Gain clarity on life decisions"
+                placeholder="e.g., Live tracking, SMS alerts"
               />
-              {formData.benefits.length > 1 && (
+              {formData.includes.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => removeField("benefits", index)}
+                  onClick={() => removeInclude(index)}
                   className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -359,44 +334,7 @@ export default function CreateServicePage() {
           ))}
           <button
             type="button"
-            onClick={() => addField("benefits")}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Add Benefit
-          </button>
-        </div>
-
-        {/* What to Expect */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            What to Expect
-          </h2>
-          {formData.whatToExpect.map((item, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="text"
-                value={item}
-                onChange={(e) =>
-                  updateField("whatToExpect", index, e.target.value)
-                }
-                className="glass-input flex-1 px-4 py-3"
-                placeholder="e.g., A personalized reading based on your energy"
-              />
-              {formData.whatToExpect.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeField("whatToExpect", index)}
-                  className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => addField("whatToExpect")}
+            onClick={addInclude}
             className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
           >
             <Plus className="w-4 h-4" />
@@ -404,41 +342,180 @@ export default function CreateServicePage() {
           </button>
         </div>
 
-        {/* Requirements */}
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Requirements (Optional)
-          </h2>
-          {formData.requirements.map((req, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="text"
-                value={req}
-                onChange={(e) =>
-                  updateField("requirements", index, e.target.value)
-                }
-                className="glass-input flex-1 px-4 py-3"
-                placeholder="e.g., Bring specific questions or topics"
-              />
-              {formData.requirements.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeField("requirements", index)}
-                  className="p-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
+        {/* Service Options */}
+        <div className="glass p-6 rounded-xl space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                Pricing Options *
+              </h2>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                Add different pricing tiers for this service
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addOption}
+              className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
+            >
+              <Plus className="w-4 h-4" />
+              Add Option
+            </button>
+          </div>
+
+          {options.map((option, index) => (
+            <div
+              key={index}
+              className="p-4 border-2 border-[var(--divider)] rounded-lg space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-[var(--text-primary)]">
+                  Option {index + 1}
+                </h3>
+                {options.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeOption(index)}
+                    className="p-2 text-[var(--error-text)] hover:bg-[var(--error-bg)] rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Option Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={option.name}
+                    onChange={(e) =>
+                      updateOption(index, "name", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="e.g., Single Delivery"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Pricing Type *
+                  </label>
+                  <select
+                    value={option.pricingType}
+                    onChange={(e) =>
+                      updateOption(index, "pricingType", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                  >
+                    <option value="PER_SESSION">Per Session</option>
+                    <option value="ONE_TIME">One Time</option>
+                    <option value="MONTHLY">Monthly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  value={option.description}
+                  onChange={(e) =>
+                    updateOption(index, "description", e.target.value)
+                  }
+                  rows={2}
+                  className="glass-input w-full px-4 py-3 resize-none"
+                  placeholder="Describe this option..."
+                />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Price (XAF) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={option.amount}
+                    onChange={(e) =>
+                      updateOption(index, "amount", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="0"
+                  />
+                </div>
+
+                {option.pricingType === "MONTHLY" && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                      Yearly Price (XAF)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={option.yearlyAmount}
+                      onChange={(e) =>
+                        updateOption(index, "yearlyAmount", e.target.value)
+                      }
+                      className="glass-input w-full px-4 py-3"
+                      placeholder="Optional yearly price"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Label (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={option.label}
+                    onChange={(e) =>
+                      updateOption(index, "label", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="e.g., Per delivery"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    Duration (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={option.duration}
+                    onChange={(e) =>
+                      updateOption(index, "duration", e.target.value)
+                    }
+                    className="glass-input w-full px-4 py-3"
+                    placeholder="e.g., 2 hours"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={option.popular}
+                  onChange={(e) =>
+                    updateOption(index, "popular", e.target.checked)
+                  }
+                  className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+                />
+                <span className="text-sm text-[var(--text-secondary)]">
+                  Mark as popular option
+                </span>
+              </label>
             </div>
           ))}
-          <button
-            type="button"
-            onClick={() => addField("requirements")}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Add Requirement
-          </button>
         </div>
 
         {/* Settings */}
@@ -491,7 +568,7 @@ export default function CreateServicePage() {
           <button
             type="submit"
             disabled={loading || images.length === 0}
-            className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50"
+            className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5" />
             {loading ? "Creating..." : "Create Service"}
