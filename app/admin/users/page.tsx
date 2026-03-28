@@ -1,19 +1,8 @@
 // app/admin/users/page.tsx
-
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import {
-  Users,
-  Search,
-  Filter,
-  Eye,
-  Edit,
-  Shield,
-  UserCheck,
-  Trash,
-} from "lucide-react";
-import { UserRole } from "@prisma/client";
-import { use } from "react";
+import { Users, Search, Shield, UserCheck } from "lucide-react";
+import { UserActions } from "./_component/UserActions";
 
 export default async function UsersPage() {
   const users = await prisma.user.findMany({
@@ -27,9 +16,7 @@ export default async function UsersPage() {
         },
       },
       subscription: {
-        include: {
-          plan: true,
-        },
+        include: { plan: true },
       },
     },
   });
@@ -40,12 +27,6 @@ export default async function UsersPage() {
     counselors: users.filter((u) => u.role === "COUNSELOR").length,
     volunteers: users.filter((u) => u.role === "VOLUNTEER").length,
     users: users.filter((u) => u.role === "USER").length,
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    await prisma.user.delete({ where: { id } });
-    window.location.reload();
   };
 
   return (
@@ -262,29 +243,10 @@ export default async function UsersPage() {
 
                   {/* Actions */}
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/admin/users/${user.id}`}
-                        className="p-2 hover:bg-[var(--purple-faint)] text-[var(--purple)] rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <Link
-                        href={`/admin/users/${user.id}/edit`}
-                        className="p-2 hover:bg-[var(--blue-faint)] text-[var(--blue)] rounded-lg transition-colors"
-                        title="Edit User"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="p-2 hover:bg-[var(--scarlet-faint)] text-[var(--scarlet)] rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <UserActions
+                      userId={user.id}
+                      userName={user.name || user.email}
+                    />
                   </td>
                 </tr>
               ))}
