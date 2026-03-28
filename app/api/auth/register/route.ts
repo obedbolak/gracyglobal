@@ -5,11 +5,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, phone, country, role, image } =
+      await req.json();
 
-    if (!name || !email || !password) {
+    // Validate required fields
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Name, email and password are required" },
+        { error: "Email and password are required" },
         { status: 400 },
       );
     }
@@ -21,6 +23,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if user already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
@@ -29,16 +32,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Hash password
     const hashed = await bcrypt.hash(password, 12);
 
+    // Create user with all fields
     const user = await prisma.user.create({
-      data: { name, email, password: hashed },
-      select: { id: true, name: true, email: true, role: true },
+      data: {
+        name: name || null,
+        email,
+        password: hashed,
+        phone: phone || null,
+        country: country || null,
+        role: role || "USER", // Support COUNSELOR, ADMIN, etc.
+        image: image || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        country: true,
+        image: true,
+        createdAt: true,
+      },
     });
+
+    console.log("✅ User created:", user);
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
-    console.error("[POST /api/auth/register]", error);
+    console.error("❌ [POST /api/auth/register]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
