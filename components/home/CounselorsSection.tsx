@@ -7,10 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { counselors } from "@/data/counselors";
-
+import { useCounselors } from "@/hooks/useCounselors";
 export default function CounselorsSection() {
   const [activeTab, setActiveTab] = useState("text");
+
+  const { counselors } = useCounselors();
 
   return (
     <section className="py-16 relative">
@@ -56,8 +57,8 @@ export default function CounselorsSection() {
                   >
                     <div className="relative overflow-hidden">
                       <img
-                        src={c.img}
-                        alt={c.name}
+                        src={c.user?.image || "/images/placeholder.png"}
+                        alt={c.user.name || "Counselor"}
                         className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                       <div
@@ -85,13 +86,13 @@ export default function CounselorsSection() {
                         className="font-bold text-sm truncate mb-0.5"
                         style={{ color: "var(--text-primary)" }}
                       >
-                        {c.name}
+                        {c.user.name}
                       </div>
                       <div
                         className="text-xs mb-2 truncate"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {c.role}
+                        {c.specialty}
                       </div>
                       <div className="flex items-center gap-1 mb-3.5">
                         <Star

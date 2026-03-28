@@ -10,8 +10,10 @@ import {
   Edit,
   Shield,
   UserCheck,
+  Trash,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
+import { use } from "react";
 
 export default async function UsersPage() {
   const users = await prisma.user.findMany({
@@ -38,6 +40,12 @@ export default async function UsersPage() {
     counselors: users.filter((u) => u.role === "COUNSELOR").length,
     volunteers: users.filter((u) => u.role === "VOLUNTEER").length,
     users: users.filter((u) => u.role === "USER").length,
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    await prisma.user.delete({ where: { id } });
+    window.location.reload();
   };
 
   return (
@@ -269,6 +277,13 @@ export default async function UsersPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </Link>
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-2 hover:bg-[var(--scarlet-faint)] text-[var(--scarlet)] rounded-lg transition-colors"
+                        title="Delete User"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
