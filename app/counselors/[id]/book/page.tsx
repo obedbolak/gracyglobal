@@ -1,9 +1,9 @@
+// app/counselors/[id]/book/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-
 import {
   CheckCircle,
   Video,
@@ -18,8 +18,9 @@ import {
   FileText,
   ArrowRight,
   Check,
+  Loader2,
 } from "lucide-react";
-import { getCounselorById, type Counselor } from "@/data/counselors";
+import { useCounselor } from "@/hooks/useCounselors";
 import { useCurrency } from "@/hooks/useCurrency";
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
@@ -81,8 +82,7 @@ function formatDate(d: Date) {
   });
 }
 
-// ─── Step components ──────────────────────────────────────────────────────────
-
+// ─── Step components (keep existing) ──────────────────────────────────────────
 function StepSessionType({
   value,
   onChange,
@@ -355,7 +355,10 @@ function StepConfirm({
   date: Date | null;
   time: string;
   notes: string;
-  counselor: Counselor;
+  counselor: {
+    user: { name: string | null };
+    pricePerHour: number;
+  };
 }) {
   const { convert, loading } = useCurrency();
 
@@ -368,7 +371,7 @@ function StepConfirm({
         Review & Confirm
       </h3>
       {[
-        { label: "Counselor", value: counselor.name },
+        { label: "Counselor", value: counselor.user.name || "Counselor" },
         {
           label: "Session Type",
           value: sessionType === "VIDEO" ? "Video Session" : "Text Session",
@@ -452,7 +455,7 @@ function StepConfirm({
             backgroundClip: "text",
           }}
         >
-          {loading ? "..." : convert(counselor.price)} /hr
+          {loading ? "..." : convert(counselor.pricePerHour)} /hr
         </span>
       </div>
       <div
@@ -471,7 +474,7 @@ function SuccessScreen({
   date,
   time,
 }: {
-  counselor: Counselor;
+  counselor: { user: { name: string | null } };
   date: Date | null;
   time: string;
 }) {
@@ -504,7 +507,7 @@ function SuccessScreen({
         >
           Your session with{" "}
           <strong style={{ color: "var(--text-primary)" }}>
-            {counselor.name}
+            {counselor.user.name || "your counselor"}
           </strong>{" "}
           is confirmed for{" "}
           <strong style={{ color: "var(--text-primary)" }}>
@@ -541,10 +544,12 @@ function SuccessScreen({
 export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
-  const { convert, currency, loading: currencyLoading } = useCurrency();
+  const { convert, loading: currencyLoading } = useCurrency();
 
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
-  const counselor = getCounselorById(id);
+
+  // Use the hook instead of local data
+  const { counselor, loading: counselorLoading, error } = useCounselor(id);
 
   const [step, setStep] = useState(1);
   const [sessionType, setSessionType] = useState("VIDEO");
@@ -552,30 +557,7 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  // Counselor not found
-  if (!counselor) {
-    return (
-      <main className="min-h-screen">
-        <div className="max-w-lg mx-auto px-4 py-32 text-center">
-          <p
-            className="text-lg font-bold mb-4"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Counselor not found.
-          </p>
-          <a
-            href="/counselors"
-            className="text-sm font-semibold"
-            style={{ color: "var(--accent-primary)" }}
-          >
-            ← Browse all counselors
-          </a>
-        </div>
-      </main>
-    );
-  }
+  const [booking, setBooking] = useState(false);
 
   const canNext =
     (step === 1 && !!sessionType) ||
@@ -584,10 +566,70 @@ export default function BookingPage() {
     step === 4;
 
   async function handleConfirm() {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setLoading(false);
-    setSubmitted(true);
+    setBooking(true);
+
+    try {
+      // TODO: Create booking via API
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          counselorId: id,
+          type: sessionType,
+          scheduledAt: new Date(
+            `${selectedDate?.toISOString().split("T")[0]}T${selectedTime}:00`,
+          ),
+          duration: 60,
+          price: counselor?.pricePerHour,
+          notes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create booking");
+      }
+
+      await new Promise((r) => setTimeout(r, 1000)); // Simulate processing
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Booking error:", error);
+      alert("Failed to create booking. Please try again.");
+    } finally {
+      setBooking(false);
+    }
+  }
+
+  // Loading state
+  if (counselorLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--purple)]" />
+      </main>
+    );
+  }
+
+  // Error or not found
+  if (error || !counselor) {
+    return (
+      <main className="min-h-screen">
+        <div className="max-w-lg mx-auto px-4 py-32 text-center">
+          <div className="glass p-8 rounded-xl">
+            <p
+              className="text-lg font-bold mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {error || "Counselor not found."}
+            </p>
+            <a
+              href="/counselors"
+              className="text-sm font-semibold inline-block px-6 py-3 bg-[var(--purple)] text-white rounded-lg hover:opacity-90 transition-opacity"
+            >
+              ← Browse all counselors
+            </a>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -623,11 +665,19 @@ export default function BookingPage() {
               >
                 <div className="flex items-start gap-4 mb-4">
                   <div className="relative flex-shrink-0">
-                    <img
-                      src={counselor.img}
-                      alt={counselor.name}
-                      className="w-16 h-16 rounded-2xl object-cover"
-                    />
+                    {counselor.user.image ? (
+                      <img
+                        src={counselor.user.image}
+                        alt={counselor.user.name || "Counselor"}
+                        className="w-16 h-16 rounded-2xl object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--purple-faint)] to-[var(--glass-bg)] flex items-center justify-center">
+                        <span className="text-2xl font-bold text-[var(--purple)]">
+                          {counselor.user.name?.[0] || "C"}
+                        </span>
+                      </div>
+                    )}
                     {counselor.available && (
                       <span
                         className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
@@ -644,7 +694,7 @@ export default function BookingPage() {
                         className="font-extrabold text-sm"
                         style={{ color: "var(--text-primary)" }}
                       >
-                        {counselor.name}
+                        {counselor.user.name || "Counselor"}
                       </span>
                       {counselor.verified && (
                         <CheckCircle
@@ -657,7 +707,7 @@ export default function BookingPage() {
                       className="text-xs mb-2"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      {counselor.role}
+                      {counselor.specialty}
                     </p>
                     <div className="flex items-center gap-1.5">
                       <Star
@@ -668,7 +718,7 @@ export default function BookingPage() {
                         className="text-xs font-bold"
                         style={{ color: "var(--text-primary)" }}
                       >
-                        {counselor.rating}
+                        {counselor.rating.toFixed(1)}
                       </span>
                       <span
                         className="text-xs"
@@ -683,7 +733,7 @@ export default function BookingPage() {
                   className="text-xs leading-relaxed font-light mb-4"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  {counselor.bio}
+                  {counselor.bio || "Professional counselor ready to help you."}
                 </p>
                 <div
                   className="flex items-center justify-between pt-3"
@@ -700,13 +750,15 @@ export default function BookingPage() {
                       className="text-base font-extrabold block"
                       style={{ color: "var(--accent-primary)" }}
                     >
-                      {currencyLoading ? "..." : convert(counselor.price)}
+                      {currencyLoading
+                        ? "..."
+                        : convert(counselor.pricePerHour)}
                     </span>
                     <span
                       className="text-[10px] font-light"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      CFA {counselor.price.toLocaleString()}
+                      XAF {counselor.pricePerHour.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -792,7 +844,10 @@ export default function BookingPage() {
                 {[
                   { icon: Shield, text: "100% private & confidential" },
                   { icon: Clock, text: "Free cancellation up to 24h before" },
-                  { icon: Star, text: "4.8★ average counselor rating" },
+                  {
+                    icon: Star,
+                    text: `${counselor.rating.toFixed(1)}★ counselor rating`,
+                  },
                 ].map(({ icon: Icon, text }, i) => (
                   <div
                     key={i}
@@ -917,7 +972,7 @@ export default function BookingPage() {
                   ) : (
                     <button
                       onClick={handleConfirm}
-                      disabled={loading}
+                      disabled={booking}
                       className="flex items-center gap-2 px-7 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-105 disabled:opacity-70"
                       style={{
                         background:
@@ -925,7 +980,7 @@ export default function BookingPage() {
                         boxShadow: "0 4px 16px rgba(220,20,60,0.4)",
                       }}
                     >
-                      {loading ? (
+                      {booking ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
                           Processing...

@@ -1,3 +1,4 @@
+// app/counselors/page.tsx
 "use client";
 
 import CounselorsHero from "@/components/counselors/CounselorsHero";

@@ -49,7 +49,7 @@ export function CounselorActions({
   return (
     <div className="flex gap-2 pt-3">
       <Link
-        href={`/counselors/${counselorId}`}
+        href={`/counselors/${counselorId}/book`}
         className="flex-1 btn-secondary flex items-center justify-center gap-2 py-2 rounded-lg text-sm"
       >
         <Eye className="w-4 h-4" />
