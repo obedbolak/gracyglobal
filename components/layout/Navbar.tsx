@@ -366,6 +366,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
+                  onClick={() => setOpen(false)}
                   className="w-full text-center py-3 text-sm font-semibold rounded-xl transition-all"
                   style={{
                     background: "var(--glass-bg)",
@@ -377,6 +378,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/register"
+                  onClick={() => setOpen(false)}
                   className="w-full text-center py-3 text-sm font-bold text-white rounded-xl"
                   style={{
                     background:
