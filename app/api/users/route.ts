@@ -23,9 +23,9 @@ export async function GET(req: NextRequest) {
             { email: { contains: search, mode: "insensitive" } },
           ],
         }),
-        // Exclude users who already have a counselor profile
+        // ✅ correct relation name from your schema
         ...(excludeCounselors && {
-          counselor: null,
+          counselorProfile: null,
         }),
       },
       select: {
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         role: true,
       },
       orderBy: { name: "asc" },
-      take: 10, // Limit results for search dropdown
+      take: 10,
     });
 
     return NextResponse.json({ users });

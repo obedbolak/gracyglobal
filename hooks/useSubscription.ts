@@ -23,6 +23,7 @@ interface Subscription {
   currentPeriodEnd: string;
   sessionsUsed: number;
   plan: Plan;
+  refetch: () => Promise<void>; // ← keep this as-is
 }
 
 const fetcher = (url: string) =>
@@ -145,6 +146,8 @@ export function useSubscription() {
     getCurrentPlan,
     canAccessFeature,
     getSessionsRemaining,
-    refetch: mutate, // mutate() triggers a fresh fetch — same as old refetch()
+    refetch: async () => {
+      await mutate();
+    }, // ← wrap mutate so it returns Promise<void> // mutate() triggers a fresh fetch — same as old refetch()
   };
 }
