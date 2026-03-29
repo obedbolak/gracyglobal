@@ -1,7 +1,5 @@
-// hooks/useCounselors.ts
 "use client";
-
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 
 export interface Counselor {
   id: string;
@@ -32,87 +30,54 @@ interface UseCounselorsOptions {
   search?: string;
 }
 
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  });
+
+// Hook for multiple counselors
 export function useCounselors(options: UseCounselorsOptions = {}) {
-  const [counselors, setCounselors] = useState<Counselor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const params = new URLSearchParams();
+  if (options.specialty) params.append("specialty", options.specialty);
+  if (options.available !== undefined)
+    params.append("available", String(options.available));
+  if (options.minPrice) params.append("minPrice", String(options.minPrice));
+  if (options.maxPrice) params.append("maxPrice", String(options.maxPrice));
+  if (options.search) params.append("search", options.search);
 
-  useEffect(() => {
-    async function fetchCounselors() {
-      setLoading(true);
-      setError(null);
+  const key = `/api/counselors?${params.toString()}`;
 
-      try {
-        const params = new URLSearchParams();
-        if (options.specialty) params.append("specialty", options.specialty);
-        if (options.available !== undefined)
-          params.append("available", String(options.available));
-        if (options.minPrice)
-          params.append("minPrice", String(options.minPrice));
-        if (options.maxPrice)
-          params.append("maxPrice", String(options.maxPrice));
-        if (options.search) params.append("search", options.search);
+  const { data, error, isLoading, mutate } = useSWR<{
+    counselors: Counselor[];
+  }>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
 
-        const response = await fetch(`/api/counselors?${params.toString()}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch counselors");
-        }
-
-        const data = await response.json();
-        setCounselors(data.counselors || []);
-      } catch (err: any) {
-        console.error("Error fetching counselors:", err);
-        setError(err.message || "Failed to load counselors");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCounselors();
-  }, [
-    options.specialty,
-    options.available,
-    options.minPrice,
-    options.maxPrice,
-    options.search,
-  ]);
-
-  return { counselors, loading, error };
+  return {
+    counselors: data?.counselors ?? [],
+    loading: isLoading,
+    error: error?.message ?? null,
+    mutate,
+  };
 }
 
 // Hook for single counselor
 export function useCounselor(id: string) {
-  const [counselor, setCounselor] = useState<Counselor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading, mutate } = useSWR<{ counselor: Counselor }>(
+    id ? `/api/counselors/${id}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+    },
+  );
 
-  useEffect(() => {
-    if (!id) return;
-
-    async function fetchCounselor() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(`/api/counselors/${id}`);
-
-        if (!response.ok) {
-          throw new Error("Counselor not found");
-        }
-
-        const data = await response.json();
-        setCounselor(data.counselor);
-      } catch (err: any) {
-        console.error("Error fetching counselor:", err);
-        setError(err.message || "Failed to load counselor");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCounselor();
-  }, [id]);
-
-  return { counselor, loading, error };
+  return {
+    counselor: data?.counselor ?? null,
+    loading: isLoading,
+    error: error?.message ?? null,
+    mutate,
+  };
 }

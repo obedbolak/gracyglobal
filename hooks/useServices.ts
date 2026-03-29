@@ -1,7 +1,5 @@
-// hooks/useServices.ts
 "use client";
-
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 
 export interface ServiceOption {
   id: string;
@@ -43,78 +41,56 @@ interface UseServicesOptions {
   search?: string;
 }
 
+// Shared fetcher
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  });
+
+// Hook for multiple services
 export function useServices(options: UseServicesOptions = {}) {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const params = new URLSearchParams();
+  if (options.category) params.append("category", options.category);
+  if (options.group) params.append("group", options.group);
+  if (options.featured !== undefined)
+    params.append("featured", String(options.featured));
+  if (options.search) params.append("search", options.search);
 
-  useEffect(() => {
-    async function fetchServices() {
-      setLoading(true);
-      setError(null);
+  const key = `/api/services?${params.toString()}`;
 
-      try {
-        const params = new URLSearchParams();
-        if (options.category) params.append("category", options.category);
-        if (options.group) params.append("group", options.group);
-        if (options.featured !== undefined)
-          params.append("featured", String(options.featured));
-        if (options.search) params.append("search", options.search);
+  const { data, error, isLoading, mutate } = useSWR<{ services: Service[] }>(
+    key,
+    fetcher,
+    {
+      revalidateOnFocus: false, // don't refetch when tab regains focus
+      dedupingInterval: 60_000, // cache for 60 seconds
+    },
+  );
 
-        const response = await fetch(`/api/services?${params.toString()}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch services");
-        }
-
-        const data = await response.json();
-        setServices(data.services || []);
-      } catch (err: any) {
-        console.error("Error fetching services:", err);
-        setError(err.message || "Failed to load services");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchServices();
-  }, [options.category, options.group, options.featured, options.search]);
-
-  return { services, loading, error };
+  return {
+    services: data?.services ?? [],
+    loading: isLoading,
+    error: error?.message ?? null,
+    mutate, // call mutate() to manually refresh
+  };
 }
 
 // Hook for single service
 export function useService(id: string) {
-  const [service, setService] = useState<Service | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading, mutate } = useSWR<{ service: Service }>(
+    id ? `/api/services/${id}` : null, // null key = don't fetch
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+    },
+  );
 
-  useEffect(() => {
-    if (!id) return;
-
-    async function fetchService() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(`/api/services/${id}`);
-
-        if (!response.ok) {
-          throw new Error("Service not found");
-        }
-
-        const data = await response.json();
-        setService(data.service);
-      } catch (err: any) {
-        console.error("Error fetching service:", err);
-        setError(err.message || "Failed to load service");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchService();
-  }, [id]);
-
-  return { service, loading, error };
+  return {
+    service: data?.service ?? null,
+    loading: isLoading,
+    error: error?.message ?? null,
+    mutate,
+  };
 }

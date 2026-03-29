@@ -70,6 +70,7 @@ export default function CreateCounselorForm() {
   });
 
   // Debounced search for existing users
+  // Replace the searchUsers callback
   const searchUsers = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setUserResults([]);
@@ -80,12 +81,22 @@ export default function CreateCounselorForm() {
       const res = await fetch(
         `/api/users?search=${encodeURIComponent(query)}&excludeCounselors=true`,
       );
-      if (res.ok) {
-        const data = await res.json();
-        setUserResults(data.users || []);
+
+      console.log("Search status:", res.status); // Add this to debug
+
+      if (!res.ok) {
+        const errData = await res.json();
+        console.error("Search error:", errData);
+        setUserResults([]);
+        return;
       }
+
+      const data = await res.json();
+      console.log("Search results:", data); // Add this to debug
+      setUserResults(data.users || []);
     } catch (err) {
       console.error("User search failed:", err);
+      setUserResults([]);
     } finally {
       setSearchLoading(false);
     }
