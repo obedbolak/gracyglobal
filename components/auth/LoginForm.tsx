@@ -160,9 +160,6 @@ export default function LoginForm() {
           >
             G
           </div>
-          <span className="font-extrabold text-white text-xl tracking-tight">
-            GRACY GLOBAL
-          </span>
         </div>
 
         <div className="relative z-10">
@@ -200,30 +197,6 @@ export default function LoginForm() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--purple), var(--blue))",
-              }}
-            >
-              G
-            </div>
-            <span
-              className="font-extrabold tracking-tight text-lg"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--purple), var(--blue-light))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              GRACY GLOBAL
-            </span>
-          </div>
-
           <div className="mb-8">
             <h1
               className="text-3xl font-extrabold mb-2 tracking-tight"

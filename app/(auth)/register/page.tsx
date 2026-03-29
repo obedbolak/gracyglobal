@@ -276,29 +276,6 @@ export default function RegisterPage() {
           className="w-full max-w-md"
         >
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              }}
-            >
-              G
-            </div>
-            <span
-              className="font-extrabold tracking-tight text-lg"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--scarlet), var(--purple-light))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              GRACY GLOBAL
-            </span>
-          </div>
 
           {/* Heading */}
           <div className="mb-8">
