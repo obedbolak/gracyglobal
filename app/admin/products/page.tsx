@@ -12,9 +12,9 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
             Products
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
@@ -24,15 +24,15 @@ export default async function ProductsPage() {
 
         <Link
           href="/admin/products/create"
-          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
+          className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Add Product
         </Link>
       </div>
 
-      {/* Products Table */}
-      <div className="glass rounded-xl overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block glass rounded-xl overflow-hidden">
         <table className="w-full">
           <thead className="bg-[var(--glass-bg-strong)] border-b border-[var(--divider)]">
             <tr>
@@ -68,7 +68,7 @@ export default async function ProductsPage() {
                       <img
                         src={product.images[0]}
                         alt={product.name}
-                        className="w-12 h-12 rounded-lg object-cover"
+                        className="w-12 h-12 rounded-lg object-cover z-0"
                       />
                     )}
                     <div>
@@ -127,6 +127,88 @@ export default async function ProductsPage() {
 
         {products.length === 0 && (
           <div className="text-center py-12">
+            <p className="text-[var(--text-muted)]">No products found</p>
+            <Link
+              href="/admin/products/create"
+              className="inline-block mt-4 text-[var(--purple)] hover:underline"
+            >
+              Create your first product
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {products.map((product) => (
+          <div
+            key={product.id}
+            className="glass rounded-xl p-4 hover:bg-[var(--glass-bg-subtle)] transition-colors"
+          >
+            <div className="flex items-start gap-4">
+              {product.images[0] && (
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0 z-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-[var(--text-primary)] text-lg mb-1">
+                  {product.name}
+                </h3>
+                <p className="text-sm text-[var(--text-muted)] mb-3 line-clamp-2">
+                  {product.description}
+                </p>
+
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium text-[var(--text-primary)] text-lg">
+                    {product.price.toLocaleString()} XAF
+                  </span>
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    {product.category}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        product.stock > 0
+                          ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+                          : "bg-[var(--error-bg)] text-[var(--error-text)]"
+                      }`}
+                    >
+                      Stock: {product.stock}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        product.active
+                          ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+                          : "bg-[var(--error-bg)] text-[var(--error-text)]"
+                      }`}
+                    >
+                      {product.active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className="p-2 hover:bg-[var(--purple-faint)] text-[var(--purple)] rounded-lg transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <DeleteProductButton id={product.id} name={product.name} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {products.length === 0 && (
+          <div className="glass rounded-xl text-center py-12">
             <p className="text-[var(--text-muted)]">No products found</p>
             <Link
               href="/admin/products/create"

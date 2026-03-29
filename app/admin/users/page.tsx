@@ -165,7 +165,7 @@ export default async function UsersPage() {
                         <img
                           src={user.image}
                           alt={user.name || "User"}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-10 h-10 rounded-full object-cover z-0"
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-[var(--purple-faint)] flex items-center justify-center">

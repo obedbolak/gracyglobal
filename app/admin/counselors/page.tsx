@@ -26,9 +26,9 @@ export default async function CounselorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
             Counselors
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
@@ -38,7 +38,7 @@ export default async function CounselorsPage() {
 
         <Link
           href="/admin/counselors/create"
-          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
+          className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Add Counselor
@@ -46,7 +46,7 @@ export default async function CounselorsPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="glass p-4 rounded-xl">
           <p className="text-sm text-[var(--text-muted)]">Total Counselors</p>
           <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">
@@ -74,7 +74,7 @@ export default async function CounselorsPage() {
       </div>
 
       {/* Counselors Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {counselors.map((counselor) => (
           <div
             key={counselor.id}
@@ -82,21 +82,21 @@ export default async function CounselorsPage() {
           >
             {/* Counselor Image */}
             {counselor.user.image ? (
-              <div className="relative h-48">
+              <div className="relative h-32 sm:h-40 lg:h-48 z-0">
                 <img
                   src={counselor.user.image}
                   alt={counselor.user.name || "Counselor"}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover z-0"
                 />
                 {counselor.available && (
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute top-3 left-3 z-10">
                     <span className="px-3 py-1 bg-green-500/90 text-white text-xs font-semibold rounded-full">
                       Available
                     </span>
                   </div>
                 )}
                 {counselor.verified && (
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 z-10">
                     <CheckCircle className="w-6 h-6 text-blue-500 bg-white rounded-full" />
                   </div>
                 )}

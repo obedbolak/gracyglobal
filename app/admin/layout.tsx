@@ -3,8 +3,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeader from "@/components/admin/AdminHeader";
+import AdminShell from "@/components/admin/AdminShell";
 
 export default async function AdminLayout({
   children,
@@ -22,15 +21,5 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <div className="flex">
-        <AdminSidebar />
-
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">{children}</div>
-        </main>
-      </div>
-    </div>
-  );
+  return <AdminShell session={session}>{children}</AdminShell>;
 }

@@ -21,9 +21,9 @@ export default async function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
             Services
           </h1>
           <p className="text-[var(--text-muted)] mt-1">
@@ -33,7 +33,7 @@ export default async function ServicesPage() {
 
         <Link
           href="/admin/services/create"
-          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
+          className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Add Service
@@ -41,7 +41,7 @@ export default async function ServicesPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="glass p-4 rounded-xl">
           <p className="text-sm text-[var(--text-muted)]">Total Services</p>
           <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">
@@ -69,7 +69,7 @@ export default async function ServicesPage() {
       </div>
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {services.map((service) => (
           <div
             key={service.id}
@@ -77,23 +77,23 @@ export default async function ServicesPage() {
           >
             {/* Service Image */}
             {service.images[0] ? (
-              <div className="relative h-48">
+              <div className="relative h-32 sm:h-40 lg:h-48 z-0">
                 <img
                   src={service.images[0]}
                   alt={service.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover z-0"
                 />
                 {service.badge && (
-                  <div className="absolute top-3 left-3 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                  <div className="absolute top-3 left-3 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg z-10">
                     {service.badge}
                   </div>
                 )}
                 {service.featured && !service.badge && (
-                  <div className="absolute top-3 left-3 px-3 py-1 bg-[var(--purple)] text-white text-xs font-semibold rounded-full">
+                  <div className="absolute top-3 left-3 px-3 py-1 bg-[var(--purple)] text-white text-xs font-semibold rounded-full z-10">
                     Featured
                   </div>
                 )}
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-3 right-3 z-10">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       service.active
@@ -106,15 +106,15 @@ export default async function ServicesPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-48 bg-gradient-to-br from-[var(--purple-faint)] to-[var(--glass-bg)] flex items-center justify-center">
-                <Package className="w-16 h-16 text-[var(--text-muted)] opacity-50" />
+              <div className="h-32 sm:h-40 lg:h-48 bg-gradient-to-br from-[var(--purple-faint)] to-[var(--glass-bg)] flex items-center justify-center">
+                <Package className="w-12 h-12 sm:w-16 sm:h-16 text-[var(--text-muted)] opacity-50" />
               </div>
             )}
 
             {/* Service Info */}
-            <div className="p-6 space-y-3">
+            <div className="p-4 sm:p-6 space-y-3">
               <div>
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] line-clamp-1">
+                <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] line-clamp-1">
                   {service.name}
                 </h3>
                 <p className="text-sm text-[var(--text-muted)] mt-1 line-clamp-2">
@@ -160,7 +160,7 @@ export default async function ServicesPage() {
                   <p className="text-xs text-[var(--text-muted)] mb-1">
                     Price Range
                   </p>
-                  <p className="text-lg font-bold text-[var(--purple)]">
+                  <p className="text-base sm:text-lg font-bold text-[var(--purple)]">
                     {Math.min(
                       ...service.options.map((o) => o.amount),
                     ).toLocaleString()}{" "}
