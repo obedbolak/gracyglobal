@@ -119,16 +119,18 @@ export async function DELETE(
       );
     }
 
-    // Check if counselor has active bookings
+    // If counselor has bookings, delete them first
     if (existing._count.bookings > 0) {
-      return NextResponse.json(
-        {
-          error:
-            "Cannot delete counselor with bookings. Deactivate them instead.",
-        },
-        { status: 400 },
-      );
+      await prisma.booking.deleteMany({
+        where: { counselorId: id },
+      });
     }
+
+    // Downgrade user role from COUNSELOR back to USER
+    await prisma.user.update({
+      where: { id: existing.userId },
+      data: { role: "USER" },
+    });
 
     await prisma.counselor.delete({
       where: { id },
