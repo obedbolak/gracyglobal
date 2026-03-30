@@ -55,6 +55,7 @@ export default function CreateCounselorForm() {
     country: "CM",
     bio: "",
     specialty: "",
+    customSpecialty: "",
     pricePerHour: "",
     available: true,
     verified: false,
@@ -64,6 +65,7 @@ export default function CreateCounselorForm() {
   const [counselorData, setCounselorData] = useState({
     bio: "",
     specialty: "",
+    customSpecialty: "",
     pricePerHour: "",
     available: true,
     verified: false,
@@ -158,7 +160,10 @@ export default function CreateCounselorForm() {
         body: JSON.stringify({
           userId: user.id,
           bio: formData.bio,
-          specialty: formData.specialty,
+          specialty:
+            formData.specialty === "Other"
+              ? formData.customSpecialty
+              : formData.specialty,
           pricePerHour: parseInt(formData.pricePerHour),
           available: formData.available,
           verified: formData.verified,
@@ -194,11 +199,16 @@ export default function CreateCounselorForm() {
 
     setLoading(true);
     try {
-      // Step 1: Update user role to COUNSELOR
+      // Step 1: Update user role to COUNSELOR and image if provided
+      const updateData: any = { role: "COUNSELOR" };
+      if (image) {
+        updateData.image = image;
+      }
+
       const roleResponse = await fetch(`/api/users/${selectedUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "COUNSELOR" }),
+        body: JSON.stringify(updateData),
       });
 
       if (!roleResponse.ok) {
@@ -213,7 +223,10 @@ export default function CreateCounselorForm() {
         body: JSON.stringify({
           userId: selectedUser.id,
           bio: counselorData.bio,
-          specialty: counselorData.specialty,
+          specialty:
+            counselorData.specialty === "Other"
+              ? counselorData.customSpecialty
+              : counselorData.specialty,
           pricePerHour: parseInt(counselorData.pricePerHour),
           available: counselorData.available,
           verified: counselorData.verified,
@@ -290,24 +303,24 @@ export default function CreateCounselorForm() {
                   </button>
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-full bg-[var(--glass-bg)] flex items-center justify-center border-2 border-dashed border-[var(--divider)]">
-                  <User className="w-10 h-10 text-[var(--text-muted)]" />
+                <div className="w-full max-w-sm">
+                  <ImageUpload
+                    folder="counselors"
+                    label="Upload Profile Image"
+                    onUploadComplete={(file) => {
+                      if (typeof file === "string") {
+                        setImage(file);
+                      } else if (
+                        file &&
+                        typeof file === "object" &&
+                        "url" in file
+                      ) {
+                        setImage((file as any).url);
+                      }
+                    }}
+                  />
                 </div>
               )}
-              <ImageUpload
-                folder="counselors"
-                onUploadComplete={(file) => {
-                  if (typeof file === "string") {
-                    setImage(file);
-                  } else if (
-                    file &&
-                    typeof file === "object" &&
-                    "url" in file
-                  ) {
-                    setImage((file as any).url);
-                  }
-                }}
-              />
             </div>
           </div>
 
@@ -410,6 +423,7 @@ export default function CreateCounselorForm() {
           <ProfessionalInfoSection
             bio={formData.bio}
             specialty={formData.specialty}
+            customSpecialty={formData.customSpecialty}
             pricePerHour={formData.pricePerHour}
             available={formData.available}
             verified={formData.verified}
@@ -541,10 +555,56 @@ export default function CreateCounselorForm() {
             )}
           </div>
 
+          {/* Profile Image */}
+          {selectedUser && (
+            <div className="glass p-6 rounded-xl">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+                Profile Image
+              </h2>
+              <div className="flex items-center gap-6">
+                {image ? (
+                  <div className="relative">
+                    <img
+                      src={image}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImage("")}
+                      className="absolute -top-2 -right-2 p-1 bg-[var(--error-bg)] text-[var(--error-text)] rounded-full hover:bg-[var(--error-border)]"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full max-w-sm">
+                    <ImageUpload
+                      folder="counselors"
+                      label="Upload Profile Image"
+                      onUploadComplete={(file) => {
+                        if (typeof file === "string") {
+                          setImage(file);
+                        } else if (
+                          file &&
+                          typeof file === "object" &&
+                          "url" in file
+                        ) {
+                          setImage((file as any).url);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Professional Information */}
           <ProfessionalInfoSection
             bio={counselorData.bio}
             specialty={counselorData.specialty}
+            customSpecialty={counselorData.customSpecialty}
             pricePerHour={counselorData.pricePerHour}
             available={counselorData.available}
             verified={counselorData.verified}
@@ -565,6 +625,7 @@ export default function CreateCounselorForm() {
 interface ProfessionalInfoProps {
   bio: string;
   specialty: string;
+  customSpecialty: string;
   pricePerHour: string;
   available: boolean;
   verified: boolean;
@@ -574,6 +635,7 @@ interface ProfessionalInfoProps {
 function ProfessionalInfoSection({
   bio,
   specialty,
+  customSpecialty,
   pricePerHour,
   available,
   verified,
@@ -621,6 +683,22 @@ function ProfessionalInfoSection({
             ))}
           </select>
         </div>
+
+        {specialty === "Other" && (
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Specify Your Specialty *
+            </label>
+            <input
+              type="text"
+              required
+              value={customSpecialty}
+              onChange={(e) => onChange("customSpecialty", e.target.value)}
+              className="glass-input w-full px-4 py-3"
+              placeholder="e.g., Sports Psychology, Child Counseling, etc."
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">

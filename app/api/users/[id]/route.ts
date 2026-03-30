@@ -52,19 +52,28 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const { role } = await req.json();
+    const { name, phone, country, image, role } = await req.json();
 
-    // Prevent self-demotion
-    if (id === session.user.id && role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "You cannot change your own admin role" },
-        { status: 400 },
-      );
+    // Prepare update data
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (country !== undefined) updateData.country = country;
+    if (image !== undefined) updateData.image = image;
+    if (role !== undefined) {
+      // Prevent self-demotion
+      if (id === session.user.id && role !== "ADMIN") {
+        return NextResponse.json(
+          { error: "You cannot change your own admin role" },
+          { status: 400 },
+        );
+      }
+      updateData.role = role as UserRole;
     }
 
     const user = await prisma.user.update({
       where: { id },
-      data: { role: role as UserRole },
+      data: updateData,
     });
 
     return NextResponse.json({ user });

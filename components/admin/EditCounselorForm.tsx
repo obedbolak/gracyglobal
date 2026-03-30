@@ -61,6 +61,7 @@ export default function EditCounselorForm({
     // Counselor fields
     bio: counselor.bio || "",
     specialty: counselor.specialty,
+    customSpecialty: counselor.specialty === "Other" ? counselor.specialty : "",
     pricePerHour: counselor.pricePerHour.toString(),
     available: counselor.available,
     verified: counselor.verified,
@@ -94,7 +95,10 @@ export default function EditCounselorForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bio: formData.bio,
-          specialty: formData.specialty,
+          specialty:
+            formData.specialty === "Other"
+              ? formData.customSpecialty
+              : formData.specialty,
           pricePerHour: parseInt(formData.pricePerHour),
           available: formData.available,
           verified: formData.verified,
@@ -183,20 +187,20 @@ export default function EditCounselorForm({
               </button>
             </div>
           ) : (
-            <div className="w-24 h-24 rounded-full bg-[var(--glass-bg)] flex items-center justify-center border-2 border-dashed border-[var(--divider)]">
-              <User className="w-10 h-10 text-[var(--text-muted)]" />
+            <div className="w-full max-w-sm">
+              <ImageUpload
+                folder="counselors"
+                label="Upload Profile Image"
+                onUploadComplete={(file) => {
+                  if (typeof file === "string") {
+                    setImage(file);
+                  } else {
+                    alert("Failed to upload image");
+                  }
+                }}
+              />
             </div>
           )}
-          <ImageUpload
-            folder="counselors"
-            onUploadComplete={(file) => {
-              if (typeof file === "string") {
-                setImage(file);
-              } else {
-                alert("Failed to upload image");
-              }
-            }}
-          />
         </div>
       </div>
 
@@ -316,6 +320,24 @@ export default function EditCounselorForm({
             ))}
           </select>
         </div>
+
+        {formData.specialty === "Other" && (
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Specify Your Specialty *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.customSpecialty}
+              onChange={(e) =>
+                setFormData({ ...formData, customSpecialty: e.target.value })
+              }
+              className="glass-input w-full px-4 py-3"
+              placeholder="e.g., Sports Psychology, Child Counseling, etc."
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
