@@ -25,7 +25,7 @@ export async function GET(
     });
 
     if (!booking) return err("Booking not found", 404);
-    if (booking.userId !== user.id && user.role !== "ADMIN") {
+    if (booking.userId !== user.id && !user.role.includes("ADMIN")) {
       return err("Forbidden", 403);
     }
 
@@ -48,7 +48,7 @@ export async function PATCH(
 
     const booking = await prisma.booking.findUnique({ where: { id } });
     if (!booking) return err("Booking not found", 404);
-    if (booking.userId !== user.id && user.role !== "ADMIN") {
+    if (booking.userId !== user.id && !user.role.includes("ADMIN")) {
       return err("Forbidden", 403);
     }
 
@@ -59,7 +59,7 @@ export async function PATCH(
 
     const hoursUntilSession =
       (new Date(booking.scheduledAt).getTime() - Date.now()) / 36e5;
-    if (hoursUntilSession < 24 && user.role !== "ADMIN") {
+    if (hoursUntilSession < 24 && user.role.includes("ADMIN")) {
       return err(
         "Cancellations must be made at least 24 hours before the session",
       );
