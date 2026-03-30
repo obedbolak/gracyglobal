@@ -124,19 +124,24 @@ export default function EditUserForm({ user }: EditUserFormProps) {
               <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">
                 Current Role
               </label>
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                  user.role === "ADMIN"
-                    ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
-                    : user.role === "COUNSELOR"
-                      ? "bg-[var(--blue-faint)] text-[var(--blue)]"
-                      : user.role === "VOLUNTEER"
-                        ? "bg-[var(--purple-faint)] text-[var(--purple)]"
-                        : "badge-neutral"
-                }`}
-              >
-                {user.role}
-              </span>
+              {(Array.isArray(user.role) ? user.role : [user.role]).map(
+                (role) => (
+                  <span
+                    key={role}
+                    className={`px-4 py-2 rounded-full text-sm font-medium ${
+                      role === "ADMIN"
+                        ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
+                        : role === "COUNSELOR"
+                          ? "bg-[var(--blue-faint)] text-[var(--blue)]"
+                          : role === "VOLUNTEER"
+                            ? "bg-[var(--purple-faint)] text-[var(--purple)]"
+                            : "badge-neutral"
+                    }`}
+                  >
+                    {role}
+                  </span>
+                ),
+              )}
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { hasRole, roleLabel } from "@/lib/roleHelpers";
 import {
   ArrowLeft,
   Mail,
@@ -120,16 +121,16 @@ export default async function UserDetailsPage({ params }: PageProps) {
 
               <span
                 className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  user.role === "ADMIN"
+                  hasRole(user.role, "ADMIN")
                     ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
-                    : user.role === "COUNSELOR"
+                    : hasRole(user.role, "COUNSELOR")
                       ? "bg-[var(--blue-faint)] text-[var(--blue)]"
-                      : user.role === "VOLUNTEER"
+                      : hasRole(user.role, "VOLUNTEER")
                         ? "bg-[var(--purple-faint)] text-[var(--purple)]"
                         : "badge-neutral"
                 }`}
               >
-                {user.role}
+                {roleLabel(user.role)}
               </span>
             </div>
 

@@ -23,10 +23,10 @@ export default async function UsersPage() {
 
   const stats = {
     total: users.length,
-    admins: users.filter((u) => u.role === "ADMIN").length,
-    counselors: users.filter((u) => u.role === "COUNSELOR").length,
-    volunteers: users.filter((u) => u.role === "VOLUNTEER").length,
-    users: users.filter((u) => u.role === "USER").length,
+    admins: users.filter((u) => u.role.includes("ADMIN")).length,
+    counselors: users.filter((u) => u.role.includes("COUNSELOR")).length,
+    volunteers: users.filter((u) => u.role.includes("VOLUNTEER")).length,
+    users: users.filter((u) => u.role.includes("USER")).length,
   };
 
   return (
