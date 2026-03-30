@@ -96,7 +96,11 @@ export function AdminMobileSidebar({
   session,
 }: {
   session?: {
-    user?: { name?: string | null; image?: string | null; role?: string };
+    user?: {
+      name?: string | null;
+      image?: string | null;
+      role?: string | string[];
+    };
   } | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -201,7 +205,11 @@ export default function AdminSidebar({
   collapsed?: boolean;
   onToggleCollapse?: (collapsed: boolean) => void;
   session?: {
-    user?: { name?: string | null; image?: string | null; role?: string };
+    user?: {
+      name?: string | null;
+      image?: string | null;
+      role?: string | string[];
+    };
   } | null;
 }) {
   if (!show) return null;

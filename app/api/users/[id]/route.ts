@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import { hasRole } from "@/lib/roleHelpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,7 +13,7 @@ interface RouteParams {
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -62,13 +63,14 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (image !== undefined) updateData.image = image;
     if (role !== undefined) {
       // Prevent self-demotion
-      if (id === session.user.id && role !== "ADMIN") {
+      const roleArray = Array.isArray(role) ? role : [role];
+      if (id === session.user.id && !roleArray.includes("ADMIN")) {
         return NextResponse.json(
-          { error: "You cannot change your own admin role" },
+          { error: "You cannot remove your own admin role" },
           { status: 400 },
         );
       }
-      updateData.role = role as UserRole;
+      updateData.role = roleArray;
     }
 
     const user = await prisma.user.update({
@@ -86,7 +88,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

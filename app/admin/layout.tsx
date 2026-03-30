@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import AdminShell from "@/components/admin/AdminShell";
+import { hasRole } from "@/lib/roleHelpers";
 
 export default async function AdminLayout({
   children,
@@ -17,7 +18,7 @@ export default async function AdminLayout({
     redirect("/login?callbackUrl=/admin");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasRole(session.user.role, "ADMIN")) {
     redirect("/dashboard");
   }
 

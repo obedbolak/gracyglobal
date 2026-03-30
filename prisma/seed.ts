@@ -111,7 +111,7 @@ async function main() {
       name: "Gracy Admin",
       email: "admin@gracyworld.com",
       password: adminPw,
-      role: UserRole.ADMIN,
+      role: [UserRole.ADMIN],
       country: "CM",
     },
   });
@@ -161,7 +161,7 @@ async function main() {
         name: acc.name,
         email: acc.email,
         password: pw,
-        role: UserRole.USER,
+        role: [UserRole.USER],
         country: "CM",
       },
     });
@@ -522,7 +522,7 @@ async function main() {
         name: cu.name,
         email: cu.email,
         password: cpw,
-        role: UserRole.COUNSELOR,
+        role: [UserRole.COUNSELOR],
         country: "CM",
       },
     });

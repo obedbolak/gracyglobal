@@ -10,11 +10,12 @@ export default withAuth(
 
     // Role-based redirects
     if (token) {
-      const role = token.role as string;
+      const role = token.role as string | string[];
+      const roles = Array.isArray(role) ? role : [role];
 
       // Admin trying to access non-admin pages
       if (
-        role === "ADMIN" &&
+        roles.includes("ADMIN") &&
         path.startsWith("/dashboard") &&
         !path.startsWith("/admin")
       ) {
@@ -22,12 +23,12 @@ export default withAuth(
       }
 
       // Non-admin trying to access admin pages
-      if (role !== "ADMIN" && path.startsWith("/admin")) {
+      if (!roles.includes("ADMIN") && path.startsWith("/admin")) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
 
       // Counselor-specific routes (optional)
-      if (role === "COUNSELOR" && path === "/dashboard") {
+      if (roles.includes("COUNSELOR") && path === "/dashboard") {
         return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
       }
     }

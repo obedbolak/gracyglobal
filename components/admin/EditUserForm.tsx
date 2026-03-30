@@ -17,12 +17,22 @@ interface EditUserFormProps {
 export default function EditUserForm({ user }: EditUserFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<UserRole>(user.role);
+  const [roles, setRoles] = useState<UserRole[]>(
+    Array.isArray(user.role) ? user.role : [user.role as UserRole],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (user.role === "ADMIN" && role !== "ADMIN") {
+    const initialRoles = Array.isArray(user.role)
+      ? user.role
+      : [user.role as UserRole];
+    const isSelfAdminDemotion =
+      user.id === user.id &&
+      initialRoles.includes("ADMIN") &&
+      !roles.includes("ADMIN");
+
+    if (isSelfAdminDemotion) {
       if (
         !confirm(
           "Are you sure you want to remove admin privileges from this user?",
@@ -38,7 +48,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role: roles }),
       });
 
       if (!response.ok) throw new Error("Failed to update user");
@@ -134,7 +144,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
         {/* Role Selection */}
         <div className="glass p-6 rounded-xl">
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-            Change Role
+            Change Roles
           </h2>
 
           <div className="space-y-3">
@@ -142,17 +152,21 @@ export default function EditUserForm({ user }: EditUserFormProps) {
               <label
                 key={roleOption}
                 className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  role === roleOption
+                  roles.includes(roleOption)
                     ? "border-[var(--purple)] bg-[var(--purple-faint)]"
                     : "border-[var(--divider)] hover:border-[var(--purple-light)]"
                 }`}
               >
                 <input
-                  type="radio"
-                  name="role"
-                  value={roleOption}
-                  checked={role === roleOption}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  type="checkbox"
+                  checked={roles.includes(roleOption)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setRoles([...roles, roleOption]);
+                    } else {
+                      setRoles(roles.filter((r) => r !== roleOption));
+                    }
+                  }}
                   className="mt-1"
                 />
                 <div className="flex-1">
@@ -179,11 +193,11 @@ export default function EditUserForm({ user }: EditUserFormProps) {
         <div className="flex gap-4">
           <button
             type="submit"
-            disabled={loading || role === user.role}
+            disabled={loading || roles.length === 0}
             className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50"
           >
             <Save className="w-5 h-5" />
-            {loading ? "Updating..." : "Update Role"}
+            {loading ? "Updating..." : "Update Roles"}
           </button>
           <Link
             href={`/admin/users/${user.id}`}

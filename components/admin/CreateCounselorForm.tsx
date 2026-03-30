@@ -141,7 +141,7 @@ export default function CreateCounselorForm() {
           password: formData.password,
           phone: formData.phone,
           country: formData.country,
-          role: "COUNSELOR",
+          role: ["COUNSELOR"],
           image: image,
         }),
       });
@@ -200,7 +200,7 @@ export default function CreateCounselorForm() {
     setLoading(true);
     try {
       // Step 1: Update user role to COUNSELOR and image if provided
-      const updateData: any = { role: "COUNSELOR" };
+      const updateData: any = { role: ["COUNSELOR"] };
       if (image) {
         updateData.image = image;
       }

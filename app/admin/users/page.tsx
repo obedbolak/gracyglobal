@@ -188,19 +188,26 @@ export default async function UsersPage() {
 
                   {/* Role */}
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        user.role === "ADMIN"
-                          ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
-                          : user.role === "COUNSELOR"
-                            ? "bg-[var(--blue-faint)] text-[var(--blue)]"
-                            : user.role === "VOLUNTEER"
-                              ? "bg-[var(--purple-faint)] text-[var(--purple)]"
-                              : "badge-neutral"
-                      }`}
-                    >
-                      {user.role}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(Array.isArray(user.role) ? user.role : [user.role]).map(
+                        (role) => (
+                          <span
+                            key={role}
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              role === "ADMIN"
+                                ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
+                                : role === "COUNSELOR"
+                                  ? "bg-[var(--blue-faint)] text-[var(--blue)]"
+                                  : role === "VOLUNTEER"
+                                    ? "bg-[var(--purple-faint)] text-[var(--purple)]"
+                                    : "badge-neutral"
+                            }`}
+                          >
+                            {role}
+                          </span>
+                        ),
+                      )}
+                    </div>
                   </td>
 
                   {/* Subscription */}

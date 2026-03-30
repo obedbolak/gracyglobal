@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parsePagination } from "@/lib/api";
+import { hasRole } from "@/lib/roleHelpers";
 
 // ── GET /api/products ─────────────────────────────────────────────────────────
 // Query params: category, group, featured, minPrice, maxPrice, search, sort, page, limit
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (session.user.role !== "ADMIN")
+    if (!hasRole(session.user.role, "ADMIN"))
       return NextResponse.json(
         { error: "Forbidden - Admin required" },
         { status: 403 },

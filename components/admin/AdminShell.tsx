@@ -13,7 +13,7 @@ export default function AdminShell({
     user?: {
       name?: string | null;
       image?: string | null;
-      role?: string;
+      role?: string | string[];
     };
   } | null;
 }) {

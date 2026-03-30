@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
+import { hasRole } from "@/lib/roleHelpers";
 
 // GET /api/counselors/:id - Get single counselor
 export async function GET(
@@ -66,7 +68,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -101,7 +103,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -129,7 +131,7 @@ export async function DELETE(
     // Downgrade user role from COUNSELOR back to USER
     await prisma.user.update({
       where: { id: existing.userId },
-      data: { role: "USER" },
+      data: { role: [UserRole.USER] },
     });
 
     await prisma.counselor.delete({

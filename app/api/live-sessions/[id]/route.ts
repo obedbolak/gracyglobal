@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasRole } from "@/lib/roleHelpers";
 
 // GET /api/live-sessions/[id] — get session details
 export async function GET(
@@ -43,7 +44,7 @@ export async function GET(
     }
 
     // Only reveal meetingUrl to registered users or admins
-    const isAdmin = session?.user?.role === "ADMIN";
+    const isAdmin = hasRole(session?.user?.role, "ADMIN");
     return NextResponse.json({
       liveSession: {
         ...liveSession,
@@ -136,7 +137,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session || !hasRole(session.user.role, "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
