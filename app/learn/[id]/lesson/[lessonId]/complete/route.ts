@@ -1,8 +1,9 @@
-// app/api/learn/[id]/lesson/[lessonId]/route.ts
+// app/api/courses/[id]/sections/[sectionId]/lessons/[lessonId]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
 import { hasRole } from "@/lib/roleHelpers";
 import { LessonType } from "@prisma/client";
 
@@ -10,11 +11,73 @@ interface RouteParams {
   params: Promise<{ id: string; lessonId: string }>;
 }
 
+// POST — mark lesson as complete
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  try {
+    const { id: courseId, lessonId } = await params;
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: { userId: session.user.id, courseId },
+      },
+    });
+
+    if (!enrollment) {
+      return NextResponse.json({ error: "Not enrolled" }, { status: 403 });
+    }
+
+    const progress = await prisma.lessonProgress.upsert({
+      where: {
+        enrollmentId_lessonId: {
+          enrollmentId: enrollment.id,
+          lessonId,
+        },
+      },
+      update: { completed: true, completedAt: new Date() },
+      create: {
+        enrollmentId: enrollment.id,
+        lessonId,
+        completed: true,
+        completedAt: new Date(),
+      },
+    });
+
+    // Check if entire course is now complete
+    const allLessons = await prisma.lesson.findMany({
+      where: { section: { courseId } },
+      select: { id: true },
+    });
+
+    const completedCount = await prisma.lessonProgress.count({
+      where: { enrollmentId: enrollment.id, completed: true },
+    });
+
+    if (completedCount === allLessons.length) {
+      await prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+    }
+
+    return NextResponse.json({ progress });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+// app/api/courses/[id]/sections/[sectionId]/lessons/[lessonId]/route.
+
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { id: courseId, lessonId } = await params;
     const session = await getServerSession(authOptions);
 
+    // Fetch the lesson with its section, quiz, and course
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
       include: {
@@ -44,12 +107,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
     }
 
-    // Verify the lesson actually belongs to the requested course
-    if (lesson.section.course.id !== courseId) {
-      return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
-    }
-
-    // Free preview lessons are public; others need enrollment
+    // Check access: free preview lessons are public; others need enrollment
     if (!lesson.isFree) {
       if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,7 +130,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Get all lessons in the course ordered for prev/next navigation
+    // Get all lessons in the course ordered for navigation
     const allLessons = await prisma.lesson.findMany({
       where: { section: { courseId } },
       orderBy: [{ section: { order: "asc" } }, { order: "asc" }],
@@ -86,7 +144,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         ? allLessons[currentIndex + 1]
         : null;
 
-    // Get progress if logged in and enrolled
+    // Get progress if logged in
     let progress = null;
     if (session?.user?.id) {
       const enrollment = await prisma.enrollment.findUnique({
