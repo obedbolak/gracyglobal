@@ -1,9 +1,8 @@
 // app/api/user/route.ts
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ok, err, requireUser, validateEmail } from "@/lib/api";
+import { ok, err, requireUser } from "@/lib/api";
 
-// ── GET /api/user — get current user's full profile ───────────────────────────
 export async function GET() {
   try {
     const user = await requireUser();
@@ -30,6 +29,7 @@ export async function GET() {
             pricePerHour: true,
             available: true,
             verified: true,
+            bio: true,
           },
         },
         affiliate: {
@@ -40,6 +40,27 @@ export async function GET() {
             totalReferrals: true,
             totalEarnings: true,
             pendingPayout: true,
+          },
+        },
+        // ✅ Include subscription with plan so dashboard can gate features
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            billing: true,
+            currentPeriodEnd: true,
+            currentPeriodStart: true,
+            sessionsUsed: true,
+            cancelAtPeriodEnd: true,
+            plan: {
+              select: {
+                id: true,
+                name: true,
+                displayName: true,
+                priceMonthly: true,
+                counselorSessions: true,
+              },
+            },
           },
         },
         _count: {
@@ -61,7 +82,6 @@ export async function GET() {
   }
 }
 
-// ── PATCH /api/user — update profile ─────────────────────────────────────────
 export async function PATCH(req: NextRequest) {
   try {
     const user = await requireUser();
@@ -70,7 +90,6 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { name, phone, country, image } = body;
 
-    // Validate fields that were provided
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length < 2) {
         return err("Name must be at least 2 characters");

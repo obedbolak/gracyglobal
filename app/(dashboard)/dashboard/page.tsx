@@ -1,43 +1,75 @@
+// app/(dashboard)/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import SubscriptionStatus from "@/components/dashboard/SubscriptionStatus";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  Crown, 
-  MapPin, 
+import {
+  User,
+  Crown,
+  MapPin,
   Calendar,
   Mail,
   Phone,
-  Loader2
+  Loader2,
+  Star,
+  ShieldCheck,
+  ShieldOff,
+  Lock,
+  Package,
+  Wrench,
+  ChevronRight,
+  Pencil,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+interface CounselorProfile {
+  id: string;
+  specialty: string;
+  rating: number;
+  reviews: number;
+  pricePerHour: number;
+  available: boolean;
+  verified: boolean;
+  bio?: string;
+}
+
+interface Subscription {
+  id: string;
+  status: string;
+  billing: string;
+  currentPeriodEnd: string;
+  sessionsUsed: number;
+  cancelAtPeriodEnd: boolean;
+  plan: {
+    id: string;
+    name: string;
+    displayName: string;
+    priceMonthly: number;
+    counselorSessions: number;
+  };
+}
 
 interface UserProfile {
   id: string;
   name: string;
   email: string;
   image?: string;
-  role: string;
+  role: string[]; // ✅ FIX: role is UserRole[] array, not string
   country?: string;
   phone?: string;
   createdAt: string;
   emailVerified?: string;
-  counselorProfile?: {
-    id: string;
-    specialty: string;
-    rating: number;
-    reviews: number;
-    pricePerHour: number;
-    available: boolean;
-    verified: boolean;
-  };
+  counselorProfile?: CounselorProfile;
+  subscription?: Subscription;
   affiliate?: {
     id: string;
     code: string;
@@ -54,6 +86,328 @@ interface UserProfile {
   };
 }
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+// Plans that unlock product/service creation
+const CREATOR_PLANS = ["growth", "elite", "elite / pro", "elite/pro"];
+
+function canCreate(subscription?: Subscription): boolean {
+  if (!subscription) return false;
+  if (subscription.status !== "ACTIVE") return false;
+  return CREATOR_PLANS.includes(subscription.plan.name.toLowerCase());
+}
+
+function getPrimaryRole(roles: string[]): string {
+  if (roles.includes("ADMIN")) return "ADMIN";
+  if (roles.includes("COUNSELOR")) return "COUNSELOR";
+  if (roles.includes("VOLUNTEER")) return "VOLUNTEER";
+  return "USER";
+}
+
+function getRoleBadgeStyle(role: string) {
+  switch (role.toUpperCase()) {
+    case "ADMIN":
+      return { background: "var(--error-bg)", color: "var(--error-text)" };
+    case "COUNSELOR":
+      return { background: "var(--info-bg)", color: "var(--blue)" };
+    case "VOLUNTEER":
+      return { background: "var(--success-bg)", color: "var(--green)" };
+    default:
+      return { background: "var(--glass-bg)", color: "var(--text-secondary)" };
+  }
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function CounselorCard({ profile }: { profile: CounselorProfile }) {
+  return (
+    <div
+      className="p-6 rounded-2xl"
+      style={{
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Counselor Profile
+        </h3>
+        <Link
+          href="/dashboard/counselor/edit"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:opacity-80"
+          style={{ background: "var(--info-bg)", color: "var(--blue)" }}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Edit Profile
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div
+          className="p-4 rounded-xl"
+          style={{ background: "var(--glass-bg-subtle)" }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+            Specialty
+          </p>
+          <p
+            className="font-semibold text-sm"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {profile.specialty}
+          </p>
+        </div>
+        <div
+          className="p-4 rounded-xl"
+          style={{ background: "var(--glass-bg-subtle)" }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+            Rate
+          </p>
+          <p
+            className="font-semibold text-sm"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {profile.pricePerHour.toLocaleString()} XAF/hr
+          </p>
+        </div>
+        <div
+          className="p-4 rounded-xl flex items-center gap-2"
+          style={{ background: "var(--glass-bg-subtle)" }}
+        >
+          <Star className="w-4 h-4" style={{ color: "var(--yellow)" }} />
+          <div>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Rating
+            </p>
+            <p
+              className="font-semibold text-sm"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {profile.rating.toFixed(1)} ({profile.reviews} reviews)
+            </p>
+          </div>
+        </div>
+        <div
+          className="p-4 rounded-xl"
+          style={{ background: "var(--glass-bg-subtle)" }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+            Status
+          </p>
+          <div className="flex items-center gap-1.5">
+            {profile.available ? (
+              <>
+                <CheckCircle
+                  className="w-4 h-4"
+                  style={{ color: "var(--green)" }}
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--green)" }}
+                >
+                  Available
+                </span>
+              </>
+            ) : (
+              <>
+                <XCircle
+                  className="w-4 h-4"
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Unavailable
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {profile.verified ? (
+          <span
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ background: "var(--success-bg)", color: "var(--green)" }}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Verified Counselor
+          </span>
+        ) : (
+          <span
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}
+          >
+            <ShieldOff className="w-3.5 h-3.5" />
+            Pending Verification
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreatorSection({ subscription }: { subscription?: Subscription }) {
+  const canCreateItems = canCreate(subscription);
+  const planName = subscription?.plan?.displayName ?? null;
+  const isSubscribed = !!subscription && subscription.status === "ACTIVE";
+
+  const cards = [
+    {
+      title: "Create a Service",
+      description: "Offer your skills & services to the community",
+      href: "/creator/services/create",
+      icon: Wrench,
+      color: "var(--purple)",
+      bg: "var(--glass-bg-subtle)",
+    },
+    {
+      title: "List a Product",
+      description: "Sell physical or digital products on the marketplace",
+      href: "/creator/products/create",
+      icon: Package,
+      color: "var(--green)",
+      bg: "var(--success-bg)",
+    },
+  ];
+
+  return (
+    <div
+      className="p-6 rounded-2xl"
+      style={{
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <h3
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Creator Tools
+        </h3>
+        {!canCreateItems && (
+          <span
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}
+          >
+            <Lock className="w-3 h-3" />
+            Locked
+          </span>
+        )}
+      </div>
+
+      {!canCreateItems && (
+        <div
+          className="mb-4 px-4 py-3 rounded-xl text-sm"
+          style={{
+            background: "var(--warning-bg)",
+            border: "1px solid var(--yellow)",
+            color: "var(--text-primary)",
+          }}
+        >
+          {!isSubscribed ? (
+            <>
+              You need an active subscription to create products or services.{" "}
+              <Link
+                href="/plans"
+                className="font-semibold underline"
+                style={{ color: "var(--yellow)" }}
+              >
+                View Plans
+              </Link>
+            </>
+          ) : (
+            <>
+              Your <strong>{planName}</strong> plan doesn't include creator
+              access. Upgrade to <strong>Growth</strong> or{" "}
+              <strong>Elite</strong> to unlock.{" "}
+              <Link
+                href="/plans"
+                className="font-semibold underline"
+                style={{ color: "var(--yellow)" }}
+              >
+                Upgrade now
+              </Link>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          const locked = !canCreateItems;
+          const inner = (
+            <div
+              className={`p-4 rounded-xl flex items-start gap-3 transition-all ${
+                locked
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:scale-[1.02] cursor-pointer"
+              }`}
+              style={{
+                background: card.bg,
+                border: "1px solid var(--divider)",
+              }}
+            >
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: "var(--glass-bg)" }}
+              >
+                <Icon className="w-5 h-5" style={{ color: card.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p
+                    className="font-semibold text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {card.title}
+                  </p>
+                  {locked && (
+                    <Lock
+                      className="w-3 h-3"
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  )}
+                </div>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {card.description}
+                </p>
+              </div>
+              {!locked && (
+                <ChevronRight
+                  className="w-4 h-4 mt-0.5 flex-shrink-0"
+                  style={{ color: "var(--text-muted)" }}
+                />
+              )}
+            </div>
+          );
+
+          return locked ? (
+            <div key={card.title}>{inner}</div>
+          ) : (
+            <Link key={card.title} href={card.href}>
+              {inner}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -61,28 +415,23 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/login");
-    }
+    if (status === "unauthenticated") redirect("/login");
   }, [status]);
 
   useEffect(() => {
-    if (session?.user) {
-      fetchProfile();
-    }
+    if (session?.user) fetchProfile();
   }, [session]);
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch("/api/user");
-      const data = await response.json();
-      
+      const res = await fetch("/api/user");
+      const data = await res.json();
       if (data.success) {
         setProfile(data.data);
       } else {
         setError(data.error || "Failed to load profile");
       }
-    } catch (err) {
+    } catch {
       setError("Network error occurred");
     } finally {
       setLoading(false);
@@ -91,10 +440,18 @@ export default function DashboardPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+      <div
+        className="flex items-center justify-center min-h-screen"
+        style={{ background: "var(--background)" }}
+      >
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: "var(--blue)" }} />
-          <p style={{ color: "var(--text-secondary)" }}>Loading your dashboard...</p>
+          <Loader2
+            className="w-8 h-8 animate-spin mx-auto mb-4"
+            style={{ color: "var(--blue)" }}
+          />
+          <p style={{ color: "var(--text-secondary)" }}>
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -102,13 +459,20 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+      <div
+        className="flex items-center justify-center min-h-screen"
+        style={{ background: "var(--background)" }}
+      >
         <div className="text-center">
-          <p className="mb-4" style={{ color: "var(--error-text)" }}>{error}</p>
-          <button 
+          <p className="mb-4" style={{ color: "var(--error-text)" }}>
+            {error}
+          </p>
+          <button
             onClick={fetchProfile}
-            className="px-4 py-2 text-white rounded-lg transition-all"
-            style={{ background: "linear-gradient(135deg, var(--purple), var(--blue))" }}
+            className="px-4 py-2 text-white rounded-lg"
+            style={{
+              background: "linear-gradient(135deg, var(--purple), var(--blue))",
+            }}
           >
             Try Again
           </button>
@@ -117,15 +481,16 @@ export default function DashboardPage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
-        <p style={{ color: "var(--text-secondary)" }}>No profile data available</p>
-      </div>
-    );
-  }
+  if (!profile) return null;
 
-  // Mock recent activity data (replace with real API call)
+  // ✅ FIX: role is an array — derive display role correctly
+  const primaryRole = getPrimaryRole(profile.role);
+  const isCounselor = profile.role.includes("COUNSELOR");
+  const memberSince = new Date(profile.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+  });
+
   const recentActivities = [
     {
       id: "1",
@@ -133,7 +498,7 @@ export default function DashboardPage() {
       title: "Counseling Session Booked",
       description: "Session with Dr. Sarah Johnson",
       status: "Confirmed",
-      date: "2 hours ago"
+      date: "2 hours ago",
     },
     {
       id: "2",
@@ -141,7 +506,7 @@ export default function DashboardPage() {
       title: "Job Application Submitted",
       description: "Frontend Developer at TechCorp",
       status: "Applied",
-      date: "1 day ago"
+      date: "1 day ago",
     },
     {
       id: "3",
@@ -149,98 +514,109 @@ export default function DashboardPage() {
       title: "Order Placed",
       description: "Skincare bundle from marketplace",
       status: "Processing",
-      date: "2 days ago"
-    }
+      date: "2 days ago",
+    },
   ];
 
-  const getRoleBadgeStyle = (role: string) => {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return { background: "var(--error-bg)", color: "var(--error-text)" };
-      case 'counselor':
-        return { background: "var(--info-bg)", color: "var(--blue)" };
-      case 'volunteer':
-        return { background: "var(--success-bg)", color: "var(--green)" };
-      default:
-        return { background: "var(--glass-bg)", color: "var(--text-secondary)" };
-    }
-  };
-
-  const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long'
-  });
-
   return (
-    <div className="min-h-screen py-8" style={{ background: "var(--background)" }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Welcome Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-                Welcome back, {profile.name?.split(' ')[0] || 'User'}! 👋
-              </h1>
-              <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
-                Here's what's happening with your account today.
-              </p>
-            </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <span className="px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" style={getRoleBadgeStyle(profile.role)}>
-                <Crown className="w-3 h-3" />
-                {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
-              </span>
-            </div>
+    <div
+      className="min-h-screen py-8"
+      style={{ background: "var(--background)" }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* ── Welcome Header ── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1
+              className="text-3xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Welcome back, {profile.name?.split(" ")[0] || "User"}! 👋
+            </h1>
+            <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
+              Here's what's happening with your account today.
+            </p>
           </div>
+          <span
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
+            style={getRoleBadgeStyle(primaryRole)}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            {primaryRole.charAt(0) + primaryRole.slice(1).toLowerCase()}
+          </span>
         </div>
 
-        {/* Profile Summary Card */}
-        <div className="p-6 mb-8 rounded-2xl" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
-          <div className="flex items-start space-x-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "var(--glass-bg-subtle)" }}>
+        {/* ── Profile Summary ── */}
+        <div
+          className="p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <div
+              className="w-16 h-16 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+              style={{ background: "var(--glass-bg-subtle)" }}
+            >
               {profile.image ? (
-                <img 
-                  src={profile.image} 
-                  alt={profile.name || 'User'} 
-                  className="w-16 h-16 rounded-full object-cover"
+                <img
+                  src={profile.image}
+                  alt={profile.name || "User"}
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <User className="w-8 h-8" style={{ color: "var(--blue)" }} />
               )}
             </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-                  {profile.name || 'User'}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <h2
+                  className="text-xl font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {profile.name || "User"}
                 </h2>
-                <span className="px-3 py-1 rounded-full text-sm font-semibold" style={getRoleBadgeStyle(profile.role)}>
-                  {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+                <span
+                  className="px-3 py-1 rounded-full text-sm font-semibold"
+                  style={getRoleBadgeStyle(primaryRole)}
+                >
+                  {primaryRole.charAt(0) + primaryRole.slice(1).toLowerCase()}
                 </span>
                 {!profile.emailVerified && (
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}>
+                  <span
+                    className="px-3 py-1 rounded-full text-sm font-semibold"
+                    style={{
+                      background: "var(--warning-bg)",
+                      color: "var(--yellow)",
+                    }}
+                  >
                     Email not verified
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm" style={{ color: "var(--text-secondary)" }}>
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-2" />
+              <div
+                className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
                   {profile.email}
                 </div>
                 {profile.phone && (
-                  <div className="flex items-center">
-                    <Phone className="w-4 h-4 mr-2" />
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
                     {profile.phone}
                   </div>
                 )}
                 {profile.country && (
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
                     {profile.country}
                   </div>
                 )}
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-2" />
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
                   Member since {memberSince}
                 </div>
               </div>
@@ -248,10 +624,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Your Activity</h2>
-          <DashboardStats 
+        {/* ── Stats ── */}
+        <div>
+          <h2
+            className="text-xl font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Your Activity
+          </h2>
+          <DashboardStats
             bookings={profile._count.bookings}
             orders={profile._count.orders}
             jobApplications={profile._count.jobApplications}
@@ -261,27 +642,60 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Main Content Grid */}
+        {/* ── Main Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Quick Actions & Subscription */}
+          {/* Left: Actions + Counselor + Creator */}
           <div className="lg:col-span-2 space-y-8">
             <div>
-              <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Quick Actions</h2>
-              <QuickActions 
-                role={profile.role}
+              <h2
+                className="text-xl font-semibold mb-4"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Quick Actions
+              </h2>
+              <QuickActions
+                role={primaryRole}
                 isAffiliate={!!profile.affiliate}
-                isCounselor={!!profile.counselorProfile}
+                isCounselor={isCounselor}
               />
             </div>
-            
+
+            {/* Counselor profile card — only shown to counselors */}
+            {isCounselor && profile.counselorProfile && (
+              <div>
+                <h2
+                  className="text-xl font-semibold mb-4"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Your Counselor Profile
+                </h2>
+                <CounselorCard profile={profile.counselorProfile} />
+              </div>
+            )}
+
+            {/* Creator tools — gated by plan */}
             <div>
-              <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Subscription Status</h2>
-              <SubscriptionStatus />
+              <h2
+                className="text-xl font-semibold mb-4"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Sell on Gracyglobal
+              </h2>
+              <CreatorSection subscription={profile.subscription} />
             </div>
           </div>
 
-          {/* Right Column - Recent Activity */}
-          <div>
+          {/* Right: Subscription + Activity */}
+          <div className="space-y-8">
+            <div>
+              <h2
+                className="text-xl font-semibold mb-4"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Subscription
+              </h2>
+              <SubscriptionStatus subscription={profile.subscription} />
+            </div>
             <RecentActivity activities={recentActivities} />
           </div>
         </div>

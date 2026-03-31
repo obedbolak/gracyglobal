@@ -337,26 +337,6 @@ function ServicesPageContent() {
                     style={{ borderTop: "1px solid var(--divider)" }}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p
-                          className="text-lg font-bold"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, var(--purple), var(--blue))",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                          }}
-                        >
-                          {getPricingDisplay(service)}
-                        </p>
-                        <p
-                          className="text-[10px]"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          XAF {getBasePricing(service).toLocaleString()}
-                        </p>
-                      </div>
                       <span
                         className="text-xs px-2 py-1 rounded-full"
                         style={{
