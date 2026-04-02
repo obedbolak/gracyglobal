@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { CourseLevel } from "@prisma/client";
+import { CourseLevel, LessonType } from "@prisma/client";
 import { hasRole } from "@/lib/roleHelpers";
+
+// ─── GET: List courses ────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,10 +15,23 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category");
     const level = searchParams.get("level") as CourseLevel | null;
     const featured = searchParams.get("featured");
+    const teacherId = searchParams.get("teacherId"); // For teacher dashboard
+    const includeUnpublished =
+      searchParams.get("includeUnpublished") === "true";
+
+    // If requesting teacher's own courses, verify auth
+    if (teacherId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user || session.user.id !== teacherId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
 
     const courses = await prisma.course.findMany({
       where: {
-        published: true,
+        // Only show published unless requesting own courses or admin
+        ...(!teacherId && !includeUnpublished && { published: true }),
+        ...(teacherId && { teacherId }),
         ...(category && { category }),
         ...(level && { level }),
         ...(featured === "true" && { featured: true }),
@@ -38,40 +53,165 @@ export async function GET(req: NextRequest) {
           },
           orderBy: { order: "asc" },
         },
+        _count: {
+          select: {
+            enrollments: true,
+            sections: true,
+          },
+        },
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ courses });
+    // Calculate total lessons for each course
+    const coursesWithStats = courses.map((course) => ({
+      ...course,
+      totalLessons: course.sections.reduce(
+        (acc, s) => acc + s.lessons.length,
+        0,
+      ),
+    }));
+
+    return NextResponse.json({ courses: coursesWithStats });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
+// ─── POST: Create course with sections and lessons ────────────────────────────
+
+interface LessonInput {
+  title: string;
+  type: LessonType;
+  content?: string | null;
+  videoUrl?: string | null;
+  duration?: number | null;
+  isFree?: boolean;
+  order: number;
+}
+
+interface SectionInput {
+  title: string;
+  order: number;
+  lessons?: LessonInput[];
+}
+
+interface CourseInput {
+  title: string;
+  description: string;
+  thumbnail?: string | null;
+  category: string;
+  level: CourseLevel;
+  price?: number;
+  isFree?: boolean;
+  published?: boolean;
+  featured?: boolean;
+  sections?: SectionInput[];
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+
+    // Allow ADMIN or TEACHER to create courses
+    const isAdmin = hasRole(session?.user?.role, "ADMIN");
+    const isTeacher = hasRole(session?.user?.role, "TEACHER");
+
+    if (!session?.user || (!isAdmin && !isTeacher)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await req.json();
+    const data: CourseInput = await req.json();
 
-    const course = await prisma.course.create({
-      data: {
-        title: data.title,
-        description: data.description,
-        thumbnail: data.thumbnail || null,
-        category: data.category,
-        level: data.level as CourseLevel,
-        price: data.price || 0,
-        isFree: data.isFree || false,
-        published: data.published || false,
-        featured: data.featured || false,
-      },
+    // Validate required fields
+    if (!data.title?.trim()) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+    if (!data.description?.trim()) {
+      return NextResponse.json(
+        { error: "Description is required" },
+        { status: 400 },
+      );
+    }
+
+    // Create course with sections and lessons in a transaction
+    const course = await prisma.$transaction(async (tx) => {
+      // 1. Create the course
+      const newCourse = await tx.course.create({
+        data: {
+          title: data.title.trim(),
+          description: data.description.trim(),
+          thumbnail: data.thumbnail || null,
+          category: data.category || "Other",
+          level: data.level || "BEGINNER",
+          price: data.isFree ? 0 : data.price || 0,
+          isFree: data.isFree ?? true,
+          published: data.published ?? false,
+          featured: data.featured ?? false,
+          // Only set teacherId if created by a teacher (not admin)
+          teacherId: isTeacher ? session.user.id : null,
+        },
+      });
+
+      // 2. Create sections with lessons if provided
+      if (data.sections && data.sections.length > 0) {
+        for (const section of data.sections) {
+          const newSection = await tx.courseSection.create({
+            data: {
+              courseId: newCourse.id,
+              title: section.title.trim(),
+              order: section.order,
+            },
+          });
+
+          // Create lessons for this section
+          if (section.lessons && section.lessons.length > 0) {
+            await tx.lesson.createMany({
+              data: section.lessons.map((lesson) => ({
+                sectionId: newSection.id,
+                title: lesson.title.trim(),
+                type: lesson.type || "VIDEO",
+                content: lesson.content || null,
+                videoUrl: lesson.videoUrl || null,
+                duration: lesson.duration || null,
+                isFree: lesson.isFree ?? false,
+                order: lesson.order,
+              })),
+            });
+          }
+        }
+      }
+
+      // 3. Return the complete course with all relations
+      return tx.course.findUnique({
+        where: { id: newCourse.id },
+        include: {
+          sections: {
+            include: {
+              lessons: {
+                orderBy: { order: "asc" },
+              },
+            },
+            orderBy: { order: "asc" },
+          },
+          _count: {
+            select: {
+              enrollments: true,
+              sections: true,
+            },
+          },
+        },
+      });
     });
 
-    return NextResponse.json({ course }, { status: 201 });
+    return NextResponse.json({ success: true, course }, { status: 201 });
   } catch (error: any) {
     console.error("Create course error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

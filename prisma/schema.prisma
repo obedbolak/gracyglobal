@@ -39,6 +39,8 @@ model User {
   quizAttempts     QuizAttempt[]
   liveAttendances  LiveAttendance[]
 
+  teacherCourses Course[] @relation("TeacherCourses")  // ← ADD THIS LINE
+
   @@map("users")
 }
 
@@ -47,6 +49,7 @@ enum UserRole {
   COUNSELOR
   ADMIN
   VOLUNTEER
+  TEACHER    // ← NEW
 }
 
 // ─── AUTH (NextAuth) ──────────────────────────────────────────────────────────
@@ -498,6 +501,9 @@ model Course {
   featured    Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+   teacherId   String?                                    // ← ADD THIS
+  teacher     User?       @relation("TeacherCourses", fields: [teacherId], references: [id])  // ← ADD THIS
 
   sections    CourseSection[]
   enrollments Enrollment[]

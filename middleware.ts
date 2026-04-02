@@ -31,6 +31,9 @@ export default withAuth(
       if (roles.includes("COUNSELOR") && path === "/dashboard") {
         return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
       }
+      if (!roles.includes("TEACHER") && path.startsWith("/teacher")) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
     }
 
     return NextResponse.next();
@@ -44,5 +47,10 @@ export default withAuth(
 
 // Protect these routes
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/counselor/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/counselor/:path*",
+    "/teacher/:path*",
+  ],
 };

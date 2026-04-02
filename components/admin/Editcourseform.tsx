@@ -277,25 +277,14 @@ export default function EditCourseForm({ course }: EditCourseFormProps) {
         <ImageUpload
           folder="courses"
           label="Upload Course Thumbnail"
-          onUploadComplete={(file: SetStateAction<string>) => {
-            if (typeof file === "string") {
-              setThumbnail(file);
-            } else {
-              alert("Failed to upload image");
-            }
-          }}
+          currentImage={thumbnail}
+          aspectRatio="video"
+          maxSize={5}
+          onUploadComplete={(url) => setThumbnail(url)}
         />
-
-        {thumbnail && (
-          <div className="mt-3">
-            <p className="text-xs text-[var(--text-muted)] mb-2">Preview</p>
-            <img
-              src={thumbnail}
-              alt="Thumbnail preview"
-              className="h-40 w-full object-cover rounded-lg border border-[var(--divider)]"
-            />
-          </div>
-        )}
+        <p className="text-xs text-[var(--text-muted)]">
+          Recommended size: 1280x720 pixels (16:9 aspect ratio)
+        </p>
       </div>
 
       {/* ── Section 3: Pricing ── */}

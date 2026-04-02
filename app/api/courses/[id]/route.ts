@@ -33,6 +33,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             },
           },
         },
+        _count: {
+          select: {
+            enrollments: true,
+            sections: true,
+          },
+        },
       },
     });
 
@@ -40,7 +46,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ course });
+    // Calculate total lessons
+    const totalLessons = course.sections.reduce(
+      (acc, s) => acc + s.lessons.length,
+      0,
+    );
+
+    return NextResponse.json({ course: { ...course, totalLessons } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

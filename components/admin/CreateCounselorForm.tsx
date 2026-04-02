@@ -199,8 +199,15 @@ export default function CreateCounselorForm() {
 
     setLoading(true);
     try {
-      // Step 1: Update user role to COUNSELOR and image if provided
-      const updateData: any = { role: ["COUNSELOR"] };
+      // Step 1: Update user role to add COUNSELOR and image if provided
+      const currentRoles = Array.isArray(selectedUser.role) 
+        ? selectedUser.role 
+        : [selectedUser.role];
+      const updatedRoles = currentRoles.includes("COUNSELOR") 
+        ? currentRoles 
+        : [...currentRoles, "COUNSELOR"];
+      
+      const updateData: any = { role: updatedRoles };
       if (image) {
         updateData.image = image;
       }

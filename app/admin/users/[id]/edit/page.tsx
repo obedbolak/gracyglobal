@@ -1,5 +1,3 @@
-// app/admin/users/[id]/edit/page.tsx
-
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditUserForm from "@/components/admin/EditUserForm";
@@ -13,6 +11,19 @@ export default async function EditUserPage({ params }: PageProps) {
 
   const user = await prisma.user.findUnique({
     where: { id },
+    include: {
+      counselorProfile: {
+        select: { id: true, specialty: true, verified: true },
+      },
+      _count: {
+        select: {
+          bookings: true,
+          orders: true,
+          communityPosts: true,
+          teacherCourses: true,
+        },
+      },
+    },
   });
 
   if (!user) {

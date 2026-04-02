@@ -34,7 +34,10 @@ export async function requireUser() {
 
 export function parsePagination(searchParams: URLSearchParams) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "12")));
+  const limit = Math.min(
+    50,
+    Math.max(1, parseInt(searchParams.get("limit") ?? "12")),
+  );
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 }
@@ -43,10 +46,14 @@ export function parsePagination(searchParams: URLSearchParams) {
 
 export function validateRequired(
   body: Record<string, unknown>,
-  fields: string[]
+  fields: string[],
 ): string | null {
   for (const field of fields) {
-    if (body[field] === undefined || body[field] === null || body[field] === "") {
+    if (
+      body[field] === undefined ||
+      body[field] === null ||
+      body[field] === ""
+    ) {
       return `'${field}' is required`;
     }
   }
