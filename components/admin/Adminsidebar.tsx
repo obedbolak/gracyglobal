@@ -204,22 +204,27 @@ export default function AdminSidebar({
       `}
     >
       <div className="flex items-center justify-between p-4 border-b border-[var(--divider)] flex-shrink-0">
-        {!collapsed && <DashboardSwitcher session={session} />}
-        <button
-          onClick={() => onToggleCollapse?.(!collapsed)}
-          className={`
-            p-2 rounded-lg hover:bg-[var(--sidebar-item-hover)]
-            transition-colors flex-shrink-0
-            ${collapsed ? "mx-auto" : ""}
-          `}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
-          ) : (
+        <div className={collapsed ? "mx-auto" : "flex-1"}>
+          <DashboardSwitcher session={session} collapsed={collapsed} />
+        </div>
+        {!collapsed && (
+          <button
+            onClick={() => onToggleCollapse?.(!collapsed)}
+            className="p-2 rounded-lg hover:bg-[var(--sidebar-item-hover)] transition-colors flex-shrink-0 ml-2"
+            aria-label="Collapse sidebar"
+          >
             <ChevronLeft className="w-4 h-4 text-[var(--text-secondary)]" />
-          )}
-        </button>
+          </button>
+        )}
+        {collapsed && (
+          <button
+            onClick={() => onToggleCollapse?.(!collapsed)}
+            className="absolute top-4 right-2 p-2 rounded-lg hover:bg-[var(--sidebar-item-hover)] transition-colors"
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+          </button>
+        )}
       </div>
       <div className="flex-1 py-4 overflow-y-auto">
         {collapsed ? <CollapsedNavItems /> : <NavItems />}

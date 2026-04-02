@@ -73,9 +73,11 @@ export default function DashboardSwitcher({
     ? [session.user.role]
     : ["USER"];
 
-  const availableDashboards = dashboards.filter((dash) =>
-    userRoles.includes(dash.role)
-  );
+  // User Dashboard is available to everyone, other dashboards require specific roles
+  const availableDashboards = dashboards.filter((dash) => {
+    if (dash.role === "USER") return true; // Everyone can access User Dashboard
+    return userRoles.includes(dash.role);
+  });
 
   const currentDashboard =
     availableDashboards.find((dash) => pathname.startsWith(dash.href)) ||
@@ -97,16 +99,58 @@ export default function DashboardSwitcher({
 
   if (collapsed) {
     return (
-      <div className="flex items-center justify-center">
-        {session?.user?.image ? (
-          <img
-            src={session.user.image}
-            alt={session.user.name || "User"}
-            className="w-8 h-8 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-[var(--purple)] text-white flex items-center justify-center text-sm font-semibold">
-            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center hover:opacity-80 transition-opacity"
+        >
+          {session?.user?.image ? (
+            <img
+              src={session.user.image}
+              alt={session.user.name || "User"}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[var(--purple)] text-white flex items-center justify-center text-sm font-semibold">
+              {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+          )}
+        </button>
+
+        {isOpen && (
+          <div
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-lg border shadow-lg overflow-hidden z-[9999]"
+            style={{
+              background: "var(--bg-base)",
+              borderColor: "var(--divider)",
+            }}
+          >
+            {availableDashboards.map((dash) => {
+              const Icon = dash.icon;
+              const isCurrent = dash.href === currentDashboard?.href;
+              return (
+                <Link
+                  key={dash.href}
+                  href={dash.href}
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                    isCurrent
+                      ? "bg-[var(--sidebar-item-active)]"
+                      : "hover:bg-[var(--sidebar-item-hover)]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" style={{ color: dash.color }} />
+                  <span
+                    className="text-sm font-medium"
+                    style={{
+                      color: isCurrent ? dash.color : "var(--text-primary)",
+                    }}
+                  >
+                    {dash.label}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
@@ -184,7 +228,7 @@ export default function DashboardSwitcher({
 
       {isOpen && (
         <div
-          className="absolute top-full left-0 right-0 mt-2 rounded-lg border shadow-lg overflow-hidden z-50"
+          className="absolute top-full left-0 right-0 mt-2 rounded-lg border shadow-lg overflow-hidden z-[9999]"
           style={{
             background: "var(--bg-base)",
             borderColor: "var(--divider)",

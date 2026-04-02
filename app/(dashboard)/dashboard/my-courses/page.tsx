@@ -13,24 +13,23 @@ import {
 } from "lucide-react";
 
 interface EnrolledCourse {
-  id: string;
-  progress: number;
-  enrolledAt: string;
+  enrollment: {
+    id: string;
+    status: string;
+    enrolledAt: string;
+    completedAt: string | null;
+  };
   course: {
     id: string;
     title: string;
     description: string;
     thumbnail: string | null;
     level: string;
-    _count: {
-      sections: number;
-    };
-    sections: {
-      lessons: {
-        id: string;
-        duration: number | null;
-      }[];
-    }[];
+  };
+  progress: {
+    totalLessons: number;
+    completedLessons: number;
+    percentage: number;
   };
 }
 
@@ -61,18 +60,6 @@ export default function MyCoursesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getTotalLessons = (course: EnrolledCourse["course"]) => {
-    return course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
-  };
-
-  const getTotalDuration = (course: EnrolledCourse["course"]) => {
-    const totalMins = course.sections
-      .flatMap((s) => s.lessons)
-      .reduce((acc, l) => acc + (l.duration ?? 0), 0);
-    if (totalMins < 60) return `${totalMins}m`;
-    return `${Math.round(totalMins / 60)}h`;
   };
 
   if (error) {
@@ -185,11 +172,9 @@ export default function MyCoursesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {enrollments.map((enrollment) => {
-            const { course } = enrollment;
-            const totalLessons = getTotalLessons(course);
-            const duration = getTotalDuration(course);
-            const isCompleted = enrollment.progress >= 100;
+          {enrollments.map((item) => {
+            const { course, progress, enrollment } = item;
+            const isCompleted = progress.percentage >= 100;
 
             return (
               <Link key={enrollment.id} href={`/learn/${course.id}`}>
@@ -251,13 +236,18 @@ export default function MyCoursesPage() {
                       style={{ color: "var(--text-muted)" }}
                     >
                       <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{duration}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
                         <BookOpen className="w-4 h-4" />
-                        <span>{totalLessons} lessons</span>
+                        <span>{progress.totalLessons} lessons</span>
                       </div>
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs"
+                        style={{
+                          background: "var(--glass-bg-subtle)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {course.level}
+                      </span>
                     </div>
 
                     <div className="mb-4">
@@ -269,7 +259,7 @@ export default function MyCoursesPage() {
                           className="font-semibold"
                           style={{ color: "var(--text-primary)" }}
                         >
-                          {enrollment.progress}%
+                          {progress.percentage}%
                         </span>
                       </div>
                       <div
@@ -279,7 +269,7 @@ export default function MyCoursesPage() {
                         <div
                           className="h-full transition-all duration-300"
                           style={{
-                            width: `${enrollment.progress}%`,
+                            width: `${progress.percentage}%`,
                             background: isCompleted
                               ? "var(--green)"
                               : "linear-gradient(90deg, var(--purple), var(--blue))",
