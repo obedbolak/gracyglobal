@@ -13,25 +13,18 @@ export default withAuth(
       const role = token.role as string | string[];
       const roles = Array.isArray(role) ? role : [role];
 
-      // Admin trying to access non-admin pages
-      if (
-        roles.includes("ADMIN") &&
-        path.startsWith("/dashboard") &&
-        !path.startsWith("/admin")
-      ) {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      }
-
       // Non-admin trying to access admin pages
       if (!roles.includes("ADMIN") && path.startsWith("/admin")) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
 
-      // Counselor-specific routes (optional)
-      if (roles.includes("COUNSELOR") && path === "/dashboard") {
-        return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
-      }
+      // Non-teacher trying to access teacher pages
       if (!roles.includes("TEACHER") && path.startsWith("/teacher")) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+
+      // Non-counselor trying to access counselor pages
+      if (!roles.includes("COUNSELOR") && path.startsWith("/counselor")) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
     }
