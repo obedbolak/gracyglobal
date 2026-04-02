@@ -28,13 +28,13 @@ export default function HomePage() {
           <CommunitySection />
           <MarketplaceSection />
         </div>
+
+        {/* Learn + Services side by side on large screens */}
+        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-800">
+          <LearnSection />
+          <ServicesSection />
+        </div>
       </div>
-
-      {/* Learn Section - Full Width */}
-      <LearnSection />
-
-      {/* Services Section - Full Width */}
-      <ServicesSection />
     </main>
   );
 }

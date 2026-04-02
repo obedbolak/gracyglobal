@@ -38,14 +38,14 @@ export default function LearnSection() {
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {COURSE_CATEGORIES.map((category) => {
             const categoryCoursesCount = COURSES.filter(c => c.category === category.id).length;
             
             return (
             <Link key={category.id} href={`/learn?category=${category.id}`}>
               <div 
-                className="p-6 rounded-2xl transition-all duration-300 h-full group hover:scale-105"
+                className="p-6 rounded-2xl transition-all duration-300 aspect-square flex flex-col group hover:scale-105"
                 style={{ 
                   background: "var(--glass-bg)", 
                   border: "1px solid var(--glass-border)"
@@ -67,12 +67,12 @@ export default function LearnSection() {
                   {category.name}
                 </h3>
                 <p 
-                  className="text-sm mb-4 line-clamp-2"
+                  className="text-sm mb-4 line-clamp-2 flex-1"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   {category.description}
                 </p>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mt-auto">
                   <span 
                     className="text-sm font-semibold"
                     style={{ color: "var(--text-muted)" }}
