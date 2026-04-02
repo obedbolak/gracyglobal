@@ -49,16 +49,6 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg transition-transform duration-200 group-hover:scale-110"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--purple), var(--blue))",
-                boxShadow: "0 4px 14px rgba(123,47,190,0.45)",
-              }}
-            >
-              G
-            </div>
             <span
               className="font-extrabold tracking-tight text-lg"
               style={{
