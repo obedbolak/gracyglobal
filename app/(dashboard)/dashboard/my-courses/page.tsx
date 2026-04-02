@@ -13,28 +13,24 @@ import {
 } from "lucide-react";
 
 interface EnrolledCourse {
-  enrollment: {
-    id: string;
-    status: string;
-    enrolledAt: string;
-    completedAt: string | null;
-  };
+  id: string;
+  progress: number;
+  enrolledAt: string;
   course: {
     id: string;
     title: string;
     description: string;
     thumbnail: string | null;
     level: string;
+    _count: {
+      sections: number;
+    };
     sections: {
       lessons: {
         id: string;
+        duration: number | null;
       }[];
     }[];
-  };
-  progress: {
-    totalLessons: number;
-    completedLessons: number;
-    percentage: number;
   };
 }
 
@@ -65,6 +61,18 @@ export default function MyCoursesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getTotalLessons = (course: EnrolledCourse["course"]) => {
+    return course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
+  };
+
+  const getTotalDuration = (course: EnrolledCourse["course"]) => {
+    const totalMins = course.sections
+      .flatMap((s) => s.lessons)
+      .reduce((acc, l) => acc + (l.duration ?? 0), 0);
+    if (totalMins < 60) return `${totalMins}m`;
+    return `${Math.round(totalMins / 60)}h`;
   };
 
   if (error) {
@@ -177,13 +185,14 @@ export default function MyCoursesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {enrollments.map((item) => {
-            const { course, progress } = item;
-            const totalLessons = progress.totalLessons;
-            const isCompleted = progress.percentage >= 100;
+          {enrollments.map((enrollment) => {
+            const { course } = enrollment;
+            const totalLessons = getTotalLessons(course);
+            const duration = getTotalDuration(course);
+            const isCompleted = enrollment.progress >= 100;
 
             return (
-              <Link key={item.enrollment.id} href={`/learn/${course.id}`}>
+              <Link key={enrollment.id} href={`/learn/${course.id}`}>
                 <div
                   className="overflow-hidden rounded-2xl transition-all duration-300 h-full group hover:scale-105"
                   style={{
@@ -237,7 +246,14 @@ export default function MyCoursesPage() {
                       {course.description}
                     </p>
 
-                    <div className="flex items-center justify-between text-sm mb-4">
+                    <div
+                      className="flex items-center justify-between text-sm mb-4"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{duration}</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         <BookOpen className="w-4 h-4" />
                         <span>{totalLessons} lessons</span>
@@ -253,7 +269,7 @@ export default function MyCoursesPage() {
                           className="font-semibold"
                           style={{ color: "var(--text-primary)" }}
                         >
-                          {progress.percentage}%
+                          {enrollment.progress}%
                         </span>
                       </div>
                       <div
@@ -263,7 +279,7 @@ export default function MyCoursesPage() {
                         <div
                           className="h-full transition-all duration-300"
                           style={{
-                            width: `${progress.percentage}%`,
+                            width: `${enrollment.progress}%`,
                             background: isCompleted
                               ? "var(--green)"
                               : "linear-gradient(90deg, var(--purple), var(--blue))",
