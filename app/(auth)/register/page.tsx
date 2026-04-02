@@ -16,6 +16,8 @@ import {
   ArrowRight,
   Chrome,
   Check,
+  GraduationCap,
+  Heart,
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -116,6 +118,7 @@ export default function RegisterPage() {
     phone: "",
     country: "",
   });
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -123,6 +126,12 @@ export default function RegisterPage() {
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function toggleRole(role: string) {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -140,7 +149,10 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          role: selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
+        }),
       });
 
       const data = await res.json();
@@ -483,6 +495,106 @@ export default function RegisterPage() {
                 </button>
               </div>
               <PasswordStrength password={form.password} />
+            </div>
+
+            {/* Role Selection */}
+            <div className="space-y-3">
+              <label
+                className="text-xs font-medium"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                I want to register as: (optional)
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleRole("TEACHER")}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                  style={{
+                    background: selectedRoles.includes("TEACHER")
+                      ? "var(--badge-purple-bg)"
+                      : "var(--glass-bg)",
+                    border: selectedRoles.includes("TEACHER")
+                      ? "2px solid var(--purple)"
+                      : "1px solid var(--glass-border)",
+                  }}
+                >
+                  <GraduationCap
+                    size={20}
+                    style={{
+                      color: selectedRoles.includes("TEACHER")
+                        ? "var(--purple)"
+                        : "var(--text-muted)",
+                    }}
+                  />
+                  <span
+                    className="text-xs font-semibold"
+                    style={{
+                      color: selectedRoles.includes("TEACHER")
+                        ? "var(--purple)"
+                        : "var(--text-secondary)",
+                    }}
+                  >
+                    Teacher
+                  </span>
+                  {selectedRoles.includes("TEACHER") && (
+                    <Check
+                      size={12}
+                      className="absolute top-2 right-2"
+                      style={{ color: "var(--purple)" }}
+                      strokeWidth={3}
+                    />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleRole("COUNSELOR")}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] relative"
+                  style={{
+                    background: selectedRoles.includes("COUNSELOR")
+                      ? "var(--info-bg)"
+                      : "var(--glass-bg)",
+                    border: selectedRoles.includes("COUNSELOR")
+                      ? "2px solid var(--blue)"
+                      : "1px solid var(--glass-border)",
+                  }}
+                >
+                  <Heart
+                    size={20}
+                    style={{
+                      color: selectedRoles.includes("COUNSELOR")
+                        ? "var(--blue)"
+                        : "var(--text-muted)",
+                    }}
+                  />
+                  <span
+                    className="text-xs font-semibold"
+                    style={{
+                      color: selectedRoles.includes("COUNSELOR")
+                        ? "var(--blue)"
+                        : "var(--text-secondary)",
+                    }}
+                  >
+                    Counselor
+                  </span>
+                  {selectedRoles.includes("COUNSELOR") && (
+                    <Check
+                      size={12}
+                      className="absolute top-2 right-2"
+                      style={{ color: "var(--blue)" }}
+                      strokeWidth={3}
+                    />
+                  )}
+                </button>
+              </div>
+              <p
+                className="text-[10px] leading-relaxed"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Select if you want to teach courses or offer counseling services.
+                You can always add these later from your profile.
+              </p>
             </div>
 
             {/* Submit */}

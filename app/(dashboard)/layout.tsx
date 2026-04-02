@@ -1,17 +1,18 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import UserShell from "@/components/dashboard/UserShell";
 
-import { SessionProvider } from "next-auth/react";
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SessionProvider>
-      <div className="min-h-screen flex flex-col">
-        <main className="flex-1">{children}</main>
-      </div>
-    </SessionProvider>
-  );
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login?callbackUrl=/dashboard");
+  }
+
+  return <UserShell session={session}>{children}</UserShell>;
 }

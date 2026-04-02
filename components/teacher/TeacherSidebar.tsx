@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import DashboardSwitcher from "@/components/shared/DashboardSwitcher";
 import {
   LayoutDashboard,
   BookOpen,
@@ -151,25 +152,7 @@ export function TeacherMobileSidebar({
         }}
       >
         <div className="flex items-center justify-between p-6 border-b border-[var(--divider)] flex-shrink-0">
-          <div className="flex items-center gap-3">
-            {session?.user?.image ? (
-              <img
-                src={session.user.image}
-                alt={session.user.name || "Teacher"}
-                className="w-8 h-8 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-[var(--purple)] text-white flex items-center justify-center text-sm font-semibold">
-                {session?.user?.name?.charAt(0).toUpperCase() || "T"}
-              </div>
-            )}
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {session?.user?.name || "Teacher"}
-              </p>
-              <p className="text-xs text-[var(--text-secondary)]">Instructor</p>
-            </div>
-          </div>
+          <DashboardSwitcher session={session} />
         </div>
         <div className="flex-1 py-4 overflow-y-auto">
           <NavItems onNavigate={() => setMobileOpen(false)} />
@@ -205,27 +188,7 @@ export default function TeacherSidebar({
       `}
     >
       <div className="flex items-center justify-between p-4 border-b border-[var(--divider)] flex-shrink-0">
-        {!collapsed && (
-          <div className="flex items-center gap-3">
-            {session?.user?.image ? (
-              <img
-                src={session.user.image}
-                alt={session.user.name || "Teacher"}
-                className="w-8 h-8 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-[var(--purple)] text-white flex items-center justify-center text-sm font-semibold">
-                {session?.user?.name?.charAt(0).toUpperCase() || "T"}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                {session?.user?.name || "Teacher"}
-              </p>
-              <p className="text-xs text-[var(--text-secondary)]">Instructor</p>
-            </div>
-          </div>
-        )}
+        {!collapsed && <DashboardSwitcher session={session} />}
         <button
           onClick={() => onToggleCollapse?.(!collapsed)}
           className={`

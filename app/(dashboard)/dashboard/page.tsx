@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import QuickActions from "@/components/dashboard/QuickActions";
@@ -27,6 +26,13 @@ import {
   Pencil,
   CheckCircle,
   XCircle,
+  LayoutDashboard,
+  GraduationCap,
+  Heart,
+  Shield,
+  BookOpen,
+  PlayCircle,
+  ArrowRight,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -63,7 +69,7 @@ interface UserProfile {
   name: string;
   email: string;
   image?: string;
-  role: string[]; // ✅ FIX: role is UserRole[] array, not string
+  role: string[];
   country?: string;
   phone?: string;
   createdAt: string;
@@ -83,6 +89,27 @@ interface UserProfile {
     orders: number;
     communityPosts: number;
     jobApplications: number;
+  };
+}
+
+interface EnrolledCourse {
+  enrollment: {
+    id: string;
+    status: string;
+    enrolledAt: string;
+    completedAt: string | null;
+  };
+  course: {
+    id: string;
+    title: string;
+    description: string;
+    thumbnail: string | null;
+    level: string;
+  };
+  progress: {
+    totalLessons: number;
+    completedLessons: number;
+    percentage: number;
   };
 }
 
@@ -409,17 +436,17 @@ function CreatorSection({ subscription }: { subscription?: Subscription }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [enrollments, setEnrollments] = useState<EnrolledCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (status === "unauthenticated") redirect("/login");
-  }, [status]);
-
-  useEffect(() => {
-    if (session?.user) fetchProfile();
+    if (session?.user) {
+      fetchProfile();
+      fetchEnrollments();
+    }
   }, [session]);
 
   const fetchProfile = async () => {
@@ -438,12 +465,23 @@ export default function DashboardPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  const fetchEnrollments = async () => {
+    try {
+      const res = await fetch("/api/learn/my-courses");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setEnrollments(data.data?.slice(0, 3) || []);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch enrollments:", error);
+    }
+  };
+
+  if (loading) {
     return (
-      <div
-        className="flex items-center justify-center min-h-screen"
-        style={{ background: "var(--background)" }}
-      >
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2
             className="w-8 h-8 animate-spin mx-auto mb-4"
@@ -459,10 +497,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div
-        className="flex items-center justify-center min-h-screen"
-        style={{ background: "var(--background)" }}
-      >
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <p className="mb-4" style={{ color: "var(--error-text)" }}>
             {error}
@@ -519,11 +554,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div
-      className="min-h-screen py-8"
-      style={{ background: "var(--background)" }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="space-y-8">
         {/* ── Welcome Header ── */}
         <div className="flex items-center justify-between">
           <div>
@@ -660,6 +691,148 @@ export default function DashboardPage() {
               />
             </div>
 
+            {/* Enrolled Courses */}
+            {enrollments.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-xl font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    My Courses
+                  </h2>
+                  <Link
+                    href="/dashboard/my-courses"
+                    className="text-sm font-semibold flex items-center gap-1"
+                    style={{ color: "var(--blue)" }}
+                  >
+                    View All
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  {enrollments.map((item) => {
+                    const { course, progress } = item;
+                    const totalLessons = progress.totalLessons;
+                    const isCompleted = progress.percentage >= 100;
+
+                    return (
+                      <Link
+                        key={item.enrollment.id}
+                        href={`/learn/${course.id}`}
+                        className="group"
+                      >
+                        <div
+                          className="p-4 rounded-xl transition-all hover:scale-[1.02]"
+                          style={{
+                            background: "var(--glass-bg)",
+                            border: "1px solid var(--glass-border)",
+                          }}
+                        >
+                          <div className="flex gap-4">
+                            <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                              {course.thumbnail ? (
+                                <img
+                                  src={course.thumbnail}
+                                  alt={course.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className="w-full h-full flex items-center justify-center"
+                                  style={{
+                                    background: "var(--glass-bg-subtle)",
+                                  }}
+                                >
+                                  <BookOpen
+                                    className="w-8 h-8"
+                                    style={{ color: "var(--text-muted)" }}
+                                  />
+                                </div>
+                              )}
+                              {isCompleted && (
+                                <div
+                                  className="absolute inset-0 flex items-center justify-center"
+                                  style={{
+                                    background: "rgba(0,0,0,0.7)",
+                                  }}
+                                >
+                                  <CheckCircle
+                                    className="w-6 h-6"
+                                    style={{ color: "var(--green)" }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3
+                                className="font-semibold mb-1 truncate"
+                                style={{ color: "var(--text-primary)" }}
+                              >
+                                {course.title}
+                              </h3>
+                              <p
+                                className="text-sm mb-2 line-clamp-1"
+                                style={{ color: "var(--text-secondary)" }}
+                              >
+                                {course.description}
+                              </p>
+                              <div className="flex items-center gap-4 text-xs mb-2">
+                                <span
+                                  style={{ color: "var(--text-muted)" }}
+                                >
+                                  {totalLessons} lessons
+                                </span>
+                                <span
+                                  className="px-2 py-0.5 rounded-full"
+                                  style={{
+                                    background: "var(--glass-bg-subtle)",
+                                    color: "var(--text-secondary)",
+                                  }}
+                                >
+                                  {course.level}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="flex-1 h-1.5 rounded-full overflow-hidden"
+                                  style={{
+                                    background: "var(--glass-bg-subtle)",
+                                  }}
+                                >
+                                  <div
+                                    className="h-full transition-all"
+                                    style={{
+                                      width: `${progress.percentage}%`,
+                                      background: isCompleted
+                                        ? "var(--green)"
+                                        : "linear-gradient(90deg, var(--purple), var(--blue))",
+                                    }}
+                                  />
+                                </div>
+                                <span
+                                  className="text-xs font-semibold"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  {progress.percentage}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center">
+                              <PlayCircle
+                                className="w-8 h-8 group-hover:scale-110 transition-transform"
+                                style={{ color: "var(--blue)" }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Counselor profile card — only shown to counselors */}
             {isCounselor && profile.counselorProfile && (
               <div>
@@ -699,7 +872,6 @@ export default function DashboardPage() {
             <RecentActivity activities={recentActivities} />
           </div>
         </div>
-      </div>
     </div>
   );
 }

@@ -66,11 +66,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ courses: coursesWithProgress });
+    return NextResponse.json({ success: true, data: coursesWithProgress });
   } catch (error) {
     console.error("[GET /api/learn/my-courses]", error);
     return NextResponse.json(
-      { error: "Failed to fetch enrolled courses" },
+      { success: false, error: "Failed to fetch enrolled courses" },
       { status: 500 },
     );
   }
