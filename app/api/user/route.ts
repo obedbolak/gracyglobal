@@ -1,5 +1,6 @@
 // app/api/user/route.ts
 import { NextRequest } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ok, err, requireUser } from "@/lib/api";
 
@@ -88,7 +89,7 @@ export async function PATCH(req: NextRequest) {
     if (!user) return err("Unauthorized", 401);
 
     const body = await req.json();
-    const { name, phone, country, image } = body;
+    const { name, phone, country, image, password } = body;
 
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length < 2) {
@@ -108,6 +109,11 @@ export async function PATCH(req: NextRequest) {
         return err("Image must be a valid URL");
       }
     }
+    if (password !== undefined && password !== null) {
+      if (typeof password !== "string" || password.length < 8) {
+        return err("Password must be at least 8 characters");
+      }
+    }
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -116,6 +122,9 @@ export async function PATCH(req: NextRequest) {
         ...(phone !== undefined ? { phone } : {}),
         ...(country !== undefined ? { country } : {}),
         ...(image !== undefined ? { image } : {}),
+        ...(password !== undefined
+          ? { password: await bcrypt.hash(password, 12) }
+          : {}),
       },
       select: {
         id: true,

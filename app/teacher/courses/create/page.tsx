@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import ImageUpload from "@/components/shared/ImageUpload";
+import VideoUpload from "@/components/shared/VideoUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1113,25 +1114,19 @@ export default function CreateCoursePage() {
         </div>
       </div>
 
-      {/* Video URL */}
+      {/* Video Upload */}
       {lessonDraft.type === "VIDEO" && (
-        <div>
-          <label
-            className="text-xs font-medium"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Video URL
-          </label>
-          <input
-            type="url"
-            value={lessonDraft.videoUrl}
-            onChange={(e) =>
-              setLessonDraft((d) => ({ ...d, videoUrl: e.target.value }))
-            }
-            placeholder="https://youtube.com/watch?v=... or Cloudinary URL"
-            className="w-full mt-1 p-3 rounded-xl glass-input text-sm"
-          />
-        </div>
+        <VideoUpload
+          folder="courses/videos"
+          label="Lesson Video"
+          currentVideo={lessonDraft.videoUrl}
+          onUploadComplete={(url, publicId) => {
+            setLessonDraft((d) => ({
+              ...d,
+              videoUrl: url,
+            }));
+          }}
+        />
       )}
 
       {/* Text content */}

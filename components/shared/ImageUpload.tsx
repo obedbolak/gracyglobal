@@ -2,12 +2,13 @@
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import Image from "next/image";
 
 interface ImageUploadProps {
   onUploadComplete: (url: string, publicId: string) => void;
+  onRemove?: () => void;
   folder?: string;
   maxSize?: number; // MB
   label?: string;
@@ -17,6 +18,7 @@ interface ImageUploadProps {
 
 export default function ImageUpload({
   onUploadComplete,
+  onRemove,
   folder = "gracyglobal",
   maxSize = 5,
   label = "Upload Image",
@@ -27,6 +29,10 @@ export default function ImageUpload({
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setPreview(currentImage || null);
+  }, [currentImage]);
 
   const aspectRatioClasses = {
     square: "aspect-square",
@@ -90,6 +96,7 @@ export default function ImageUpload({
     setPreview(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    onRemove?.();
   };
 
   return (

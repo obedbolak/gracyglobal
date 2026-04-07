@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle, ShoppingBag, ArrowRight, Home } from "lucide-react";
 
 export default function OrderConfirmationPage() {
-  const orderNumber = `GG-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
+  const orderNumber = orderId
+    ? `GG-${orderId.slice(0, 6).toUpperCase()}`
+    : `GG-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
   return (
     <main className="min-h-screen">

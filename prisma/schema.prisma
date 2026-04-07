@@ -30,14 +30,17 @@ model User {
   counselorProfile Counselor?
   jobApplications  JobApplication[]
   orders           Order[]
+  communityMembers CommunityMember[]   // was: communityMember CommunityMember?
   communityPosts   CommunityPost[]
+  postComments     PostComment[]
+  postReactions    PostReaction[]
   bookings         Booking[]
   affiliate        Affiliate?
   subscription     Subscription?
-  communityMember  CommunityMember?
   enrollments      Enrollment[]
   quizAttempts     QuizAttempt[]
   liveAttendances  LiveAttendance[]
+  verificationOTP  VerificationOTP[]
 
   teacherCourses Course[] @relation("TeacherCourses")  // ← ADD THIS LINE
 
@@ -91,6 +94,20 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model VerificationOTP {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String?
+  code      String
+  type      String
+  data      Json?
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("verification_otps")
 }
 
 // ─── PLANS & SUBSCRIPTIONS ───────────────────────────────────────────────────
@@ -171,28 +188,6 @@ enum PaymentStatus {
 }
 
 // ─── COMMUNITY MEMBERSHIP ────────────────────────────────────────────────────
-
-model CommunityMember {
-  id            String      @id @default(cuid())
-  userId        String      @unique
-  bio           String?     @db.Text
-  systems       String[]
-  badge         MemberBadge @default(CONTRIBUTOR)
-  contributions Int         @default(0)
-  joinedAt      DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("community_members")
-}
-
-enum MemberBadge {
-  CONTRIBUTOR
-  LEADER
-  MENTOR
-  PIONEER
-}
 
 // ─── COUNSELORS ──────────────────────────────────────────────────────────────
 
@@ -383,19 +378,112 @@ enum OrderStatus {
 // ─── COMMUNITY POSTS ─────────────────────────────────────────────────────────
 
 model CommunityPost {
+  id          String      @id @default(cuid())
+  userId      String
+  communityId String
+  title       String?     // optional — not all posts need a title
+  content     String?     @db.Text   // text/caption
+  type        PostType    @default(TEXT)
+
+  // media
+  mediaUrl    String?     // image, video, or document URL (from Cloudinary)
+  mediaType   String?     // e.g. "image/jpeg", "video/mp4", "application/pdf"
+  linkUrl     String?     // for LINK type posts
+  linkPreview Json?       // { title, description, image, url } scraped from link
+
+  tags        String[]
+  published   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user      User           @relation(fields: [userId], references: [id])
+  community Community      @relation(fields: [communityId], references: [id])
+  comments  PostComment[]  @relation("PostComments")
+  reactions PostReaction[] @relation("PostReactions")
+
+  @@map("community_posts")
+}
+
+enum PostType {
+  TEXT
+  IMAGE
+  VIDEO
+  DOCUMENT
+  LINK
+}
+
+// ─── COMMUNITY ───────────────────────────────────────────────────────────────
+
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @db.Text
+  image       String?
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members CommunityMember[]
+  posts   CommunityPost[]
+
+  @@map("communities")
+}
+
+// ── UPDATED: now links to a specific community, removed @unique on userId ──
+model CommunityMember {
+  id          String    @id @default(cuid())
+  userId      String
+  communityId String
+  role        MemberRole @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])  // one membership per community per user
+  @@map("community_members")
+}
+
+enum MemberRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
+
+// ── NEW: comments on posts ──
+model PostComment {
   id        String   @id @default(cuid())
+  postId    String
   userId    String
-  title     String
   content   String   @db.Text
-  category  String
-  tags      String[]
-  published Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  communityPost CommunityPost @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("community_posts")
+  @@map("post_comments")
+}
+
+// ── NEW: reactions on posts ──
+model PostReaction {
+  id     String       @id @default(cuid())
+  postId String
+  userId String
+  type   ReactionType
+
+  communityPost CommunityPost @relation("PostReactions", fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, type])  // one reaction type per user per post
+  @@map("post_reactions")
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  SUPPORT
 }
 
 // ─── STATS ───────────────────────────────────────────────────────────────────

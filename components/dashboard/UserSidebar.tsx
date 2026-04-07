@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Heart,
   Users,
+  Settings,
   ChevronLeft,
   ChevronRight,
   PanelLeft,
@@ -25,6 +26,7 @@ const menuItems = [
   { label: "Community", href: "/community", icon: MessageSquare },
   { label: "Counseling", href: "/counselors", icon: Heart },
   { label: "Affiliate", href: "/dashboard/affiliate-dashboard", icon: Users },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {

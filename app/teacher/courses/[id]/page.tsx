@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import ImageUpload from "@/components/shared/ImageUpload";
 import {
   ArrowLeft,
   Save,
@@ -16,7 +17,6 @@ import {
   EyeOff,
   Trash2,
   CheckCircle,
-  Image as ImageIcon,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -313,34 +313,14 @@ export default function EditCoursePage() {
       >
         {/* Thumbnail */}
         <div>
-          <label
-            className="block text-sm font-semibold mb-2"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Thumbnail URL
-          </label>
-          <div className="relative">
-            <ImageIcon
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: "var(--text-muted)" }}
-            />
-            <input
-              type="url"
-              value={thumbnail}
-              onChange={(e) => setThumbnail(e.target.value)}
-              placeholder="https://..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl glass-input text-sm"
-            />
-          </div>
-          {thumbnail && (
-            <div className="mt-3 h-40 rounded-xl overflow-hidden">
-              <img
-                src={thumbnail}
-                alt="Preview"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+          <ImageUpload
+            folder="courses"
+            label="Course Thumbnail"
+            aspectRatio="video"
+            currentImage={thumbnail || undefined}
+            onUploadComplete={(url) => setThumbnail(url)}
+            onRemove={() => setThumbnail("")}
+          />
         </div>
 
         {/* Title */}

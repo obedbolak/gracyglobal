@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   ChevronLeft,
   Shield,
@@ -23,7 +24,9 @@ export default function CheckoutPage() {
   const { convert, loading: currencyLoading } = useCurrency();
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("mobile_money");
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -56,10 +59,45 @@ export default function CheckoutPage() {
 
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
+
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/marketplace/checkout");
+      return;
+    }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    clearCart();
-    router.push("/marketplace/order-confirmation");
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to place order");
+      }
+
+      const orderId = data.data?.id;
+      clearCart();
+      router.push(
+        orderId
+          ? `/marketplace/order-confirmation?orderId=${encodeURIComponent(orderId)}`
+          : "/marketplace/order-confirmation",
+      );
+    } catch (err: any) {
+      console.error("Order creation failed", err);
+      setError(err.message || "Failed to place order");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (items.length === 0) {
@@ -394,6 +432,18 @@ export default function CheckoutPage() {
                 Secure & encrypted checkout
               </div>
 
+              {error && (
+                <div
+                  className="rounded-2xl p-4 text-sm"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                    border: "1px solid var(--error-border)",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading}

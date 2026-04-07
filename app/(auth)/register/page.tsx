@@ -123,6 +123,9 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [otp, setOtp] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -130,7 +133,7 @@ export default function RegisterPage() {
 
   function toggleRole(role: string) {
     setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
     );
   }
 
@@ -138,43 +141,106 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
+    if (step === "form") {
+      if (form.password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/auth/send-registration-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...form,
+            role:
+              selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error ?? "Something went wrong. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        setStep("otp");
+        setLoading(false);
+      } catch {
+        setError("Network error. Please check your connection.");
+        setLoading(false);
+      }
+    } else {
+      // Verify OTP
+      if (!otp) {
+        setError("Please enter the OTP.");
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/auth/verify-registration-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: form.email,
+            otp,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error ?? "Something went wrong. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        // Auto sign in after register
+        await signIn("credentials", {
+          email: form.email,
+          password: form.password,
+          redirect: false,
+        });
+
+        router.push("/dashboard");
+      } catch {
+        setError("Network error. Please check your connection.");
+        setLoading(false);
+      }
+    }
+  }
+
+  async function handleResend() {
+    setResendLoading(true);
+    setError("");
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/send-registration-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          role: selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
+          role:
+            selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
-        setLoading(false);
-        return;
+        setError(data.error ?? "Failed to resend OTP.");
       }
-
-      // Auto sign in after register
-      await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
-      });
-
-      router.push("/dashboard");
     } catch {
-      setError("Network error. Please check your connection.");
-      setLoading(false);
+      setError("Network error.");
     }
+
+    setResendLoading(false);
   }
 
   async function handleGoogle() {
@@ -295,61 +361,71 @@ export default function RegisterPage() {
               className="text-3xl font-extrabold mb-2 tracking-tight"
               style={{ color: "var(--text-primary)" }}
             >
-              Create your account.
+              {step === "form" ? "Create your account." : "Verify your email"}
             </h1>
             <p
               className="text-sm font-light"
               style={{ color: "var(--text-muted)" }}
             >
-              Already have one?{" "}
-              <Link
-                href="/login"
-                className="font-semibold transition-colors duration-200"
-                style={{ color: "var(--accent-primary)" }}
-              >
-                Sign in
-              </Link>
+              {step === "form" ? (
+                <>
+                  Already have one?{" "}
+                  <Link
+                    href="/login"
+                    className="font-semibold transition-colors duration-200"
+                    style={{ color: "var(--accent-primary)" }}
+                  >
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>We've sent a 6-digit code to {form.email}</>
+              )}
             </p>
           </div>
 
-          {/* Google */}
-          <button
-            onClick={handleGoogle}
-            disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.01] mb-6 disabled:opacity-60"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--text-secondary)",
-              backdropFilter: "blur(12px)",
-              boxShadow: "var(--glass-shadow)",
-            }}
-          >
-            {googleLoading ? (
-              <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-            ) : (
-              <Chrome size={17} />
-            )}
-            Continue with Google
-          </button>
+          {/* Google - only for form step */}
+          {step === "form" && (
+            <>
+              <button
+                onClick={handleGoogle}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.01] mb-6 disabled:opacity-60"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-secondary)",
+                  backdropFilter: "blur(12px)",
+                  boxShadow: "var(--glass-shadow)",
+                }}
+              >
+                {googleLoading ? (
+                  <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                ) : (
+                  <Chrome size={17} />
+                )}
+                Continue with Google
+              </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-6">
-            <div
-              className="flex-1 h-px"
-              style={{ background: "var(--divider)" }}
-            />
-            <span
-              className="text-xs font-medium"
-              style={{ color: "var(--text-disabled)" }}
-            >
-              or register with email
-            </span>
-            <div
-              className="flex-1 h-px"
-              style={{ background: "var(--divider)" }}
-            />
-          </div>
+              {/* Divider */}
+              <div className="flex items-center gap-3 mb-6">
+                <div
+                  className="flex-1 h-px"
+                  style={{ background: "var(--divider)" }}
+                />
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: "var(--text-disabled)" }}
+                >
+                  or register with email
+                </span>
+                <div
+                  className="flex-1 h-px"
+                  style={{ background: "var(--divider)" }}
+                />
+              </div>
+            </>
+          )}
 
           {/* Error */}
           {error && (
@@ -369,233 +445,271 @@ export default function RegisterPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* Name */}
-            <div className="relative">
-              <User
-                size={15}
-                className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--text-disabled)" }}
-              />
-              <input
-                type="text"
-                placeholder="Full name"
-                required
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                style={inputStyle}
-                onFocus={onFocus}
-                onBlur={onBlur}
-              />
-            </div>
-
-            {/* Email */}
-            <div className="relative">
-              <Mail
-                size={15}
-                className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--text-disabled)" }}
-              />
-              <input
-                type="email"
-                placeholder="Email address"
-                required
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                style={inputStyle}
-                onFocus={onFocus}
-                onBlur={onBlur}
-              />
-            </div>
-
-            {/* Phone */}
-            <div className="relative">
-              <Phone
-                size={15}
-                className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--text-disabled)" }}
-              />
-              <input
-                type="tel"
-                placeholder="Phone number (e.g. +237 6XX XXX XXX)"
-                value={form.phone}
-                onChange={(e) => update("phone", e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                style={inputStyle}
-                onFocus={onFocus}
-                onBlur={onBlur}
-              />
-            </div>
-
-            {/* Country */}
-            <div className="relative">
-              <Globe
-                size={15}
-                className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10"
-                style={{ color: "var(--text-disabled)" }}
-              />
-              <select
-                value={form.country}
-                onChange={(e) => update("country", e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200 appearance-none cursor-pointer"
-                style={{
-                  ...inputStyle,
-                  color: form.country
-                    ? "var(--text-primary)"
-                    : "var(--text-disabled)",
-                }}
-                onFocus={onFocus}
-                onBlur={onBlur}
-              >
-                <option value="" disabled>
-                  Select your country
-                </option>
-                {COUNTRIES.map((c) => (
-                  <option
-                    key={c}
-                    value={c}
-                    style={{
-                      background: "var(--bg-base)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="relative">
-                <Lock
-                  size={15}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "var(--text-disabled)" }}
-                />
-                <input
-                  type={showPass ? "text" : "password"}
-                  placeholder="Create a password"
-                  required
-                  value={form.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  className="w-full pl-11 pr-12 py-3.5 text-sm rounded-2xl transition-all duration-200"
-                  style={inputStyle}
-                  onFocus={onFocus}
-                  onBlur={onBlur}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
-                  style={{ color: "var(--text-disabled)" }}
-                >
-                  {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <PasswordStrength password={form.password} />
-            </div>
-
-            {/* Role Selection */}
-            <div className="space-y-3">
-              <label
-                className="text-xs font-medium"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                I want to register as: (optional)
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => toggleRole("TEACHER")}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
-                  style={{
-                    background: selectedRoles.includes("TEACHER")
-                      ? "var(--badge-purple-bg)"
-                      : "var(--glass-bg)",
-                    border: selectedRoles.includes("TEACHER")
-                      ? "2px solid var(--purple)"
-                      : "1px solid var(--glass-border)",
-                  }}
-                >
-                  <GraduationCap
-                    size={20}
-                    style={{
-                      color: selectedRoles.includes("TEACHER")
-                        ? "var(--purple)"
-                        : "var(--text-muted)",
-                    }}
+            {step === "form" ? (
+              <>
+                {/* Name */}
+                <div className="relative">
+                  <User
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-disabled)" }}
                   />
-                  <span
-                    className="text-xs font-semibold"
-                    style={{
-                      color: selectedRoles.includes("TEACHER")
-                        ? "var(--purple)"
-                        : "var(--text-secondary)",
-                    }}
-                  >
-                    Teacher
-                  </span>
-                  {selectedRoles.includes("TEACHER") && (
-                    <Check
-                      size={12}
-                      className="absolute top-2 right-2"
-                      style={{ color: "var(--purple)" }}
-                      strokeWidth={3}
-                    />
-                  )}
-                </button>
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    required
+                    value={form.name}
+                    onChange={(e) => update("name", e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
+                    style={inputStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  />
+                </div>
 
+                {/* Email */}
+                <div className="relative">
+                  <Mail
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-disabled)" }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    required
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
+                    style={inputStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="relative">
+                  <Phone
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-disabled)" }}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone number (e.g. +237 6XX XXX XXX)"
+                    value={form.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200"
+                    style={inputStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  />
+                </div>
+
+                {/* Country */}
+                <div className="relative">
+                  <Globe
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+                    style={{ color: "var(--text-disabled)" }}
+                  />
+                  <select
+                    value={form.country}
+                    onChange={(e) => update("country", e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200 appearance-none cursor-pointer"
+                    style={{
+                      ...inputStyle,
+                      color: form.country
+                        ? "var(--text-primary)"
+                        : "var(--text-disabled)",
+                    }}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  >
+                    <option value="" disabled>
+                      Select your country
+                    </option>
+                    {COUNTRIES.map((c) => (
+                      <option
+                        key={c}
+                        value={c}
+                        style={{
+                          background: "var(--bg-base)",
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <div className="relative">
+                    <Lock
+                      size={15}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                      style={{ color: "var(--text-disabled)" }}
+                    />
+                    <input
+                      type={showPass ? "text" : "password"}
+                      placeholder="Create a password"
+                      required
+                      value={form.password}
+                      onChange={(e) => update("password", e.target.value)}
+                      className="w-full pl-11 pr-12 py-3.5 text-sm rounded-2xl transition-all duration-200"
+                      style={inputStyle}
+                      onFocus={onFocus}
+                      onBlur={onBlur}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(!showPass)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                      style={{ color: "var(--text-disabled)" }}
+                    >
+                      {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <PasswordStrength password={form.password} />
+                </div>
+
+                {/* Role Selection */}
+                <div className="space-y-3">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    I want to register as: (optional)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleRole("TEACHER")}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                      style={{
+                        background: selectedRoles.includes("TEACHER")
+                          ? "var(--badge-purple-bg)"
+                          : "var(--glass-bg)",
+                        border: selectedRoles.includes("TEACHER")
+                          ? "2px solid var(--purple)"
+                          : "1px solid var(--glass-border)",
+                      }}
+                    >
+                      <GraduationCap
+                        size={20}
+                        style={{
+                          color: selectedRoles.includes("TEACHER")
+                            ? "var(--purple)"
+                            : "var(--text-muted)",
+                        }}
+                      />
+                      <span
+                        className="text-xs font-semibold"
+                        style={{
+                          color: selectedRoles.includes("TEACHER")
+                            ? "var(--purple)"
+                            : "var(--text-secondary)",
+                        }}
+                      >
+                        Teacher
+                      </span>
+                      {selectedRoles.includes("TEACHER") && (
+                        <Check
+                          size={12}
+                          className="absolute top-2 right-2"
+                          style={{ color: "var(--purple)" }}
+                          strokeWidth={3}
+                        />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleRole("COUNSELOR")}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] relative"
+                      style={{
+                        background: selectedRoles.includes("COUNSELOR")
+                          ? "var(--info-bg)"
+                          : "var(--glass-bg)",
+                        border: selectedRoles.includes("COUNSELOR")
+                          ? "2px solid var(--blue)"
+                          : "1px solid var(--glass-border)",
+                      }}
+                    >
+                      <Heart
+                        size={20}
+                        style={{
+                          color: selectedRoles.includes("COUNSELOR")
+                            ? "var(--blue)"
+                            : "var(--text-muted)",
+                        }}
+                      />
+                      <span
+                        className="text-xs font-semibold"
+                        style={{
+                          color: selectedRoles.includes("COUNSELOR")
+                            ? "var(--blue)"
+                            : "var(--text-secondary)",
+                        }}
+                      >
+                        Counselor
+                      </span>
+                      {selectedRoles.includes("COUNSELOR") && (
+                        <Check
+                          size={12}
+                          className="absolute top-2 right-2"
+                          style={{ color: "var(--blue)" }}
+                          strokeWidth={3}
+                        />
+                      )}
+                    </button>
+                  </div>
+                  <p
+                    className="text-[10px] leading-relaxed"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Select if you want to teach courses or offer counseling
+                    services. You can always add these later from your profile.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* OTP Input */}
+                <div className="relative">
+                  <Lock
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-disabled)" }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    required
+                    value={otp}
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl transition-all duration-200 text-center font-mono text-lg tracking-widest"
+                    style={inputStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    maxLength={6}
+                  />
+                </div>
                 <button
                   type="button"
-                  onClick={() => toggleRole("COUNSELOR")}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] relative"
-                  style={{
-                    background: selectedRoles.includes("COUNSELOR")
-                      ? "var(--info-bg)"
-                      : "var(--glass-bg)",
-                    border: selectedRoles.includes("COUNSELOR")
-                      ? "2px solid var(--blue)"
-                      : "1px solid var(--glass-border)",
-                  }}
+                  onClick={handleResend}
+                  disabled={resendLoading}
+                  className="text-xs font-medium transition-colors duration-200 self-start"
+                  style={{ color: "var(--accent-primary)" }}
                 >
-                  <Heart
-                    size={20}
-                    style={{
-                      color: selectedRoles.includes("COUNSELOR")
-                        ? "var(--blue)"
-                        : "var(--text-muted)",
-                    }}
-                  />
-                  <span
-                    className="text-xs font-semibold"
-                    style={{
-                      color: selectedRoles.includes("COUNSELOR")
-                        ? "var(--blue)"
-                        : "var(--text-secondary)",
-                    }}
-                  >
-                    Counselor
-                  </span>
-                  {selectedRoles.includes("COUNSELOR") && (
-                    <Check
-                      size={12}
-                      className="absolute top-2 right-2"
-                      style={{ color: "var(--blue)" }}
-                      strokeWidth={3}
-                    />
-                  )}
+                  {resendLoading ? "Sending..." : "Didn't receive code? Resend"}
                 </button>
-              </div>
-              <p
-                className="text-[10px] leading-relaxed"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Select if you want to teach courses or offer counseling services.
-                You can always add these later from your profile.
-              </p>
-            </div>
+              </>
+            )}
 
             {/* Submit */}
             <button
@@ -612,7 +726,10 @@ export default function RegisterPage() {
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  Create Account <ArrowRight size={15} />
+                  {step === "form"
+                    ? "Send Verification Code"
+                    : "Verify & Create Account"}{" "}
+                  <ArrowRight size={15} />
                 </>
               )}
             </button>
