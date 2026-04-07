@@ -4,11 +4,11 @@ import {
   UserRole,
   JobCategory,
   JobType,
-  MemberBadge,
   SubscriptionBilling,
   CourseLevel,
   LessonType,
   LiveSessionStatus,
+  MemberRole,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -117,6 +117,45 @@ async function main() {
   });
   console.log("✅ Admin:", admin.email);
 
+  // ── Communities (needed before members/posts) ───────────────────────────────
+  const communitiesData = [
+    {
+      name: "Human Flourishing",
+      slug: "human-flourishing",
+      description: "A community dedicated to personal growth and wellbeing.",
+      category: "Wellness",
+      image:
+        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80",
+    },
+    {
+      name: "Knowledge & Skills",
+      slug: "knowledge-skills",
+      description: "Share knowledge, learn new skills, and grow together.",
+      category: "Education",
+      image:
+        "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&q=80",
+    },
+    {
+      name: "African Business Hub",
+      slug: "african-business-hub",
+      description: "Entrepreneurs and professionals building Africa's future.",
+      category: "Business",
+      image:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80",
+    },
+  ];
+
+  const communities: Record<string, { id: string }> = {};
+  for (const c of communitiesData) {
+    const community = await prisma.community.upsert({
+      where: { slug: c.slug },
+      update: {},
+      create: c,
+    });
+    communities[c.slug] = community;
+    console.log(`✅ Community seeded: ${community.name}`);
+  }
+
   // ── Test accounts — one per plan ────────────────────────────────────────────
   const testAccounts = [
     {
@@ -124,28 +163,24 @@ async function main() {
       email: "free@gracyworld.com",
       planName: "free",
       billing: SubscriptionBilling.MONTHLY,
-      badge: MemberBadge.CONTRIBUTOR,
     },
     {
       name: "Test Starter User",
       email: "starter@gracyworld.com",
       planName: "starter",
       billing: SubscriptionBilling.MONTHLY,
-      badge: MemberBadge.CONTRIBUTOR,
     },
     {
       name: "Test Growth User",
       email: "growth@gracyworld.com",
       planName: "growth",
       billing: SubscriptionBilling.ANNUAL,
-      badge: MemberBadge.LEADER,
     },
     {
       name: "Test Elite User",
       email: "elite@gracyworld.com",
       planName: "elite",
       billing: SubscriptionBilling.ANNUAL,
-      badge: MemberBadge.PIONEER,
     },
   ];
 
@@ -179,15 +214,20 @@ async function main() {
       },
     });
 
+    // ✅ Fixed: CommunityMember now requires userId + communityId
+    // Join user to the first community by default
     await prisma.communityMember.upsert({
-      where: { userId: user.id },
+      where: {
+        userId_communityId: {
+          userId: user.id,
+          communityId: communities["human-flourishing"].id,
+        },
+      },
       update: {},
       create: {
         userId: user.id,
-        bio: `${acc.name} — testing the ${acc.planName} plan.`,
-        systems: ["human-flourishing", "knowledge-skills"],
-        badge: acc.badge,
-        contributions: 0,
+        communityId: communities["human-flourishing"].id,
+        role: MemberRole.MEMBER,
       },
     });
 
@@ -202,12 +242,11 @@ async function main() {
   await prisma.service.deleteMany();
 
   const servicesData = [
-    // ── Service 1: Home Delivery ──────────────────────────────────────────────
     {
       id: "svc-home-delivery",
       name: "Home Delivery Service",
       description:
-        "Fast, reliable delivery of packages, documents, and purchases straight to your door. Same-day and scheduled delivery available.",
+        "Fast, reliable delivery of packages, documents, and purchases straight to your door.",
       images: [
         "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=600&q=80",
       ],
@@ -252,13 +291,11 @@ async function main() {
         },
       ],
     },
-
-    // ── Service 2: Meal Preparation ───────────────────────────────────────────
     {
       id: "svc-meal-preparation",
       name: "Meal Preparation Service",
       description:
-        "A personal cook comes to your home to prepare fresh, healthy meals. Choose your menu, dietary needs, and schedule — we handle the rest.",
+        "A personal cook comes to your home to prepare fresh, healthy meals.",
       images: [
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
       ],
@@ -303,13 +340,11 @@ async function main() {
         },
       ],
     },
-
-    // ── Service 3: Child Care ─────────────────────────────────────────────────
     {
       id: "svc-child-care",
       name: "Child Care Service",
       description:
-        "Trusted, background-checked caregivers provide attentive, nurturing care for your children at home. Includes activities, meals, and school-run assistance.",
+        "Trusted, background-checked caregivers provide attentive care for your children.",
       images: [
         "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&q=80",
       ],
@@ -354,13 +389,11 @@ async function main() {
         },
       ],
     },
-
-    // ── Service 4: Home Cleaning ──────────────────────────────────────────────
     {
       id: "svc-home-cleaning",
       name: "Home Cleaning & Maintenance",
       description:
-        "Professional home cleaning covering all rooms, floors, kitchens, and bathrooms. Deep cleaning and routine maintenance packages available.",
+        "Professional home cleaning covering all rooms, floors, kitchens, and bathrooms.",
       images: [
         "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
       ],
@@ -405,13 +438,11 @@ async function main() {
         },
       ],
     },
-
-    // ── Service 5: Ride & Transport ───────────────────────────────────────────
     {
       id: "svc-ride-transport",
       name: "Ride & Transport Service",
       description:
-        "Safe, comfortable rides for daily commutes, airport transfers, school runs, or special occasions. Book in advance or on-demand.",
+        "Safe, comfortable rides for daily commutes, airport transfers, and school runs.",
       images: [
         "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80",
       ],
@@ -460,24 +491,14 @@ async function main() {
 
   for (const serviceData of servicesData) {
     const { options, ...serviceFields } = serviceData;
-
     const service = await prisma.service.create({
-      data: {
-        ...serviceFields,
-        active: true,
-      },
+      data: { ...serviceFields, active: true },
     });
-
     for (const option of options) {
       await prisma.serviceOption.create({
-        data: {
-          ...option,
-          serviceId: service.id,
-          active: true,
-        },
+        data: { ...option, serviceId: service.id, active: true },
       });
     }
-
     console.log(
       `✅ Service seeded: ${service.name} (${options.length} options)`,
     );
@@ -567,6 +588,7 @@ async function main() {
       salaryMax: 300000,
     },
   ];
+
   for (const j of jobs) {
     await prisma.job.create({
       data: {
@@ -594,7 +616,7 @@ async function main() {
       reviews: 89,
       badge: "Best Seller",
       description:
-        "A premium wellness blend formulated to restore inner balance and radiance. Rich in natural African botanicals.",
+        "A premium wellness blend formulated to restore inner balance and radiance.",
       images: [
         "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=600&q=80",
       ],
@@ -611,8 +633,7 @@ async function main() {
       rating: 4.8,
       reviews: 142,
       badge: "Top Rated",
-      description:
-        "An artisan beauty serum that enhances your natural glow. Crafted with rare African oils.",
+      description: "An artisan beauty serum that enhances your natural glow.",
       images: [
         "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&q=80",
       ],
@@ -681,7 +702,7 @@ async function main() {
       rating: 4.5,
       reviews: 62,
       description:
-        "An intensive overnight face mask that repairs the skin barrier and fades dark spots.",
+        "An intensive overnight face mask that repairs the skin barrier.",
       images: [
         "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&q=80",
       ],
@@ -717,7 +738,7 @@ async function main() {
       reviews: 87,
       badge: "Bestseller",
       description:
-        "A 6-module online course teaching budgeting, saving, and investing for the African context.",
+        "A 6-module online course teaching budgeting, saving, and investing.",
       images: [
         "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=600&q=80",
       ],
@@ -768,8 +789,7 @@ async function main() {
       rating: 4.8,
       reviews: 310,
       badge: "Farm Direct",
-      description:
-        "Cold-pressed, unrefined red palm oil from family farms in the Southwest Region.",
+      description: "Cold-pressed, unrefined red palm oil from family farms.",
       images: [
         "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&q=80",
       ],
@@ -819,8 +839,7 @@ async function main() {
       featured: true,
       rating: 4.7,
       reviews: 61,
-      description:
-        "A 6-piece eco-friendly bamboo kitchen set. Naturally antimicrobial and heat resistant.",
+      description: "A 6-piece eco-friendly bamboo kitchen set.",
       images: [
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
       ],
@@ -977,7 +996,7 @@ async function main() {
       rating: 4.8,
       reviews: 144,
       description:
-        "A certified career coach rewrites your CV and cover letter tailored to your target role.",
+        "A certified career coach rewrites your CV and cover letter.",
       images: [
         "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80",
       ],
@@ -995,11 +1014,10 @@ async function main() {
   console.log("🎓 Seeding e-learning courses...");
 
   const coursesData = [
-    // ── Course 1: Financial Freedom (FREE) ────────────────────────────────────
     {
       title: "Financial Freedom for Africans",
       description:
-        "Learn how to budget, save, invest, and build wealth from the African context. Practical strategies used by real people across the continent.",
+        "Learn how to budget, save, invest, and build wealth from the African context.",
       thumbnail:
         "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&q=80",
       category: "Finance",
@@ -1025,7 +1043,7 @@ async function main() {
               title: "The 3 Pillars of Financial Freedom",
               type: LessonType.TEXT,
               content:
-                "Financial freedom rests on three pillars: Income, Savings, and Investment. In this lesson we break down each pillar with actionable steps tailored to the African economic reality...",
+                "Financial freedom rests on three pillars: Income, Savings, and Investment...",
               duration: 8,
               order: 2,
               isFree: true,
@@ -1082,7 +1100,7 @@ async function main() {
               title: "Saving on a Low Income",
               type: LessonType.TEXT,
               content:
-                "Even with limited income, there are proven strategies to build savings. This lesson covers micro-saving, group savings (njangi/tontines), and digital wallet strategies...",
+                "Even with limited income, there are proven strategies to build savings...",
               duration: 10,
               order: 2,
               isFree: false,
@@ -1113,19 +1131,16 @@ async function main() {
       liveSession: {
         title: "Live Q&A: Financial Freedom Masterclass",
         description:
-          "Join our admin coach for a live session answering your top questions about investing and saving in Africa.",
-        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+          "Join our admin coach for a live session answering your top questions.",
+        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         duration: 60,
         meetingUrl: "https://meet.google.com/example-financial",
         status: LiveSessionStatus.SCHEDULED,
       },
     },
-
-    // ── Course 2: Public Speaking (PAID) ──────────────────────────────────────
     {
       title: "Public Speaking Mastery",
-      description:
-        "Build unshakeable confidence on stage and in meetings. From fear to power in 4 weeks with practical exercises and live coaching.",
+      description: "Build unshakeable confidence on stage and in meetings.",
       thumbnail:
         "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=80",
       category: "Personal Development",
@@ -1145,13 +1160,12 @@ async function main() {
               videoUrl: "https://www.youtube.com/watch?v=example4",
               duration: 14,
               order: 1,
-              isFree: true, // preview
+              isFree: true,
             },
             {
               title: "Body Language Basics",
               type: LessonType.TEXT,
-              content:
-                "Your body speaks before your mouth does. In this lesson, we cover posture, eye contact, hand gestures, and movement that commands respect and attention...",
+              content: "Your body speaks before your mouth does...",
               duration: 10,
               order: 2,
               isFree: false,
@@ -1221,7 +1235,7 @@ async function main() {
               title: "Storytelling as a Speaking Tool",
               type: LessonType.TEXT,
               content:
-                "Stories are the most powerful way to connect with an audience. This lesson teaches you how to structure personal stories that educate, inspire, and persuade...",
+                "Stories are the most powerful way to connect with an audience...",
               duration: 12,
               order: 2,
               isFree: false,
@@ -1232,19 +1246,17 @@ async function main() {
       liveSession: {
         title: "Live Coaching: Public Speaking Practice Session",
         description:
-          "Practice your 2-minute speech live with peers and receive real-time feedback from the coach.",
-        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+          "Practice your 2-minute speech live with peers and receive real-time feedback.",
+        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         duration: 90,
         meetingUrl: "https://meet.google.com/example-speaking",
         status: LiveSessionStatus.SCHEDULED,
       },
     },
-
-    // ── Course 3: African Leadership (PAID) ───────────────────────────────────
     {
       title: "African Leadership Bootcamp",
       description:
-        "A transformative 8-module leadership program built for young African professionals ready to lead teams, communities, and organizations.",
+        "A transformative 8-module leadership program for young African professionals.",
       thumbnail:
         "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80",
       category: "Leadership",
@@ -1264,13 +1276,13 @@ async function main() {
               videoUrl: "https://www.youtube.com/watch?v=example6",
               duration: 20,
               order: 1,
-              isFree: true, // preview
+              isFree: true,
             },
             {
               title: "African Leadership Models vs Western Models",
               type: LessonType.TEXT,
               content:
-                "Leadership in Africa has deep roots in community, consensus, and ubuntu. This lesson compares traditional African leadership philosophy with Western corporate models, and shows how to blend both for maximum impact...",
+                "Leadership in Africa has deep roots in community, consensus, and ubuntu...",
               duration: 15,
               order: 2,
               isFree: false,
@@ -1292,8 +1304,7 @@ async function main() {
             {
               title: "Conflict Resolution in African Contexts",
               type: LessonType.TEXT,
-              content:
-                "Conflict is inevitable in any team. This lesson provides culturally-aware strategies for resolving disputes, navigating hierarchy, and maintaining team cohesion across diverse African cultures...",
+              content: "Conflict is inevitable in any team...",
               duration: 18,
               order: 2,
               isFree: false,
@@ -1338,19 +1349,17 @@ async function main() {
       liveSession: {
         title: "Leadership Bootcamp — Live Cohort Session",
         description:
-          "Join the full cohort for a live group discussion, case study breakdown, and networking session.",
-        scheduledAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 3 weeks from now
+          "Join the full cohort for a live group discussion and networking session.",
+        scheduledAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
         duration: 120,
         meetingUrl: "https://meet.google.com/example-leadership",
         status: LiveSessionStatus.SCHEDULED,
       },
     },
-
-    // ── Course 4: Digital Skills (FREE) ───────────────────────────────────────
     {
       title: "Digital Skills for Africa",
       description:
-        "Master the essential digital tools every African professional needs — from Google Workspace to social media marketing and basic coding.",
+        "Master the essential digital tools every African professional needs.",
       thumbnail:
         "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80",
       category: "Technology",
@@ -1376,7 +1385,7 @@ async function main() {
               title: "Google Workspace Essentials",
               type: LessonType.TEXT,
               content:
-                "Google Docs, Sheets, Drive, and Meet are the backbone of remote work. This lesson walks you through setting up and using each tool effectively for professional collaboration...",
+                "Google Docs, Sheets, Drive, and Meet are the backbone of remote work...",
               duration: 14,
               order: 2,
               isFree: true,
@@ -1433,7 +1442,7 @@ async function main() {
               title: "Content Strategy for African Audiences",
               type: LessonType.TEXT,
               content:
-                "Creating content that resonates with African audiences requires cultural awareness, language sensitivity, and platform-specific strategy. This lesson breaks it all down...",
+                "Creating content that resonates with African audiences requires cultural awareness...",
               duration: 13,
               order: 2,
               isFree: false,
@@ -1456,37 +1465,25 @@ async function main() {
       const { lessons, ...sectionFields } = sectionData;
 
       const section = await prisma.courseSection.create({
-        data: {
-          courseId: course.id,
-          ...sectionFields,
-        },
+        data: { courseId: course.id, ...sectionFields },
       });
 
       for (const lessonData of lessons) {
         const { quiz, ...lessonFields } = lessonData as any;
 
         const lesson = await prisma.lesson.create({
-          data: {
-            sectionId: section.id,
-            ...lessonFields,
-          },
+          data: { sectionId: section.id, ...lessonFields },
         });
 
         if (quiz) {
           const { questions, ...quizFields } = quiz;
           const createdQuiz = await prisma.quiz.create({
-            data: {
-              lessonId: lesson.id,
-              ...quizFields,
-            },
+            data: { lessonId: lesson.id, ...quizFields },
           });
 
           for (const q of questions) {
             await prisma.quizQuestion.create({
-              data: {
-                quizId: createdQuiz.id,
-                ...q,
-              },
+              data: { quizId: createdQuiz.id, ...q },
             });
           }
         }
@@ -1495,10 +1492,7 @@ async function main() {
 
     if (liveSession) {
       await prisma.liveSession.create({
-        data: {
-          courseId: course.id,
-          ...liveSession,
-        },
+        data: { courseId: course.id, ...liveSession },
       });
     }
 
