@@ -6,16 +6,17 @@ import { ReactionType } from "@prisma/client";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> }, // ✅ Promise type
 ) {
   try {
+    const { id: postId } = await params; // ✅ Await params
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.id;
-    const postId = params.id;
     const { type } = await req.json();
 
     if (!["LIKE", "LOVE", "SUPPORT"].includes(type)) {
@@ -27,18 +28,16 @@ export async function POST(
 
     const existing = await prisma.postReaction.findUnique({
       where: {
-        userId_postId_type: { userId, postId, type: type as ReactionType },
+        userId_postId_type: { userId, postId, type: type as ReactionType }, // ✅ Use destructured postId
       },
     });
 
     if (existing) {
-      // Toggle off — remove the reaction
       await prisma.postReaction.delete({ where: { id: existing.id } });
       return NextResponse.json({ reacted: false, type });
     } else {
-      // Add the reaction
       await prisma.postReaction.create({
-        data: { userId, postId, type: type as ReactionType },
+        data: { userId, postId, type: type as ReactionType }, // ✅ Use destructured postId
       });
       return NextResponse.json({ reacted: true, type });
     }
