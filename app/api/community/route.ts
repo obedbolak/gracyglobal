@@ -1,7 +1,13 @@
 // app/api/community/route.ts
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ok, err, requireUser, parsePagination, validateRequired } from "@/lib/api";
+import {
+  ok,
+  err,
+  requireUser,
+  parsePagination,
+  validateRequired,
+} from "@/lib/api";
 
 // ── GET /api/community — list posts ──────────────────────────────────────────
 // Query params: category, tag, search, page, limit
@@ -11,8 +17,8 @@ export async function GET(req: NextRequest) {
     const { skip, limit, page } = parsePagination(sp);
 
     const category = sp.get("category");
-    const tag      = sp.get("tag");
-    const search   = sp.get("search");
+    const tag = sp.get("tag");
+    const search = sp.get("search");
 
     const where: any = { published: true };
 
@@ -20,7 +26,7 @@ export async function GET(req: NextRequest) {
     if (tag) where.tags = { has: tag };
     if (search) {
       where.OR = [
-        { title:   { contains: search, mode: "insensitive" } },
+        { title: { contains: search, mode: "insensitive" } },
         { content: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -58,9 +64,14 @@ export async function POST(req: NextRequest) {
     if (!user) return err("Unauthorized", 401);
 
     const body = await req.json();
-    const { title, content, category, tags = [] } = body;
+    const { title, content, category, tags = [], communityId } = body; // ✅ Add communityId
 
-    const missing = validateRequired(body, ["title", "content", "category"]);
+    const missing = validateRequired(body, [
+      "title",
+      "content",
+      "category",
+      "communityId",
+    ]); // ✅
     if (missing) return err(missing);
 
     if (typeof title !== "string" || title.trim().length < 5) {
@@ -74,9 +85,16 @@ export async function POST(req: NextRequest) {
     }
     if (tags.length > 8) return err("Maximum 8 tags allowed");
 
+    // ✅ Verify community exists
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+    });
+    if (!community) return err("Community not found", 404);
+
     const post = await prisma.communityPost.create({
       data: {
         userId: user.id,
+        communityId, // ✅ Required field
         title: title.trim(),
         content: content.trim(),
         category: category.trim(),

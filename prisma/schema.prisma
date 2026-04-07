@@ -383,6 +383,7 @@ model CommunityPost {
   communityId String
   title       String?     // optional — not all posts need a title
   content     String?     @db.Text   // text/caption
+  category    String?     // e.g. "Announcement", "Discussion", "Resource"
   type        PostType    @default(TEXT)
 
   // media
