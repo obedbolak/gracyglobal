@@ -6,14 +6,15 @@ import { PostType } from "@prisma/client";
 
 export async function GET(
   req: Request,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> }, // ✅ Promise type
 ) {
   try {
+    const { slug } = await params; // ✅ Await params
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     const community = await prisma.community.findUnique({
-      where: { slug: params.slug },
+      where: { slug }, // ✅ Use destructured slug
     });
 
     if (!community) {
@@ -47,9 +48,10 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { slug: string } },
+  { params }: { params: Promise<{ slug: string }> }, // ✅ Promise type
 ) {
   try {
+    const { slug } = await params; // ✅ Await params
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -58,7 +60,7 @@ export async function POST(
     const userId = session.user.id;
 
     const community = await prisma.community.findUnique({
-      where: { slug: params.slug },
+      where: { slug }, // ✅ Use destructured slug
     });
 
     if (!community) {
@@ -68,7 +70,6 @@ export async function POST(
       );
     }
 
-    // Must be a member to post
     const membership = await prisma.communityMember.findUnique({
       where: { userId_communityId: { userId, communityId: community.id } },
     });

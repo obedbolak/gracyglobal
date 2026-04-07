@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> }, // ✅ Promise type
 ) {
   try {
+    const { id: postId } = await params; // ✅ Await params
+
     const comments = await prisma.postComment.findMany({
-      where: { postId: params.id },
+      where: { postId }, // ✅ Use destructured postId
       orderBy: { createdAt: "asc" },
       include: {
         user: { select: { id: true, name: true, image: true } },
