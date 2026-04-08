@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -12,64 +11,49 @@ import {
 } from "lucide-react";
 import { SYSTEMS } from "@/data/community";
 
-// ─── Slide data pulled from systems ──────────────────────────────────────────
-const SLIDES = SYSTEMS.map((s) => ({
-  ...s,
-  headline: {
-    "human-flourishing": {
-      title: "Heal. Grow. Thrive.",
-      sub: "A safe space for emotional wellness, family strength, and mental health transformation.",
-    },
-    "knowledge-skills": {
-      title: "Learn. Build. Lead.",
-      sub: "Access world-class digital skills, AI literacy, and entrepreneurship training for Africa's future.",
-    },
-    "economic-empowerment": {
-      title: "Earn. Build. Own.",
-      sub: "Join cooperatives, launch startups, and create community economies that last generations.",
-    },
-    "civic-leadership": {
-      title: "Rise. Lead. Serve.",
-      sub: "Train ethical leaders, shape governance, and build communities aligned with global standards.",
-    },
-    "media-narrative": {
-      title: "Speak. Create. Influence.",
-      sub: "Shape Africa's story through podcasts, youth media, and powerful community narratives.",
-    },
-    "creativity-culture": {
-      title: "Create. Express. Inspire.",
-      sub: "Celebrate African identity through music, digital art, and cultural innovation.",
-    },
-    "technology-intelligence": {
-      title: "Code. Build. Transform.",
-      sub: "Harness AI, build digital platforms, and power community transformation with technology.",
-    },
-  }[s.id] ?? { title: s.label, sub: s.description },
-}));
+// ─── Slide headlines per sector ───────────────────────────────────────────────
 
-// Stats per system
-const STATS: Record<
-  string,
-  { members: string; projects: string; countries: string }
-> = {
-  "human-flourishing": { members: "240+", projects: "8", countries: "12" },
-  "knowledge-skills": { members: "180+", projects: "11", countries: "18" },
-  "economic-empowerment": { members: "320+", projects: "14", countries: "22" },
-  "civic-leadership": { members: "95+", projects: "6", countries: "10" },
-  "media-narrative": { members: "140+", projects: "9", countries: "15" },
-  "creativity-culture": { members: "210+", projects: "12", countries: "20" },
-  "technology-intelligence": {
-    members: "160+",
-    projects: "7",
-    countries: "16",
+const HEADLINES: Record<string, { title: string; sub: string }> = {
+  "health-environment": {
+    title: "Heal. Sustain. Thrive.",
+    sub: "A community driving health initiatives and environmental sustainability across Africa.",
+  },
+  "education-knowledge": {
+    title: "Learn. Build. Lead.",
+    sub: "Access world-class digital skills, AI literacy, and entrepreneurship training for Africa's future.",
+  },
+  "governance-law": {
+    title: "Rise. Lead. Serve.",
+    sub: "Train ethical leaders, shape governance, and build communities aligned with global standards.",
+  },
+  "economic-empowerment": {
+    title: "Earn. Build. Own.",
+    sub: "Join cooperatives, launch startups, and create community economies that last generations.",
+  },
+  "youth-empowerment": {
+    title: "Dream. Act. Inspire.",
+    sub: "Empowering the next generation with mentorship, skills, and the tools to lead change.",
+  },
+  "women-empowerment": {
+    title: "Rise. Lead. Transform.",
+    sub: "Safe spaces, equal opportunities, and a global sisterhood driving women's advancement.",
   },
 };
+
+const SLIDES = SYSTEMS.map((s) => ({
+  ...s,
+  headline: HEADLINES[s.id] ?? { title: s.label, sub: s.description },
+}));
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommunityHero({
   onJoin,
   stats,
+  joining,
 }: {
-  onJoin?: () => void;
+  onJoin?: (slug: string, name: string) => void;
+  joining?: boolean;
   stats?: {
     members: number;
     posts: number;
@@ -80,29 +64,40 @@ export default function CommunityHero({
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
+  // Track which images have loaded so we can fade them in
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
   const go = useCallback((next: number, direction: number) => {
     setDir(direction);
     setActive((next + SLIDES.length) % SLIDES.length);
   }, []);
 
+  // Auto-advance
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => go(active + 1, 1), 5000);
     return () => clearInterval(t);
   }, [active, paused, go]);
 
-  const slide = SLIDES[active];
-  const defaultStats = STATS[slide.id];
+  // Preload all images on mount
+  useEffect(() => {
+    SLIDES.forEach((slide) => {
+      const img = new Image();
+      img.src = slide.image;
+      img.onload = () =>
+        setLoadedImages((prev) => ({ ...prev, [slide.id]: true }));
+    });
+  }, []);
 
-  // Use dynamic stats if available, otherwise fallback to defaults
+  const slide = SLIDES[active];
+
   const displayStats = stats
     ? {
-        members: stats.members.toString(),
-        projects: stats.posts.toString(),
-        countries: stats.countries.toString(),
+        members: stats.members.toLocaleString() + "+",
+        posts: stats.posts.toLocaleString() + "+",
+        countries: stats.countries.toLocaleString() + "+",
       }
-    : defaultStats;
+    : { members: "1,000+", posts: "500+", countries: "20+" };
 
   return (
     <section
@@ -111,59 +106,64 @@ export default function CommunityHero({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Background gradient per system */}
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={slide.id + "-bg"}
-          className="absolute inset-0"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.7 }}
-          style={{ background: slide.gradient, opacity: 0.92 }}
-        />
-      </AnimatePresence>
+      {/* ── Background images (one per slide, crossfade) ── */}
+      {SLIDES.map((s, i) => (
+        <div
+          key={s.id}
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: i === active ? 1 : 0 }}
+          aria-hidden="true"
+        >
+          {/* Actual image */}
+          <img
+            src={s.image}
+            alt={s.imageAlt}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: loadedImages[s.id] ? 1 : 0,
+              transition: "opacity 0.5s ease",
+            }}
+          />
 
-      {/* Glow blobs */}
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={slide.id + "-glow"}
-          className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full pointer-events-none"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.9 }}
-          style={{
-            background: `radial-gradient(circle, ${slide.glow} 0%, transparent 65%)`,
-            filter: "blur(80px)",
-          }}
-        />
-        <motion.div
-          key={slide.id + "-glow2"}
-          className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.9, delay: 0.15 }}
-          style={{
-            background: `radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%)`,
-            filter: "blur(60px)",
-          }}
-        />
-      </AnimatePresence>
+          {/* Dark base so text is always readable */}
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+          />
 
-      {/* Glass shimmer */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(145deg, rgba(255,255,255,0.08) 0%, transparent 60%)",
-        }}
-      />
+          {/* Sector-coloured gradient overlay (replaces the old pure gradient) */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: s.gradient,
+              opacity: 0.55,
+              mixBlendMode: "multiply",
+            }}
+          />
 
-      {/* Content */}
+          {/* Glow blob — top-left */}
+          <div
+            className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full pointer-events-none"
+            style={{
+              background: `radial-gradient(circle, ${s.glow} 0%, transparent 65%)`,
+              filter: "blur(80px)",
+            }}
+          />
+
+          {/* Subtle glass shimmer */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(145deg, rgba(255,255,255,0.06) 0%, transparent 60%)",
+            }}
+          />
+        </div>
+      ))}
+
+      {/* ── Content ── */}
       <div className="relative z-10 flex flex-col justify-between min-h-screen px-4 sm:px-6 lg:px-8 py-24">
-        {/* System pills — top */}
+        {/* Sector pills — top */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">
           {SLIDES.map((s, i) => (
             <button
@@ -203,21 +203,24 @@ export default function CommunityHero({
                 exit={{ y: dir > 0 ? -40 : 40, opacity: 0 }}
                 transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
               >
+                {/* Sector badge */}
                 <div
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-8"
                   style={{
                     background: "rgba(255,255,255,0.15)",
                     border: "1px solid rgba(255,255,255,0.25)",
-                    color: "rgba(255,255,255,0.85)",
+                    color: "rgba(255,255,255,0.9)",
+                    backdropFilter: "blur(8px)",
                   }}
                 >
                   {slide.icon} {slide.label}
                 </div>
 
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05] mb-6">
+                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05] mb-6 drop-shadow-lg">
                   {slide.headline.title}
                 </h1>
-                <p className="text-lg sm:text-xl text-white/65 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+
+                <p className="text-lg sm:text-xl text-white/70 font-light max-w-2xl mx-auto mb-10 leading-relaxed drop-shadow">
                   {slide.headline.sub}
                 </p>
 
@@ -231,7 +234,7 @@ export default function CommunityHero({
                     },
                     {
                       icon: ArrowRight,
-                      value: displayStats.projects,
+                      value: displayStats.posts,
                       label: "Posts",
                     },
                     {
@@ -243,12 +246,15 @@ export default function CommunityHero({
                     <div key={label} className="flex items-center gap-2">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ background: "rgba(255,255,255,0.15)" }}
+                        style={{
+                          background: "rgba(255,255,255,0.15)",
+                          backdropFilter: "blur(6px)",
+                        }}
                       >
                         <Icon size={14} className="text-white" />
                       </div>
                       <div>
-                        <div className="text-lg font-extrabold text-white leading-none">
+                        <div className="text-lg font-extrabold text-white leading-none drop-shadow">
                           {value}
                         </div>
                         <div className="text-[11px] text-white/50">{label}</div>
@@ -260,20 +266,18 @@ export default function CommunityHero({
                 {/* CTAs */}
                 <div className="flex flex-wrap items-center justify-center gap-4">
                   <button
-                    onClick={onJoin}
-                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 group"
+                    onClick={() => onJoin?.(slide.slug, slide.headline.title)}
+                    disabled={joining}
+                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold text-white transition-all duration-200 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
                     style={{
-                      background: "rgba(255,255,255,0.95)",
-                      color: "#1a0533",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
+                      background: slide.gradient,
+                      boxShadow: `0 8px 24px ${slide.glow}`,
                     }}
                   >
-                    Join This System
-                    <ArrowRight
-                      size={15}
-                      className="transition-transform duration-200 group-hover:translate-x-1"
-                    />
+                    {joining ? "Joining…" : "Join This Community"}
+                    <ArrowRight size={15} />
                   </button>
+
                   <button
                     onClick={() =>
                       document
@@ -287,7 +291,7 @@ export default function CommunityHero({
                       backdropFilter: "blur(10px)",
                     }}
                   >
-                    View All Community
+                    Explore All Communities
                   </button>
                 </div>
               </motion.div>
@@ -303,6 +307,7 @@ export default function CommunityHero({
             style={{
               background: "rgba(255,255,255,0.15)",
               border: "1px solid rgba(255,255,255,0.22)",
+              backdropFilter: "blur(6px)",
             }}
           >
             <ChevronLeft size={18} className="text-white" />
@@ -333,6 +338,7 @@ export default function CommunityHero({
             style={{
               background: "rgba(255,255,255,0.15)",
               border: "1px solid rgba(255,255,255,0.22)",
+              backdropFilter: "blur(6px)",
             }}
           >
             <ChevronRight size={18} className="text-white" />

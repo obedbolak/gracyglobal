@@ -33,7 +33,6 @@ export default function CommunityFeed({
 }) {
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<PostData[]>([]);
-  const [community, setCommunity] = useState<CommunityData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -139,8 +138,11 @@ export default function CommunityFeed({
               transition={{ duration: 0.35, delay: i * 0.06 }}
               className="glass p-5 group cursor-pointer transition-all duration-200 hover:scale-[1.005]"
             >
-              <Link href={`/community/${communitySlug || "posts"}/${post.id}`}>
-                <a className="block">
+              <Link
+                href={`/community/${communitySlug || "posts"}/${post.id}`}
+                className="block"
+              >
+                <div className="flex items-start gap-4">
                   <div className="flex items-start gap-4">
                     <img
                       src={post.user.image || "https://via.placeholder.com/40"}
@@ -207,7 +209,7 @@ export default function CommunityFeed({
                       </div>
                     </div>
                   </div>
-                </a>
+                </div>
               </Link>
             </motion.div>
           ))

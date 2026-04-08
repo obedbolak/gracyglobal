@@ -6,6 +6,7 @@ import { CartProvider } from "@/context/CartContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
+import { CommunityMembershipProvider } from "@/context/CommunityMembershipContext";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -15,15 +16,15 @@ export default function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider>
       <AuthProvider>
-        <SubscriptionProvider>
-          <ThemeProvider defaultTheme="light" storageKey="gracyglobal-theme">
-            <CurrencyProvider>
-              <CartProvider>
-                {children}
-              </CartProvider>
-            </CurrencyProvider>
-          </ThemeProvider>
-        </SubscriptionProvider>
+        <CommunityMembershipProvider>
+          <SubscriptionProvider>
+            <ThemeProvider defaultTheme="light" storageKey="gracyglobal-theme">
+              <CurrencyProvider>
+                <CartProvider>{children}</CartProvider>
+              </CurrencyProvider>
+            </ThemeProvider>
+          </SubscriptionProvider>
+        </CommunityMembershipProvider>
       </AuthProvider>
     </SessionProvider>
   );

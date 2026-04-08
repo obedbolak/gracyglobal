@@ -23,7 +23,7 @@ const menuItems = [
   { label: "My Courses", href: "/dashboard/my-courses", icon: BookOpen },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
-  { label: "Community", href: "/community", icon: MessageSquare },
+  { label: "Community", href: "/dashboard/community", icon: MessageSquare },
   { label: "Counseling", href: "/counselors", icon: Heart },
   { label: "Affiliate", href: "/dashboard/affiliate-dashboard", icon: Users },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
