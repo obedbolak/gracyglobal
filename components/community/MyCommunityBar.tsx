@@ -13,6 +13,9 @@ import {
 import { useCommunityMembership } from "@/context/CommunityMembershipContext";
 import { useCommunities, useJoinCommunity } from "@/hooks/useCommunity";
 
+// Responsive card class: 2-per-row on phones, fixed 256px on sm+
+const CARD_CLASS = "w-[calc(50%-6px)] min-w-0 sm:w-64 sm:flex-shrink-0";
+
 export default function MyCommunityBar() {
   const [open, setOpen] = useState(false);
 
@@ -42,11 +45,11 @@ export default function MyCommunityBar() {
 
   if (loading) {
     return (
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {[...Array(2)].map((_, i) => (
           <div
             key={i}
-            className="w-64 h-32 rounded-2xl animate-pulse"
+            className={`${CARD_CLASS} h-32 rounded-2xl animate-pulse`}
             style={{ background: "var(--glass-bg-subtle)" }}
           />
         ))}
@@ -61,7 +64,7 @@ export default function MyCommunityBar() {
         {/* Selected Community Card */}
         {selected ? (
           <div
-            className="w-64 rounded-2xl p-4 relative overflow-hidden flex-shrink-0"
+            className={`${CARD_CLASS} rounded-2xl p-4 relative overflow-hidden`}
             style={{
               background:
                 "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -129,7 +132,7 @@ export default function MyCommunityBar() {
             onClick={() => setOpen((v) => !v)}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-64 rounded-2xl p-4 text-left flex-shrink-0 transition-all duration-200"
+            className={`${CARD_CLASS} rounded-2xl p-4 text-left transition-all duration-200`}
             style={{
               background: "var(--glass-bg)",
               border: open
@@ -199,7 +202,7 @@ export default function MyCommunityBar() {
                         onClick={() => handleSelect(community.slug)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-64 rounded-2xl p-4 text-left transition-all duration-200 relative overflow-hidden"
+                        className={`${CARD_CLASS} rounded-2xl p-4 text-left transition-all duration-200 relative overflow-hidden`}
                         style={{
                           background: "var(--glass-bg)",
                           border: "1px solid var(--glass-border)",
@@ -277,7 +280,7 @@ export default function MyCommunityBar() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: i * 0.06 }}
-                        className="w-64 rounded-2xl p-4 relative overflow-hidden"
+                        className={`${CARD_CLASS} rounded-2xl p-4 relative overflow-hidden`}
                         style={{
                           background: "var(--glass-bg)",
                           border: "1px solid var(--glass-border)",
