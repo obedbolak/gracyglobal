@@ -127,7 +127,8 @@ export default function MyCommunityBar() {
         ) : null}
 
         {/* Accordion Toggle Card */}
-        {memberships.length > 1 && (
+        {/* Accordion Toggle Card */}
+        {(memberships.length > 1 || notJoined.length > 0) && (
           <motion.button
             onClick={() => setOpen((v) => !v)}
             whileHover={{ scale: 1.02 }}
@@ -162,13 +163,19 @@ export default function MyCommunityBar() {
               className="font-bold text-sm"
               style={{ color: "var(--text-primary)" }}
             >
-              {open ? "Hide Communities" : "Switch Community"}
+              {open
+                ? "Hide Communities"
+                : others.length > 0
+                  ? "Switch Community"
+                  : "Join Communities"}
             </p>
             <p
               className="text-xs mt-0.5"
               style={{ color: "var(--text-muted)" }}
             >
-              {others.length} other{others.length !== 1 ? "s" : ""} joined
+              {others.length > 0
+                ? `${others.length} other${others.length !== 1 ? "s" : ""} joined`
+                : `${notJoined.length} available`}
             </p>
           </motion.button>
         )}

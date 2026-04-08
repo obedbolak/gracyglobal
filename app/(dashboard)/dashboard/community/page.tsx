@@ -75,6 +75,89 @@ function RoleBadge({ role }: { role: JoinedCommunity["role"] }) {
   );
 }
 
+// ── Confirm Dialog ────────────────────────────────────────────────────────────
+
+function LeaveConfirmDialog({
+  communityName,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  communityName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "rgba(0,0,0,0.5)" }}
+        onClick={onCancel}
+      />
+      {/* Dialog */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+        style={{ zIndex: 1 }}
+      >
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+          style={{ background: "rgba(220,20,60,0.12)" }}
+        >
+          <LogOut size={20} style={{ color: "var(--scarlet)" }} />
+        </div>
+        <div className="text-center">
+          <h3
+            className="font-bold text-base mb-1"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Leave {communityName}?
+          </h3>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            You'll lose access to this community's posts and discussions. You
+            can rejoin at any time.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:scale-[1.01] disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+              color: "var(--text-muted)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{
+              background: "var(--scarlet)",
+            }}
+          >
+            {loading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <>
+                <LogOut size={14} />
+                Leave
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Community Card ────────────────────────────────────────────────────────────
 
 function CommunityCard({
@@ -115,14 +198,15 @@ function CommunityCard({
         }}
       >
         {community.image && (
-          <img
+          <Image
             src={community.image}
             alt={community.name}
+            fill
             className="object-cover"
           />
         )}
         {/* Category pill */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3" style={{ zIndex: 1 }}>
           <span
             className="px-2 py-0.5 rounded-full text-[11px] font-semibold text-white"
             style={{ background: "rgba(0,0,0,0.45)" }}
@@ -131,7 +215,7 @@ function CommunityCard({
           </span>
         </div>
         {/* Role badge */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3" style={{ zIndex: 1 }}>
           <RoleBadge role={role} />
         </div>
       </div>
@@ -198,15 +282,16 @@ function CommunityCard({
             <ArrowRight size={14} />
           </Link>
 
-          {/* ✅ Leave button */}
+          {/* Leave button */}
           <button
             onClick={() => onLeave(community.slug)}
-            disabled={isLeaving}
-            className="px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLeaving || !!leaving}
+            className="px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
               background: "var(--glass-bg)",
               border: "1px solid var(--glass-border)",
               color: "var(--text-muted)",
+              minWidth: "40px",
             }}
             title="Leave community"
           >
@@ -305,7 +390,10 @@ export default function DashboardCommunityPage() {
   const [communities, setCommunities] = useState<JoinedCommunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState<string | null>(null); // ✅ Track which community is being left
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState<JoinedCommunity | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchMyCommunities();
@@ -324,10 +412,18 @@ export default function DashboardCommunityPage() {
     }
   }
 
-  // ✅ Handle leave community
-  async function handleLeave(slug: string) {
-    if (leaving) return;
+  // Opens the confirm dialog
+  function handleLeaveRequest(slug: string) {
+    const target = communities.find((c) => c.community.slug === slug);
+    if (target) setConfirmLeave(target);
+  }
+
+  // Actually leaves after confirmation
+  async function handleLeaveConfirm() {
+    if (!confirmLeave || leaving) return;
+    const slug = confirmLeave.community.slug;
     setLeaving(slug);
+    setError(null);
 
     try {
       const res = await fetch(`/api/communities/${slug}/join`, {
@@ -336,134 +432,151 @@ export default function DashboardCommunityPage() {
 
       if (!res.ok) throw new Error("Failed to leave community");
 
-      // Remove from local state
-      setCommunities((prev) => prev.filter((c) => c.community.slug !== slug));
-    } catch (err) {
+      const data = await res.json();
+
+      // The join endpoint is a toggle — confirm we actually left
+      if (data.joined === false || data.action === "left" || res.ok) {
+        setCommunities((prev) => prev.filter((c) => c.community.slug !== slug));
+      }
+    } catch {
       setError("Failed to leave community. Please try again.");
     } finally {
       setLeaving(null);
+      setConfirmLeave(null);
     }
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1
-            className="text-2xl font-extrabold tracking-tight"
-            style={{ color: "var(--text-primary)" }}
-          >
-            My Communities
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {loading
-              ? "Loading your communities..."
-              : communities.length > 0
-                ? `You're a member of ${communities.length} communit${communities.length === 1 ? "y" : "ies"}`
-                : "You haven't joined any communities yet"}
-          </p>
-        </div>
+    <>
+      {/* Confirm leave dialog */}
+      {confirmLeave && (
+        <LeaveConfirmDialog
+          communityName={confirmLeave.community.name}
+          onConfirm={handleLeaveConfirm}
+          onCancel={() => setConfirmLeave(null)}
+          loading={!!leaving}
+        />
+      )}
 
-        <Link
-          href="/community"
-          className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--scarlet), var(--purple))",
-            boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
-          }}
-        >
-          <Plus size={14} />
-          Explore More
-        </Link>
-      </motion.div>
-
-      {/* Summary stats */}
-      {!loading && communities.length > 0 && (
+      <div className="space-y-8">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
-          {[
-            {
-              label: "Communities Joined",
-              value: communities.length,
-              icon: Globe,
-            },
-            {
-              label: "Total Members",
-              value: communities
-                .reduce((acc, c) => acc + c.community.memberCount, 0)
-                .toLocaleString(),
-              icon: Users,
-            },
-            {
-              label: "Total Posts",
-              value: communities
-                .reduce((acc, c) => acc + c.community.postCount, 0)
-                .toLocaleString(),
-              icon: FileText,
-            },
-          ].map(({ label, value, icon: Icon }) => (
-            <div
-              key={label}
-              className="glass rounded-2xl p-4 flex flex-col gap-2"
+          <div>
+            <h1
+              className="text-2xl font-extrabold tracking-tight"
+              style={{ color: "var(--text-primary)" }}
             >
-              <div className="flex items-center gap-2">
-                <Icon size={14} style={{ color: "var(--text-muted)" }} />
+              My Communities
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+              {loading
+                ? "Loading your communities..."
+                : communities.length > 0
+                  ? `You're a member of ${communities.length} communit${communities.length === 1 ? "y" : "ies"}`
+                  : "You haven't joined any communities yet"}
+            </p>
+          </div>
+
+          <Link
+            href="/community"
+            className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01]"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--scarlet), var(--purple))",
+              boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
+            }}
+          >
+            <Plus size={14} />
+            Explore More
+          </Link>
+        </motion.div>
+
+        {/* Summary stats */}
+        {!loading && communities.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          >
+            {[
+              {
+                label: "Communities Joined",
+                value: communities.length,
+                icon: Globe,
+              },
+              {
+                label: "Total Members",
+                value: communities
+                  .reduce((acc, c) => acc + c.community.memberCount, 0)
+                  .toLocaleString(),
+                icon: Users,
+              },
+              {
+                label: "Total Posts",
+                value: communities
+                  .reduce((acc, c) => acc + c.community.postCount, 0)
+                  .toLocaleString(),
+                icon: FileText,
+              },
+            ].map(({ label, value, icon: Icon }) => (
+              <div
+                key={label}
+                className="glass rounded-2xl p-4 flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon size={14} style={{ color: "var(--text-muted)" }} />
+                  <span
+                    className="text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {label}
+                  </span>
+                </div>
                 <span
-                  className="text-xs"
-                  style={{ color: "var(--text-muted)" }}
+                  className="text-2xl font-extrabold"
+                  style={{ color: "var(--text-primary)" }}
                 >
-                  {label}
+                  {value}
                 </span>
               </div>
-              <span
-                className="text-2xl font-extrabold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {value}
-              </span>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div
-          className="glass rounded-2xl p-4 text-sm font-medium"
-          style={{ color: "var(--scarlet)", borderColor: "var(--scarlet)" }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : communities.length === 0 ? (
-          <EmptyState />
-        ) : (
-          communities.map((item, i) => (
-            <CommunityCard
-              key={item.membershipId}
-              item={item}
-              index={i}
-              onLeave={handleLeave}
-              leaving={leaving}
-            />
-          ))
+            ))}
+          </motion.div>
         )}
+
+        {/* Error */}
+        {error && (
+          <div
+            className="glass rounded-2xl p-4 text-sm font-medium"
+            style={{ color: "var(--scarlet)", borderColor: "var(--scarlet)" }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          ) : communities.length === 0 ? (
+            <EmptyState />
+          ) : (
+            communities.map((item, i) => (
+              <CommunityCard
+                key={item.membershipId}
+                item={item}
+                index={i}
+                onLeave={handleLeaveRequest}
+                leaving={leaving}
+              />
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

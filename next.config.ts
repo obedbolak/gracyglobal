@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
         hostname: "lh3.googleusercontent.com", // For Google OAuth avatars
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };
