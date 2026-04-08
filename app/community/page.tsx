@@ -91,7 +91,7 @@ function CommunityPageContent() {
   }, [selectedSlug]);
 
   return (
-    <main className="min-h-screen relative mb-16">
+    <main className="min-h-screen relative mb-15">
       {/* Toast */}
       <AnimatePresence>
         {joinMessage && (
