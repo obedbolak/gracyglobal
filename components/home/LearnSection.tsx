@@ -10,7 +10,7 @@ export default function LearnSection() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div 
+          <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
             style={{
               background: "var(--badge-blue-bg)",
@@ -18,75 +18,80 @@ export default function LearnSection() {
             }}
           >
             <BookOpen className="w-4 h-4" style={{ color: "var(--blue)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--blue)" }}>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: "var(--blue)" }}
+            >
               E-Learning Platform
             </span>
           </div>
-          <h2 
-            className="text-3xl md:text-4xl font-bold mb-4"
+          <h2
+            className="text-3xl md:text-4xl font-bold mb-3"
             style={{ color: "var(--text-primary)" }}
           >
             Learn New Skills, Transform Your Future
           </h2>
-          <p 
-            className="text-lg max-w-2xl mx-auto"
+          <p
+            className="text-base max-w-xl mx-auto"
             style={{ color: "var(--text-secondary)" }}
           >
             Access quality courses designed to empower you with in-demand skills
-            and knowledge
           </p>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {COURSE_CATEGORIES.map((category) => {
-            const categoryCoursesCount = COURSES.filter(c => c.category === category.id).length;
-            
+        {/* Categories Grid — max 8, 4 per row on large screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {COURSE_CATEGORIES.slice(0, 8).map((category) => {
+            const categoryCoursesCount = COURSES.filter(
+              (c) => c.category === category.id,
+            ).length;
+
             return (
-            <Link key={category.id} href={`/learn?category=${category.id}`}>
-              <div 
-                className="p-6 rounded-2xl transition-all duration-300 aspect-square flex flex-col group hover:scale-105"
-                style={{ 
-                  background: "var(--glass-bg)", 
-                  border: "1px solid var(--glass-border)"
-                }}
-              >
-                <div 
-                  className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl mb-4 transition-transform group-hover:scale-110"
-                  style={{ 
-                    background: `${category.color}15`,
-                    border: `2px solid ${category.color}30`
+              <Link key={category.id} href={`/learn?category=${category.id}`}>
+                <div
+                  className="p-4 rounded-2xl transition-all duration-300 flex flex-col group hover:scale-[1.02]"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
                   }}
                 >
-                  {category.icon}
-                </div>
-                <h3 
-                  className="text-lg font-semibold mb-2"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {category.name}
-                </h3>
-                <p 
-                  className="text-sm mb-4 line-clamp-2 flex-1"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {category.description}
-                </p>
-                <div className="flex items-center justify-between mt-auto">
-                  <span 
-                    className="text-sm font-semibold"
-                    style={{ color: "var(--text-muted)" }}
+                  {/* Icon */}
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-3 transition-transform group-hover:scale-110"
+                    style={{
+                      background: `${category.color}15`,
+                      border: `2px solid ${category.color}30`,
+                    }}
                   >
-                    {categoryCoursesCount} {categoryCoursesCount === 1 ? 'Course' : 'Courses'}
-                  </span>
-                  <ArrowRight 
-                    className="w-5 h-5 group-hover:translate-x-1 transition-transform" 
-                    style={{ color: category.color }}
-                  />
+                    {category.icon}
+                  </div>
+
+                  {/* Name */}
+                  <h3
+                    className="text-sm font-semibold mb-1 leading-tight"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {category.name}
+                  </h3>
+
+                  {/* Course count + arrow */}
+                  <div className="flex items-center justify-between mt-2">
+                    <span
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {categoryCoursesCount}{" "}
+                      {categoryCoursesCount === 1 ? "Course" : "Courses"}
+                    </span>
+                    <ArrowRight
+                      className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                      style={{ color: category.color }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </Link>
-          )})}
+              </Link>
+            );
+          })}
         </div>
 
         {/* CTA */}
@@ -105,7 +110,7 @@ export default function LearnSection() {
         </div>
 
         {/* Stats */}
-        <div 
+        <div
           className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 pt-12"
           style={{ borderTop: "1px solid var(--divider)" }}
         >
@@ -116,13 +121,13 @@ export default function LearnSection() {
             { value: "4.8/5", label: "Average Rating" },
           ].map((stat, idx) => (
             <div key={idx} className="text-center">
-              <div 
+              <div
                 className="text-3xl font-bold mb-1"
                 style={{ color: "var(--text-primary)" }}
               >
                 {stat.value}
               </div>
-              <div 
+              <div
                 className="text-sm"
                 style={{ color: "var(--text-secondary)" }}
               >

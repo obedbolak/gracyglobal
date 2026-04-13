@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default function ServicesSection() {
-  // Service category images mapping
   const categoryImages: Record<string, string> = {
     "Home & Errand":
       "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=600&q=80",
@@ -36,30 +35,29 @@ export default function ServicesSection() {
             transition={{ duration: 0.5 }}
           >
             <h2
-              className="text-4xl font-black mb-4"
+              className="text-4xl font-black mb-3"
               style={{ color: "var(--text-primary)" }}
             >
               Professional Services
             </h2>
             <p
-              className="text-lg max-w-2xl mx-auto"
+              className="text-base max-w-xl mx-auto"
               style={{ color: "var(--text-secondary)" }}
             >
-              From home care to beauty services, book trusted professionals for
-              all your needs
+              Book trusted professionals for all your needs
             </p>
           </motion.div>
         </div>
 
-        {/* Service Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {SERVICE_CATEGORY_GROUPS.map((group, index) => (
+        {/* Service Categories Grid — max 8 cards, 4 per row on large screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {SERVICE_CATEGORY_GROUPS.slice(0, 8).map((group, index) => (
             <motion.div
               key={group.group}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              transition={{ duration: 0.5, delay: index * 0.07 }}
             >
               <Link
                 href={`/services?category=${encodeURIComponent(group.group)}`}
@@ -71,8 +69,8 @@ export default function ServicesSection() {
                     border: "1px solid var(--glass-border)",
                   }}
                 >
-                  {/* Image */}
-                  <div className="relative aspect-square overflow-hidden">
+                  {/* Image — shorter aspect ratio to keep cards compact */}
+                  <div className="relative aspect-[4/3] overflow-hidden">
                     <img
                       src={categoryImages[group.group]}
                       alt={group.group}
@@ -82,13 +80,13 @@ export default function ServicesSection() {
                       className="absolute inset-0"
                       style={{
                         background:
-                          "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)",
+                          "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
                       }}
                     />
 
                     {/* Icon Badge */}
                     <div
-                      className="absolute top-3 left-3 w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                      className="absolute top-2 left-2 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
                       style={{
                         background: "var(--glass-bg-strong)",
                         backdropFilter: "blur(12px)",
@@ -99,55 +97,28 @@ export default function ServicesSection() {
                   </div>
 
                   {/* Content */}
-                  <div className="p-5">
+                  <div className="p-3">
                     <h3
-                      className="text-lg font-bold mb-2 group-hover:opacity-80 transition-opacity"
+                      className="text-sm font-bold mb-1 group-hover:opacity-80 transition-opacity leading-tight"
                       style={{ color: "var(--text-primary)" }}
                     >
                       {group.group}
                     </h3>
                     <p
-                      className="text-sm mb-3"
+                      className="text-xs mb-2"
                       style={{ color: "var(--text-muted)" }}
                     >
                       {group.categories.length} service
-                      {group.categories.length > 1 ? "s" : ""} available
+                      {group.categories.length > 1 ? "s" : ""}
                     </p>
-
-                    {/* Categories List */}
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {group.categories.slice(0, 2).map((cat, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs px-2 py-1 rounded-full"
-                          style={{
-                            background: "var(--glass-bg-subtle)",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                      {group.categories.length > 2 && (
-                        <span
-                          className="text-xs px-2 py-1 rounded-full"
-                          style={{
-                            background: "var(--glass-bg-subtle)",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          +{group.categories.length - 2}
-                        </span>
-                      )}
-                    </div>
 
                     {/* CTA */}
                     <div
-                      className="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all"
+                      className="flex items-center gap-1 text-xs font-semibold group-hover:gap-2 transition-all"
                       style={{ color: "var(--blue)" }}
                     >
-                      Explore Services
-                      <ArrowRight size={16} />
+                      Explore
+                      <ArrowRight size={13} />
                     </div>
                   </div>
                 </div>
