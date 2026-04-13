@@ -32,6 +32,17 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-profile-menu]")) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <nav
       className="sticky top-0 z-50 transition-all duration-300"
@@ -106,7 +117,7 @@ export default function Navbar() {
               <ShoppingBag size={18} />
               {count > 0 && (
                 <span
-                  className="absolute -top-1.5 -right-1.5 w-4.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
                   style={{
                     background:
                       "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -118,126 +129,154 @@ export default function Navbar() {
               )}
             </Link>
 
-            {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="relative p-2 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+            {/* Profile icon — always visible, dropdown changes based on auth state */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="relative p-2 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {isAuthenticated && user?.image ? (
+                  <img
+                    src={user.image}
+                    alt={user.name || "Profile"}
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <User size={18} />
+                )}
+              </button>
+
+              {showProfileMenu && (
+                <div
+                  className="absolute right-0 mt-2 w-52 rounded-xl overflow-hidden shadow-lg"
                   style={{
                     background: "var(--glass-bg)",
                     border: "1px solid var(--glass-border)",
-                    color: "var(--text-secondary)",
+                    backdropFilter: "blur(12px)",
                   }}
                 >
-                  {user?.image ? (
-                    <img
-                      src={user.image}
-                      alt={user.name || "Profile"}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
+                  {isAuthenticated ? (
+                    <>
+                      {/* Authenticated: show user info + dashboard + sign out */}
+                      <div
+                        className="p-3 border-b"
+                        style={{ borderColor: "var(--divider)" }}
+                      >
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {user?.name || "User"}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {user?.email}
+                        </p>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-2 px-3 py-2.5 text-sm transition-all duration-200"
+                        style={{ color: "var(--text-secondary)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "var(--btn-ghost-bg-hover)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "transparent";
+                        }}
+                      >
+                        <User size={16} />
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          signOut({ callbackUrl: "/" });
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-all duration-200"
+                        style={{ color: "var(--error-text)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "var(--error-bg)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "transparent";
+                        }}
+                      >
+                        <LogOut size={16} />
+                        Sign Out
+                      </button>
+                    </>
                   ) : (
-                    <User size={18} />
+                    <>
+                      {/* Unauthenticated: show login + sign up */}
+                      <div
+                        className="p-3 border-b"
+                        style={{ borderColor: "var(--divider)" }}
+                      >
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          Welcome to Gracy Global
+                        </p>
+                        <p
+                          className="text-sm font-semibold mt-0.5"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          Sign in to get started
+                        </p>
+                      </div>
+                      <Link
+                        href="/login"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-all duration-200"
+                        style={{ color: "var(--text-secondary)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "var(--btn-ghost-bg-hover)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background =
+                            "transparent";
+                        }}
+                      >
+                        <LogOut size={16} style={{ transform: "scaleX(-1)" }} />
+                        Login
+                      </Link>
+                      <div
+                        className="p-2"
+                        style={{ borderTop: "1px solid var(--divider)" }}
+                      >
+                        <Link
+                          href="/register"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center justify-center gap-2 w-full py-2 text-sm font-bold text-white rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                            boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
+                          }}
+                        >
+                          Sign Up
+                        </Link>
+                      </div>
+                    </>
                   )}
-                </button>
-
-                {/* Profile dropdown */}
-                {showProfileMenu && (
-                  <div
-                    className="absolute right-0 mt-2 w-48 rounded-xl overflow-hidden shadow-lg"
-                    style={{
-                      background: "var(--glass-bg)",
-                      border: "1px solid var(--glass-border)",
-                      backdropFilter: "blur(12px)",
-                    }}
-                  >
-                    <div
-                      className="p-3 border-b"
-                      style={{ borderColor: "var(--divider)" }}
-                    >
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {user?.name || "User"}
-                      </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {user?.email}
-                      </p>
-                    </div>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setShowProfileMenu(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
-                      style={{ color: "var(--text-secondary)" }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background =
-                          "var(--btn-ghost-bg-hover)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background =
-                          "transparent";
-                      }}
-                    >
-                      <User size={16} />
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        signOut({ callbackUrl: "/" });
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-all duration-200"
-                      style={{ color: "var(--error-text)" }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background =
-                          "var(--error-bg)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background =
-                          "transparent";
-                      }}
-                    >
-                      <LogOut size={16} />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-sm font-semibold transition-colors duration-200"
-                  style={{ color: "var(--text-secondary)" }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLElement).style.color =
-                      "var(--accent-primary)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLElement).style.color =
-                      "var(--text-secondary)")
-                  }
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="px-5 py-2 text-sm font-bold text-white rounded-xl transition-all duration-200 hover:scale-105"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                    boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
-                  }}
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-
           {/* Mobile toggle */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle size="sm" />
