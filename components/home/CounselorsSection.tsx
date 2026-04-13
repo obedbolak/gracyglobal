@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useCounselors } from "@/hooks/useCounselors";
+
 export default function CounselorsSection() {
   const [activeTab, setActiveTab] = useState("text");
-
   const { counselors } = useCounselors();
 
   return (
@@ -42,24 +42,26 @@ export default function CounselorsSection() {
         {/* Session type tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="text">Text Counseling</TabsTrigger>
-            <TabsTrigger value="video">Video Counseling</TabsTrigger>
-            <TabsTrigger value="group">Support Groups</TabsTrigger>
+            <TabsTrigger value="text">Text</TabsTrigger>
+            <TabsTrigger value="video">Video</TabsTrigger>
+            <TabsTrigger value="group">Groups</TabsTrigger>
           </TabsList>
 
           {["text", "video", "group"].map((tab) => (
             <TabsContent key={tab} value={tab}>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                {counselors.slice(0, 4).map((c) => (
+                {counselors.slice(0, 8).map((c) => (
                   <Card
                     key={c.id}
-                    className="overflow-hidden hover:-translate-y-1.5 transition-all duration-300 group p-0 gap-0"
+                    className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0"
                   >
+                    {/* Image */}
                     <div className="relative overflow-hidden">
                       <img
                         src={c.user?.image || "/images/placeholder.png"}
                         alt={c.user.name || "Counselor"}
-                        className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-105"
+                        style={{ objectPosition: "center 15%" }}
                       />
                       <div
                         className="absolute inset-0"
@@ -69,10 +71,10 @@ export default function CounselorsSection() {
                         }}
                       />
                       {c.available && (
-                        <div className="absolute top-3 right-3">
+                        <div className="absolute top-2 right-2">
                           <Badge
                             variant="blue"
-                            className="flex items-center gap-1.5 rounded-full"
+                            className="flex items-center gap-1 rounded-full text-[10px] px-2 py-0.5"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
                             Live
@@ -81,7 +83,7 @@ export default function CounselorsSection() {
                       )}
                     </div>
 
-                    <CardContent className="p-3.5">
+                    <CardContent className="p-3">
                       <div
                         className="font-bold text-sm truncate mb-0.5"
                         style={{ color: "var(--text-primary)" }}
@@ -94,9 +96,9 @@ export default function CounselorsSection() {
                       >
                         {c.specialty}
                       </div>
-                      <div className="flex items-center gap-1 mb-3.5">
+                      <div className="flex items-center gap-1 mb-3">
                         <Star
-                          size={12}
+                          size={11}
                           className="text-yellow-400 fill-yellow-400"
                         />
                         <span
@@ -119,8 +121,8 @@ export default function CounselorsSection() {
                         className="w-full"
                       >
                         <Link href={`/counselors/${c.id}/book`}>
-                          <Calendar size={12} />
-                          Book Session
+                          <Calendar size={11} />
+                          Book
                         </Link>
                       </Button>
                     </CardContent>

@@ -13,8 +13,12 @@ import {
   Star,
   ArrowRight,
 } from "lucide-react";
+import { useCounselors } from "@/hooks/useCounselors";
+import { useCourses } from "@/hooks/useCourses";
+import { useFeaturedProducts } from "@/hooks/UseProducts";
+import { useCommunities } from "@/hooks/useCommunity";
 
-// ─── Slide data ────────────────────────────────────────────────────────────────
+// ─── Slide shell (no preview items — those come from hooks) ────────────────────
 
 const slides = [
   {
@@ -36,32 +40,7 @@ const slides = [
       { label: "Sessions Done", value: "1,000+" },
       { label: "Avg. Rating", value: "4.8 ★" },
     ],
-    preview: {
-      type: "counselors",
-      items: [
-        {
-          name: "Grace Nfor",
-          role: "Emotional Wellness",
-          rating: 4.9,
-          img: "https://randomuser.me/api/portraits/women/44.jpg",
-          available: true,
-        },
-        {
-          name: "Daniel Evans",
-          role: "Relationship Counselor",
-          rating: 4.8,
-          img: "https://randomuser.me/api/portraits/men/32.jpg",
-          available: true,
-        },
-        {
-          name: "Sarah Johnson",
-          role: "Family Counselor",
-          rating: 4.8,
-          img: "https://randomuser.me/api/portraits/women/58.jpg",
-          available: false,
-        },
-      ],
-    },
+    preview: "counselors",
   },
   {
     id: "jobs",
@@ -82,32 +61,7 @@ const slides = [
       { label: "Companies", value: "80+" },
       { label: "Avg. Salary", value: "CFA 350k" },
     ],
-    preview: {
-      type: "jobs",
-      items: [
-        {
-          company: "Amazon",
-          logo: "A",
-          color: "#FF9900",
-          salary: "CFA 250k/mo",
-          type: "Remote",
-        },
-        {
-          company: "Upwork",
-          logo: "U",
-          color: "#14a800",
-          salary: "CFA 600k/mo",
-          type: "Freelance",
-        },
-        {
-          company: "Fiverr",
-          logo: "F",
-          color: "#1dbf73",
-          salary: "CFA 300k/mo",
-          type: "Contract",
-        },
-      ],
-    },
+    preview: "community", // shows communities as stand-in; swap for jobs hook when ready
   },
   {
     id: "community",
@@ -128,26 +82,7 @@ const slides = [
       { label: "Volunteers", value: "800+" },
       { label: "Communities", value: "20+" },
     ],
-    preview: {
-      type: "community",
-      items: [
-        {
-          title: "Youth Entrepreneurship",
-          cat: "Youth",
-          img: "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=300&q=80",
-        },
-        {
-          title: "Women Empowerment",
-          cat: "Women",
-          img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&q=80",
-        },
-        {
-          title: "Community Development",
-          cat: "Community",
-          img: "https://images.unsplash.com/photo-1517486808906-6ca8b3f8e1c1?w=300&q=80",
-        },
-      ],
-    },
+    preview: "community",
   },
   {
     id: "marketplace",
@@ -168,43 +103,19 @@ const slides = [
       { label: "Sellers", value: "15+" },
       { label: "Orders Done", value: "200+" },
     ],
-    preview: {
-      type: "marketplace",
-      items: [
-        {
-          name: "Gracy 72 Aura",
-          price: 10000,
-          rating: 4.5,
-          img: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80",
-          tag: "Wellness",
-        },
-        {
-          name: "Gracy Shine",
-          price: 30000,
-          rating: 4.8,
-          img: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=300&q=80",
-          tag: "Beauty",
-        },
-        {
-          name: "Gracy Glow",
-          price: 50000,
-          rating: 4.7,
-          img: "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=300&q=80",
-          tag: "Skincare",
-        },
-      ],
-    },
+    preview: "marketplace",
   },
 ];
 
 // ─── Preview renderers ─────────────────────────────────────────────────────────
 
-function CounselorPreview({ items }: { items: any[] }) {
+function CounselorPreview({ counselors }: { counselors: any[] }) {
+  const items = counselors.slice(0, 3);
   return (
     <div className="flex flex-col gap-3">
       {items.map((c, i) => (
         <motion.div
-          key={i}
+          key={c.id ?? i}
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
@@ -216,15 +127,18 @@ function CounselorPreview({ items }: { items: any[] }) {
           }}
         >
           <img
-            src={c.img}
-            alt={c.name}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20"
+            src={
+              c.user?.image ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${c.user?.name}`
+            }
+            alt={c.user?.name ?? "Counselor"}
+            className="w-10 h-10 rounded-full object-cover object-top ring-2 ring-white/20"
           />
           <div className="flex-1 min-w-0">
             <div className="text-white font-semibold text-sm truncate">
-              {c.name}
+              {c.user?.name ?? "Counselor"}
             </div>
-            <div className="text-white/55 text-xs truncate">{c.role}</div>
+            <div className="text-white/55 text-xs truncate">{c.specialty}</div>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold">
@@ -255,54 +169,13 @@ function CounselorPreview({ items }: { items: any[] }) {
   );
 }
 
-function JobsPreview({ items }: { items: any[] }) {
-  return (
-    <div className="flex flex-col gap-3">
-      {items.map((j, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
-          className="flex items-center gap-3 rounded-2xl p-3"
-          style={{
-            background: "rgba(255,255,255,0.10)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-base flex-shrink-0"
-            style={{ background: j.color }}
-          >
-            {j.logo}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-white font-semibold text-sm">{j.company}</div>
-            <div className="text-white/55 text-xs">{j.salary}</div>
-          </div>
-          <span
-            className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-            style={{
-              background: "rgba(255,255,255,0.15)",
-              color: "rgba(255,255,255,0.85)",
-              border: "1px solid rgba(255,255,255,0.20)",
-            }}
-          >
-            {j.type}
-          </span>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-function CommunityPreview({ items }: { items: any[] }) {
+function CommunityPreview({ communities }: { communities: any[] }) {
+  const items = communities.slice(0, 3);
   return (
     <div className="grid grid-cols-3 gap-2">
-      {items.map((p, i) => (
+      {items.map((c, i) => (
         <motion.div
-          key={i}
+          key={c.id ?? i}
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
@@ -311,13 +184,17 @@ function CommunityPreview({ items }: { items: any[] }) {
         >
           <div
             className="h-20 bg-cover bg-center"
-            style={{ backgroundImage: `url(${p.img})` }}
+            style={{
+              backgroundImage: c.image
+                ? `url(${c.image})`
+                : "linear-gradient(135deg, #7b2fbe, #1a3adb)",
+            }}
           />
           <div className="p-2" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="text-white text-[10px] font-bold leading-tight truncate">
-              {p.title}
+              {c.name}
             </div>
-            <div className="text-white/45 text-[9px] mt-0.5">{p.cat}</div>
+            <div className="text-white/45 text-[9px] mt-0.5">{c.category}</div>
           </div>
         </motion.div>
       ))}
@@ -325,12 +202,13 @@ function CommunityPreview({ items }: { items: any[] }) {
   );
 }
 
-function MarketplacePreview({ items }: { items: any[] }) {
+function MarketplacePreview({ products }: { products: any[] }) {
+  const items = products.slice(0, 3);
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((p, i) => (
         <motion.div
-          key={i}
+          key={p.id ?? i}
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
@@ -339,7 +217,10 @@ function MarketplacePreview({ items }: { items: any[] }) {
         >
           <div className="h-20 relative overflow-hidden">
             <img
-              src={p.img}
+              src={
+                p.images?.[0] ??
+                "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
+              }
               alt={p.name}
               className="w-full h-full object-cover"
             />
@@ -347,7 +228,7 @@ function MarketplacePreview({ items }: { items: any[] }) {
               className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
               style={{ background: "rgba(123,47,190,0.80)" }}
             >
-              {p.tag}
+              {p.category ?? p.group}
             </div>
           </div>
           <div className="p-2" style={{ background: "rgba(255,255,255,0.08)" }}>
@@ -355,10 +236,56 @@ function MarketplacePreview({ items }: { items: any[] }) {
               {p.name}
             </div>
             <div className="text-white/60 text-[9px]">
-              CFA {p.price.toLocaleString()}
+              CFA {(p.price ?? 0).toLocaleString()}
             </div>
           </div>
         </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// Skeleton for when data is loading
+function PreviewSkeleton({ type }: { type: string }) {
+  if (type === "counselors") {
+    return (
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-2xl p-3 animate-pulse"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.10)",
+            }}
+          >
+            <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-2.5 w-3/4 rounded bg-white/20" />
+              <div className="h-2 w-1/2 rounded bg-white/15" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="rounded-xl overflow-hidden animate-pulse"
+          style={{ border: "1px solid rgba(255,255,255,0.10)" }}
+        >
+          <div className="h-20 bg-white/15" />
+          <div
+            className="p-2 space-y-1"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          >
+            <div className="h-2 w-3/4 rounded bg-white/20" />
+            <div className="h-1.5 w-1/2 rounded bg-white/15" />
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -384,23 +311,30 @@ export default function HeroSection() {
   const [active, setActive] = useState(0);
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
-  
+
   // Typing effect states
   const [displayedText, setDisplayedText] = useState("");
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [hasCompletedInitial, setHasCompletedInitial] = useState(false);
   const [isWaitingForNextCycle, setIsWaitingForNextCycle] = useState(false);
-  
+
   const phrases = [
     "Creating Opportunities.",
     "Building Futures.",
     "Connecting People.",
     "Driving Innovation.",
   ];
-  
+
   const staticText = "Empowering Lives. ";
   const lastLine = "Transforming Communities.";
+
+  // ─── Live data ───────────────────────────────────────────────────────────────
+  const { counselors, loading: loadingCounselors } = useCounselors({
+    available: true,
+  });
+  const { products, isLoading: loadingProducts } = useFeaturedProducts(3);
+  const { communities, loading: loadingCommunities } = useCommunities();
 
   const go = useCallback((next: number, direction: number) => {
     setDir(direction);
@@ -410,20 +344,16 @@ export default function HeroSection() {
   const prev = () => go(active - 1, -1);
   const next = () => go(active + 1, 1);
 
-  // Auto-advance every 5s
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => go(active + 1, 1), 5000);
     return () => clearInterval(t);
   }, [active, paused, go]);
-  
-  // Initial typing animation
+
   useEffect(() => {
     if (hasCompletedInitial) return;
-    
     let index = 0;
     const fullInitialText = staticText + phrases[0];
-    
     const typingInterval = setInterval(() => {
       if (index <= fullInitialText.length) {
         setDisplayedText(fullInitialText.slice(0, index));
@@ -431,59 +361,80 @@ export default function HeroSection() {
       } else {
         clearInterval(typingInterval);
         setHasCompletedInitial(true);
-        // Wait 2 seconds before starting deletion
-        setTimeout(() => {
-          setIsDeleting(true);
-        }, 2000);
+        setTimeout(() => setIsDeleting(true), 2000);
       }
     }, 50);
-
     return () => clearInterval(typingInterval);
   }, [hasCompletedInitial]);
-  
-  // Handle rotating text effect
+
   useEffect(() => {
     if (!hasCompletedInitial || isWaitingForNextCycle) return;
-    
-    const currentPhrase = phrases[currentPhraseIndex];
     const dynamicPart = displayedText.slice(staticText.length);
-    
-    const timeout = setTimeout(() => {
-      if (isDeleting) {
-        // Delete current phrase
-        if (dynamicPart.length > 0) {
-          setDisplayedText(staticText + dynamicPart.slice(0, -1));
+    const timeout = setTimeout(
+      () => {
+        if (isDeleting) {
+          if (dynamicPart.length > 0) {
+            setDisplayedText(staticText + dynamicPart.slice(0, -1));
+          } else {
+            setIsDeleting(false);
+            const nextIndex = (currentPhraseIndex + 1) % phrases.length;
+            setCurrentPhraseIndex(nextIndex);
+            if (nextIndex === 0) {
+              setIsWaitingForNextCycle(true);
+              setTimeout(() => setIsWaitingForNextCycle(false), 30000);
+            }
+          }
         } else {
-          // Finished deleting, move to next phrase
-          setIsDeleting(false);
-          const nextIndex = (currentPhraseIndex + 1) % phrases.length;
-          setCurrentPhraseIndex(nextIndex);
-          
-          // If we've completed a full cycle (back to index 0), wait 30 seconds
-          if (nextIndex === 0) {
-            setIsWaitingForNextCycle(true);
-            setTimeout(() => {
-              setIsWaitingForNextCycle(false);
-            }, 30000); // 30 seconds
+          const targetPhrase = phrases[currentPhraseIndex];
+          if (dynamicPart.length < targetPhrase.length) {
+            setDisplayedText(
+              staticText + targetPhrase.slice(0, dynamicPart.length + 1),
+            );
+          } else {
+            setTimeout(() => setIsDeleting(true), 2000);
           }
         }
-      } else {
-        // Type new phrase
-        const targetPhrase = phrases[currentPhraseIndex];
-        if (dynamicPart.length < targetPhrase.length) {
-          setDisplayedText(staticText + targetPhrase.slice(0, dynamicPart.length + 1));
-        } else {
-          // Finished typing, wait before deleting
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
-      }
-    }, isDeleting ? 30 : 50);
-    
+      },
+      isDeleting ? 30 : 50,
+    );
     return () => clearTimeout(timeout);
-  }, [displayedText, isDeleting, currentPhraseIndex, hasCompletedInitial, phrases, isWaitingForNextCycle]);
+  }, [
+    displayedText,
+    isDeleting,
+    currentPhraseIndex,
+    hasCompletedInitial,
+    phrases,
+    isWaitingForNextCycle,
+  ]);
 
   const slide = slides[active];
   const Icon = slide.icon;
+
+  // Resolve which preview + loading state to show for current slide
+  const renderPreview = () => {
+    switch (slide.preview) {
+      case "counselors":
+        return loadingCounselors ? (
+          <PreviewSkeleton type="counselors" />
+        ) : (
+          <CounselorPreview counselors={counselors} />
+        );
+      case "community":
+        return loadingCommunities ? (
+          <PreviewSkeleton type="community" />
+        ) : (
+          <CommunityPreview communities={communities} />
+        );
+      case "marketplace":
+        return loadingProducts ? (
+          <PreviewSkeleton type="marketplace" />
+        ) : (
+          <MarketplacePreview products={products} />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <section
@@ -491,8 +442,8 @@ export default function HeroSection() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Background Image - Animated - Behind Hero Content */}
-      <div 
+      {/* Background Image */}
+      <div
         className="absolute left-0 top-1/2 -translate-y-1/2 w-1/2 h-[700px] pointer-events-none z-[5] animate-float"
         style={{
           backgroundImage: "url(/images/community.png)",
@@ -502,7 +453,7 @@ export default function HeroSection() {
           opacity: 0.15,
         }}
       />
-      
+
       {/* Animated gradient background */}
       <AnimatePresence mode="sync">
         <motion.div
@@ -516,7 +467,7 @@ export default function HeroSection() {
         />
       </AnimatePresence>
 
-      {/* Animated glow blobs */}
+      {/* Glow blobs */}
       <AnimatePresence mode="sync">
         <motion.div
           key={slide.id + "-glow-a"}
@@ -544,7 +495,7 @@ export default function HeroSection() {
         />
       </AnimatePresence>
 
-      {/* ── Hero headline section ── */}
+      {/* Hero headline */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-32 lg:pt-36 pb-6">
         <div className="text-center">
           <div
@@ -572,8 +523,7 @@ export default function HeroSection() {
           >
             {displayedText.includes(staticText.trim()) ? (
               <>
-                Empowering Lives.{" "}
-                <br />
+                Empowering Lives. <br />
                 {displayedText.length > staticText.length && (
                   <span
                     style={{
@@ -587,12 +537,12 @@ export default function HeroSection() {
                     {displayedText.slice(staticText.length)}
                   </span>
                 )}
-                <span 
+                <span
                   className="inline-block w-0.5 h-[0.9em] ml-1"
-                  style={{ 
+                  style={{
                     background: "var(--purple)",
                     verticalAlign: "middle",
-                    animation: "blink 1s infinite"
+                    animation: "blink 1s infinite",
                   }}
                 />
                 <br />
@@ -603,23 +553,28 @@ export default function HeroSection() {
             ) : (
               <>
                 {displayedText}
-                <span 
+                <span
                   className="inline-block w-0.5 h-[0.9em] ml-1"
-                  style={{ 
+                  style={{
                     background: "var(--purple)",
                     verticalAlign: "middle",
-                    animation: "blink 1s infinite"
+                    animation: "blink 1s infinite",
                   }}
                 />
               </>
             )}
           </h1>
-          
-          {/* Blinking cursor animation */}
+
           <style jsx>{`
             @keyframes blink {
-              0%, 50% { opacity: 1; }
-              51%, 100% { opacity: 0; }
+              0%,
+              50% {
+                opacity: 1;
+              }
+              51%,
+              100% {
+                opacity: 0;
+              }
             }
           `}</style>
 
@@ -659,9 +614,9 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* ── Carousel section ── */}
+      {/* Carousel */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
-        {/* Section tab pills above carousel */}
+        {/* Tab pills */}
         <div className="flex justify-center gap-1 sm:gap-2 mb-8 flex-wrap px-2">
           {slides.map((s, i) => {
             const SIcon = s.icon;
@@ -702,7 +657,6 @@ export default function HeroSection() {
             border: "1px solid rgba(255,255,255,0.15)",
           }}
         >
-          {/* Glass shimmer */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
@@ -712,7 +666,7 @@ export default function HeroSection() {
           />
 
           <div className="relative z-10 grid lg:grid-cols-2 gap-0 min-h-[400px] lg:min-h-[420px]">
-            {/* LEFT — text content */}
+            {/* LEFT — text */}
             <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-10">
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div
@@ -725,7 +679,6 @@ export default function HeroSection() {
                   transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
                   className="flex flex-col gap-5"
                 >
-                  {/* Icon + label */}
                   <div className="flex items-center gap-3">
                     <div
                       className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center"
@@ -752,7 +705,6 @@ export default function HeroSection() {
                     </span>
                   </div>
 
-                  {/* Title + description */}
                   <div>
                     <h2 className="text-2xl lg:text-3xl font-extrabold text-white leading-tight mb-2">
                       {slide.title}
@@ -765,7 +717,6 @@ export default function HeroSection() {
                     </p>
                   </div>
 
-                  {/* Stats row */}
                   <div className="flex gap-5 sm:gap-6">
                     {slide.stats.map((s, i) => (
                       <div key={i} className="flex flex-col gap-0.5">
@@ -779,7 +730,6 @@ export default function HeroSection() {
                     ))}
                   </div>
 
-                  {/* CTA */}
                   <Link
                     href={slide.href}
                     className="inline-flex items-center gap-2 self-start px-6 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 group"
@@ -821,7 +771,6 @@ export default function HeroSection() {
                   <ChevronRight size={16} className="text-white" />
                 </button>
 
-                {/* Dot indicators */}
                 <div className="flex items-center gap-2 ml-2">
                   {slides.map((s, i) => (
                     <button
@@ -841,7 +790,6 @@ export default function HeroSection() {
                   ))}
                 </div>
 
-                {/* Slide counter */}
                 <span className="ml-auto text-xs text-white/35 font-mono">
                   {String(active + 1).padStart(2, "0")} /{" "}
                   {String(slides.length).padStart(2, "0")}
@@ -849,7 +797,7 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* RIGHT — animated preview */}
+            {/* RIGHT — live preview */}
             <div
               className="hidden lg:flex items-center p-8 lg:p-10"
               style={{ borderLeft: "1px solid rgba(255,255,255,0.10)" }}
@@ -865,18 +813,7 @@ export default function HeroSection() {
                   transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
                   className="w-full"
                 >
-                  {slide.preview.type === "counselors" && (
-                    <CounselorPreview items={slide.preview.items} />
-                  )}
-                  {slide.preview.type === "jobs" && (
-                    <JobsPreview items={slide.preview.items} />
-                  )}
-                  {slide.preview.type === "community" && (
-                    <CommunityPreview items={slide.preview.items} />
-                  )}
-                  {slide.preview.type === "marketplace" && (
-                    <MarketplacePreview items={slide.preview.items} />
-                  )}
+                  {renderPreview()}
                 </motion.div>
               </AnimatePresence>
             </div>
