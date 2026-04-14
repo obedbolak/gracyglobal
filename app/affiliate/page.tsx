@@ -25,7 +25,6 @@ export default function AffiliatePage() {
       <AffiliateTestimonials />
       <AffiliateFAQ />
       <AffiliateJoinCTA />
-      <Footer />
     </main>
   );
 }
