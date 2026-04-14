@@ -15,6 +15,7 @@ import {
 
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCamPay } from "@/hooks/useCamPay"; // 👈 add this
 
 type PaymentMethod = "mobile_money" | "bank_transfer";
 
@@ -35,6 +36,14 @@ export default function CheckoutPage() {
     city: "",
     country: "Cameroon",
   });
+
+  // 👇 add campay hook
+  const {
+    status: campayStatus,
+    error: campayError,
+    pay,
+    reset: resetCampay,
+  } = useCamPay();
 
   const fmt = (xaf: number) => (currencyLoading ? "..." : convert(xaf));
 
@@ -60,6 +69,7 @@ export default function CheckoutPage() {
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    resetCampay();
 
     if (status === "unauthenticated") {
       router.push("/login?callbackUrl=/marketplace/checkout");
@@ -69,6 +79,7 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
+      // ── Step 1: Create the order in your DB first ──────────────────
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,6 +97,31 @@ export default function CheckoutPage() {
       }
 
       const orderId = data.data?.id;
+
+      // ── Step 2: If mobile money, trigger CamPay ────────────────────
+      if (paymentMethod === "mobile_money") {
+        setLoading(false); // campay hook manages its own loading state
+
+        await pay({
+          amount: total, // already in XAF
+          phone: form.phone,
+          description: `GracyGlobal order #${orderId}`,
+          externalReference: orderId,
+          onSuccess: () => {
+            clearCart();
+            router.push(
+              `/marketplace/order-confirmation?orderId=${encodeURIComponent(orderId)}`,
+            );
+          },
+          onFailure: () => {
+            setError("Mobile money payment failed. Please try again.");
+          },
+        });
+
+        return;
+      }
+
+      // ── Step 3: Bank transfer — skip payment, go straight to confirmation ──
       clearCart();
       router.push(
         orderId
@@ -99,6 +135,17 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   }
+
+  // Derived button state
+  const isProcessing =
+    loading || campayStatus === "pending" || campayStatus === "polling";
+
+  const buttonLabel = () => {
+    if (loading) return "Creating order...";
+    if (campayStatus === "pending") return "Initiating payment...";
+    if (campayStatus === "polling") return "Check your phone for PIN prompt...";
+    return "Place Order";
+  };
 
   if (items.length === 0) {
     return (
@@ -173,8 +220,8 @@ export default function CheckoutPage() {
                     },
                     {
                       field: "phone",
-                      label: "Phone",
-                      placeholder: "+237 6XX XXX XXX",
+                      label: "Phone (MTN or Orange)",
+                      placeholder: "670000000",
                       type: "tel",
                     },
                     {
@@ -269,7 +316,7 @@ export default function CheckoutPage() {
                       id: "mobile_money" as const,
                       icon: Smartphone,
                       label: "Mobile Money",
-                      sub: "MTN, Orange, Airtel",
+                      sub: "MTN & Orange — powered by CamPay",
                     },
                     {
                       id: "bank_transfer" as const,
@@ -336,6 +383,27 @@ export default function CheckoutPage() {
                     </button>
                   ))}
                 </div>
+
+                {/* 👇 CamPay polling notice — only shows when waiting for PIN */}
+                {campayStatus === "polling" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 flex items-start gap-3 rounded-xl p-4 text-sm"
+                    style={{
+                      background: "var(--glass-bg-strong)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    <span className="w-4 h-4 mt-0.5 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    <span>
+                      A payment prompt has been sent to{" "}
+                      <strong>{form.phone}</strong>. Enter your Mobile Money PIN
+                      to confirm.
+                    </span>
+                  </motion.div>
+                )}
               </motion.div>
             </div>
 
@@ -432,7 +500,8 @@ export default function CheckoutPage() {
                 Secure & encrypted checkout
               </div>
 
-              {error && (
+              {/* Error display — shows both order errors and campay errors */}
+              {(error || campayError) && (
                 <div
                   className="rounded-2xl p-4 text-sm"
                   style={{
@@ -441,12 +510,13 @@ export default function CheckoutPage() {
                     border: "1px solid var(--error-border)",
                   }}
                 >
-                  {error}
+                  {error || campayError}
                 </div>
               )}
+
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isProcessing}
                 className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{
                   background:
@@ -454,10 +524,10 @@ export default function CheckoutPage() {
                   boxShadow: "0 4px 16px rgba(220,20,60,0.35)",
                 }}
               >
-                {loading ? (
+                {isProcessing ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
-                    Processing...
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {buttonLabel()}
                   </>
                 ) : (
                   "Place Order"
