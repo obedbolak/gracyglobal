@@ -1,10 +1,23 @@
+// app/(dashboard)/dashboard/settings/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, CheckCircle, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  CheckCircle,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  ShieldCheck,
+  ShieldAlert,
+} from "lucide-react";
 import ImageUpload from "@/components/shared/ImageUpload";
 
 interface UserProfile {
@@ -14,6 +27,9 @@ interface UserProfile {
   image?: string | null;
   country?: string | null;
   phone?: string | null;
+  createdAt?: string;
+  emailVerified?: string | null;
+  role?: string[];
 }
 
 export default function DashboardSettingsPage() {
@@ -48,14 +64,11 @@ export default function DashboardSettingsPage() {
   const fetchProfile = async () => {
     setLoading(true);
     setError("");
-
     try {
       const res = await fetch("/api/user");
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || !data.success)
         throw new Error(data.error || "Failed to load profile");
-      }
-
       setProfile(data.data);
       setForm({
         name: data.data.name ?? "",
@@ -93,9 +106,7 @@ export default function DashboardSettingsPage() {
         country: form.country,
         image: form.image,
       };
-      if (form.password) {
-        payload.password = form.password;
-      }
+      if (form.password) payload.password = form.password;
 
       const res = await fetch("/api/user", {
         method: "PATCH",
@@ -103,9 +114,8 @@ export default function DashboardSettingsPage() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || !data.success)
         throw new Error(data.error || "Failed to save settings");
-      }
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -120,10 +130,7 @@ export default function DashboardSettingsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div
-        className="flex items-center justify-center min-h-screen"
-        style={{ background: "var(--background)" }}
-      >
+      <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2
           className="w-8 h-8 animate-spin"
           style={{ color: "var(--blue)" }}
@@ -132,223 +139,348 @@ export default function DashboardSettingsPage() {
     );
   }
 
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      })
+    : null;
+
+  const isEmailVerified = !!profile?.emailVerified;
+
   return (
-    <div
-      className="min-h-screen py-8"
-      style={{ background: "var(--background)" }}
-    >
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/dashboard"
-            className="p-2 rounded-lg transition-colors hover:opacity-80"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-            }}
+    <div className="py-4 sm:py-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
+        <Link
+          href="/dashboard"
+          className="p-2 rounded-lg transition-colors hover:opacity-80 flex-shrink-0"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <ArrowLeft
+            className="w-4 h-4 sm:w-5 sm:h-5"
+            style={{ color: "var(--text-primary)" }}
+          />
+        </Link>
+        <div>
+          <h1
+            className="text-xl sm:text-2xl font-bold"
+            style={{ color: "var(--text-primary)" }}
           >
-            <ArrowLeft
-              className="w-5 h-5"
-              style={{ color: "var(--text-primary)" }}
-            />
-          </Link>
-          <div>
-            <h1
-              className="text-2xl font-bold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Profile Settings
-            </h1>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Update your name, image, contact info, and password.
-            </p>
-          </div>
+            Profile Settings
+          </h1>
+          <p
+            className="text-xs sm:text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Manage your account details, contact info, and security.
+          </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section
-            className="p-6 rounded-2xl"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-            }}
-          >
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Full name
-                  </label>
-                  <input
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
-                    placeholder="Your full name"
-                    type="text"
-                  />
-                </div>
+      {/* ── Profile Summary Card (moved from dashboard) ── */}
+      {profile && (
+        <div
+          className="p-5 rounded-2xl mb-6"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <div className="flex items-start gap-4">
+            {/* Avatar */}
+            <div
+              className="w-14 h-14 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+              style={{ background: "var(--glass-bg-subtle)" }}
+            >
+              {form.image || profile.image ? (
+                <img
+                  src={form.image || profile.image || ""}
+                  alt={profile.name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-7 h-7" style={{ color: "var(--blue)" }} />
+              )}
+            </div>
 
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Email address
-                  </label>
-                  <input
-                    value={profile?.email ?? ""}
-                    disabled
-                    className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-secondary)] outline-none"
-                    type="email"
-                  />
-                </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <h2
+                  className="text-base font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {profile.name || "User"}
+                </h2>
 
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-secondary)" }}
+                {/* Email verification badge */}
+                {isEmailVerified ? (
+                  <span
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                    style={{
+                      background: "var(--success-bg)",
+                      color: "var(--green)",
+                    }}
                   >
-                    Phone number
-                  </label>
-                  <input
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                    className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
-                    placeholder="+234 123 4567"
-                    type="tel"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-secondary)" }}
+                    <ShieldCheck className="w-3 h-3" />
+                    Email verified
+                  </span>
+                ) : (
+                  <span
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                    style={{
+                      background: "var(--warning-bg)",
+                      color: "var(--yellow)",
+                    }}
                   >
-                    Country
-                  </label>
-                  <input
-                    value={form.country}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, country: e.target.value }))
-                    }
-                    className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
-                    placeholder="Cameroon"
-                    type="text"
-                  />
-                </div>
+                    <ShieldAlert className="w-3 h-3" />
+                    Email not verified
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-4">
-                <ImageUpload
-                  label="Profile Photo"
-                  currentImage={form.image || undefined}
-                  onUploadComplete={handleUploadComplete}
-                  aspectRatio="square"
-                />
-                {form.image && (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Uploaded image URL: {form.image}
-                  </p>
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{profile.email}</span>
+                </div>
+                {profile.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                    {profile.phone}
+                  </div>
+                )}
+                {profile.country && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    {profile.country}
+                  </div>
+                )}
+                {memberSince && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                    Member since {memberSince}
+                  </div>
                 )}
               </div>
             </div>
-          </section>
+          </div>
+        </div>
+      )}
 
-          <section
-            className="p-6 rounded-2xl"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-            }}
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Personal Information */}
+        <section
+          className="p-4 sm:p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <h2
+            className="font-semibold mb-4 sm:mb-5 text-sm sm:text-base"
+            style={{ color: "var(--text-primary)" }}
           >
-            <h2
-              className="font-semibold mb-5"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Change Password
-            </h2>
-            <div className="grid gap-6 lg:grid-cols-2">
+            Personal Information
+          </h2>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Left — text fields */}
+            <div className="space-y-4">
               <div>
                 <label
-                  className="block text-sm font-medium mb-2"
+                  className="block text-sm font-medium mb-1.5"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  New password
+                  Full name
                 </label>
                 <input
-                  value={form.password}
+                  value={form.name}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, password: e.target.value }))
+                    setForm((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
-                  placeholder="Leave blank to keep current password"
-                  type="password"
+                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
+                  placeholder="Your full name"
+                  type="text"
                 />
               </div>
+
               <div>
                 <label
-                  className="block text-sm font-medium mb-2"
+                  className="block text-sm font-medium mb-1.5"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Confirm password
+                  Email address
                 </label>
                 <input
-                  value={form.confirmPassword}
+                  value={profile?.email ?? ""}
+                  disabled
+                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-secondary)] outline-none opacity-60 cursor-not-allowed"
+                  type="email"
+                />
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Email cannot be changed directly. Contact support if needed.
+                </p>
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Phone number
+                </label>
+                <input
+                  value={form.phone}
                   onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      confirmPassword: e.target.value,
-                    }))
+                    setForm((prev) => ({ ...prev, phone: e.target.value }))
                   }
-                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
-                  placeholder="Confirm password"
-                  type="password"
+                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
+                  placeholder="+237 6XX XXX XXX"
+                  type="tel"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Country
+                </label>
+                <input
+                  value={form.country}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, country: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
+                  placeholder="Cameroon"
+                  type="text"
                 />
               </div>
             </div>
-            <p className="text-xs mt-3 text-[var(--text-muted)]">
-              Password must be at least 8 characters if you choose to update it.
-            </p>
-          </section>
 
-          {error && (
-            <div className="rounded-2xl p-4 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-border)]">
-              {error}
+            {/* Right — photo upload */}
+            <div className="space-y-3">
+              <ImageUpload
+                label="Profile Photo"
+                currentImage={form.image || undefined}
+                onUploadComplete={handleUploadComplete}
+                aspectRatio="square"
+              />
+              {form.image && (
+                <p
+                  className="text-xs break-all"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {form.image}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Change Password */}
+        <section
+          className="p-4 sm:p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <h2
+            className="font-semibold mb-4 sm:mb-5 text-sm sm:text-base"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Change Password
+          </h2>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                New password
+              </label>
+              <input
+                value={form.password}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, password: e.target.value }))
+                }
+                className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
+                placeholder="Leave blank to keep current"
+                type="password"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Confirm password
+              </label>
+              <input
+                value={form.confirmPassword}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 sm:py-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--purple)]"
+                placeholder="Confirm new password"
+                type="password"
+              />
+            </div>
+          </div>
+          <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
+            Password must be at least 8 characters if you choose to update it.
+          </p>
+        </section>
+
+        {/* Error */}
+        {error && (
+          <div className="rounded-2xl p-4 text-sm bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-border)]">
+            {error}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {saved && (
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3 text-sm bg-[var(--success-bg)] text-[var(--success-text)] border border-[var(--success-border)]">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Profile updated successfully.</span>
             </div>
           )}
-
-          <div className="flex flex-col gap-4 sm:flex-row items-stretch sm:items-center justify-between">
-            {saved && (
-              <div className="flex items-center gap-2 rounded-2xl px-4 py-3 bg-[var(--success-bg)] text-[var(--success-text)] border border-[var(--success-border)]">
-                <CheckCircle className="w-4 h-4" />
-                <span>Profile updated successfully.</span>
-              </div>
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--purple)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-auto"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" /> Save changes
+              </>
             )}
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--purple)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" /> Save changes
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

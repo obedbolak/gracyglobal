@@ -9,12 +9,7 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import SubscriptionStatus from "@/components/dashboard/SubscriptionStatus";
 import {
-  User,
   Crown,
-  MapPin,
-  Calendar,
-  Mail,
-  Phone,
   Loader2,
   Star,
   ShieldCheck,
@@ -26,13 +21,15 @@ import {
   Pencil,
   CheckCircle,
   XCircle,
-  LayoutDashboard,
-  GraduationCap,
-  Heart,
-  Shield,
   BookOpen,
   PlayCircle,
   ArrowRight,
+  GraduationCap,
+  HeartHandshake,
+  X,
+  Sparkles,
+  Zap,
+  Check,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -48,6 +45,15 @@ interface CounselorProfile {
   bio?: string;
 }
 
+interface Plan {
+  id: string;
+  name: string;
+  displayName: string;
+  priceMonthly: number;
+  counselorSessions: number;
+  features?: string[];
+}
+
 interface Subscription {
   id: string;
   status: string;
@@ -55,13 +61,7 @@ interface Subscription {
   currentPeriodEnd: string;
   sessionsUsed: number;
   cancelAtPeriodEnd: boolean;
-  plan: {
-    id: string;
-    name: string;
-    displayName: string;
-    priceMonthly: number;
-    counselorSessions: number;
-  };
+  plan: Plan;
 }
 
 interface UserProfile {
@@ -115,15 +115,6 @@ interface EnrolledCourse {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-// Plans that unlock product/service creation
-const CREATOR_PLANS = ["growth", "elite", "elite / pro", "elite/pro"];
-
-function canCreate(subscription?: Subscription): boolean {
-  if (!subscription) return false;
-  if (subscription.status !== "ACTIVE") return false;
-  return CREATOR_PLANS.includes(subscription.plan.name.toLowerCase());
-}
-
 function getPrimaryRole(roles: string[]): string {
   if (roles.includes("ADMIN")) return "ADMIN";
   if (roles.includes("COUNSELOR")) return "COUNSELOR";
@@ -144,7 +135,423 @@ function getRoleBadgeStyle(role: string) {
   }
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+// ─── Plans Modal ───────────────────────────────────────────────────────────────
+
+interface PlansModalProps {
+  open: boolean;
+  onClose: () => void;
+  featureName: string;
+}
+
+function PlansModal({ open, onClose, featureName }: PlansModalProps) {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/plans")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setPlans(d.data ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    // Backdrop
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
+        style={{
+          background: "var(--bg-primary, #0f0f12)",
+          border: "1px solid var(--glass-border)",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="p-6 pb-4"
+          style={{
+            borderBottom: "1px solid var(--divider)",
+            background:
+              "linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%)",
+          }}
+        >
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1.5 rounded-lg transition-all hover:opacity-80"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-5 h-5 text-white opacity-90" />
+            <p className="text-white/80 text-sm font-medium">Unlock Feature</p>
+          </div>
+          <h2 className="text-xl font-bold text-white">
+            Get access to {featureName}
+          </h2>
+          <p className="text-white/70 text-sm mt-1">
+            Choose a plan that works for you and start using this feature today.
+          </p>
+        </div>
+
+        {/* Plans */}
+        <div className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2
+                className="w-6 h-6 animate-spin"
+                style={{ color: "var(--blue)" }}
+              />
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="text-center py-8">
+              <p style={{ color: "var(--text-secondary)" }}>
+                No plans available right now.
+              </p>
+              <Link
+                href="/plans"
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--blue))",
+                }}
+                onClick={onClose}
+              >
+                View all plans
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                {plans.slice(0, 4).map((plan, i) => {
+                  const isPopular = i === 1;
+                  return (
+                    <div
+                      key={plan.id}
+                      className="p-4 rounded-xl relative"
+                      style={{
+                        background: isPopular
+                          ? "linear-gradient(135deg, rgba(var(--purple-rgb,99,74,221),0.12), rgba(var(--blue-rgb,59,130,246),0.08))"
+                          : "var(--glass-bg-subtle)",
+                        border: isPopular
+                          ? "1.5px solid var(--purple)"
+                          : "1px solid var(--divider)",
+                      }}
+                    >
+                      {isPopular && (
+                        <span
+                          className="absolute -top-3 left-4 px-2.5 py-0.5 rounded-full text-xs font-bold text-white"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, var(--purple), var(--blue))",
+                          }}
+                        >
+                          Most Popular
+                        </span>
+                      )}
+                      <p
+                        className="font-bold text-base mb-0.5"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {plan.displayName}
+                      </p>
+                      <p
+                        className="text-2xl font-bold mb-3"
+                        style={{
+                          color: isPopular
+                            ? "var(--purple)"
+                            : "var(--text-primary)",
+                        }}
+                      >
+                        {plan.priceMonthly.toLocaleString()}{" "}
+                        <span
+                          className="text-sm font-normal"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          XAF/mo
+                        </span>
+                      </p>
+                      {plan.counselorSessions > 0 && (
+                        <div
+                          className="flex items-center gap-1.5 text-xs mb-3"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <Check
+                            className="w-3.5 h-3.5 flex-shrink-0"
+                            style={{ color: "var(--green)" }}
+                          />
+                          {plan.counselorSessions} counselor session
+                          {plan.counselorSessions > 1 ? "s" : ""}/mo
+                        </div>
+                      )}
+                      <Link
+                        href={`/plans?plan=${plan.id}`}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                        style={
+                          isPopular
+                            ? {
+                                background:
+                                  "linear-gradient(135deg, var(--purple), var(--blue))",
+                                color: "#fff",
+                              }
+                            : {
+                                background: "var(--glass-bg)",
+                                border: "1px solid var(--divider)",
+                                color: "var(--text-primary)",
+                              }
+                        }
+                        onClick={onClose}
+                      >
+                        Choose {plan.displayName}
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="text-center">
+                <Link
+                  href="/plans"
+                  className="text-sm font-semibold inline-flex items-center gap-1"
+                  style={{ color: "var(--blue)" }}
+                  onClick={onClose}
+                >
+                  See full plan comparison
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Feature Cards ─────────────────────────────────────────────────────────────
+
+interface FeatureCardsProps {
+  roles: string[];
+}
+
+const FEATURES = [
+  {
+    key: "TEACHER",
+    title: "Teach Courses",
+    description:
+      "Create and publish e-learning courses, earn from students worldwide.",
+    icon: GraduationCap,
+    color: "var(--purple)",
+    bg: "rgba(99,74,221,0.08)",
+    href: "/teacher",
+    requiredRole: "TEACHER",
+  },
+  {
+    key: "COUNSELOR",
+    title: "Offer Counseling",
+    description:
+      "Provide professional counseling sessions and grow your client base.",
+    icon: HeartHandshake,
+    color: "var(--blue)",
+    bg: "rgba(59,130,246,0.08)",
+    href: "/counselor",
+    requiredRole: "COUNSELOR",
+  },
+  {
+    key: "SERVICE",
+    title: "Sell Services",
+    description:
+      "List your skills and services on the marketplace for clients to book.",
+    icon: Wrench,
+    color: "var(--green)",
+    bg: "rgba(34,197,94,0.08)",
+    href: "/creator/services/create",
+    requiredRole: "CREATOR",
+  },
+  {
+    key: "PRODUCT",
+    title: "List Products",
+    description:
+      "Sell physical or digital products to customers across the platform.",
+    icon: Package,
+    color: "var(--yellow, #f59e0b)",
+    bg: "rgba(245,158,11,0.08)",
+    href: "/creator/products/create",
+    requiredRole: "CREATOR",
+  },
+];
+
+function FeatureCards({ roles }: FeatureCardsProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeFeature, setActiveFeature] = useState("");
+
+  const handleLockedClick = (featureTitle: string) => {
+    setActiveFeature(featureTitle);
+    setModalOpen(true);
+  };
+
+  return (
+    <>
+      <div
+        className="p-6 rounded-2xl"
+        style={{
+          background: "var(--glass-bg)",
+          border: "1px solid var(--glass-border)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <h3
+            className="text-lg font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Grow on Gracyglobal
+          </h3>
+          <span
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              color: "var(--text-muted)",
+            }}
+          >
+            <Zap className="w-3 h-3" />
+            Upgrade to unlock
+          </span>
+        </div>
+        <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+          Expand what you can do — teach, counsel, or sell on the platform.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {FEATURES.map((feature) => {
+            const Icon = feature.icon;
+            const hasAccess =
+              roles.includes(feature.requiredRole) || roles.includes("ADMIN");
+
+            return hasAccess ? (
+              <Link key={feature.key} href={feature.href}>
+                <div
+                  className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
+                  style={{
+                    background: feature.bg,
+                    border: "1px solid var(--divider)",
+                  }}
+                >
+                  <div
+                    className="p-2 rounded-lg flex-shrink-0"
+                    style={{ background: "var(--glass-bg)" }}
+                  >
+                    <Icon
+                      className="w-5 h-5"
+                      style={{ color: feature.color }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p
+                        className="font-semibold text-sm"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {feature.title}
+                      </p>
+                      <CheckCircle
+                        className="w-3.5 h-3.5 flex-shrink-0"
+                        style={{ color: "var(--green)" }}
+                      />
+                    </div>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {feature.description}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    className="w-4 h-4 mt-0.5 flex-shrink-0"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                </div>
+              </Link>
+            ) : (
+              <button
+                key={feature.key}
+                onClick={() => handleLockedClick(feature.title)}
+                className="text-left w-full"
+              >
+                <div
+                  className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.01] cursor-pointer opacity-75 hover:opacity-90"
+                  style={{
+                    background: "var(--glass-bg-subtle)",
+                    border: "1px solid var(--divider)",
+                  }}
+                >
+                  <div
+                    className="p-2 rounded-lg flex-shrink-0"
+                    style={{ background: "var(--glass-bg)" }}
+                  >
+                    <Icon
+                      className="w-5 h-5"
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p
+                        className="font-semibold text-sm"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {feature.title}
+                      </p>
+                      <Lock
+                        className="w-3 h-3 flex-shrink-0"
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    </div>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {feature.description}
+                    </p>
+                  </div>
+                  <span
+                    className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold mt-0.5"
+                    style={{
+                      background: "var(--warning-bg)",
+                      color: "var(--yellow)",
+                    }}
+                  >
+                    Unlock
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <PlansModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        featureName={activeFeature}
+      />
+    </>
+  );
+}
+
+// ─── Counselor Card ────────────────────────────────────────────────────────────
 
 function CounselorCard({ profile }: { profile: CounselorProfile }) {
   return (
@@ -280,159 +687,6 @@ function CounselorCard({ profile }: { profile: CounselorProfile }) {
   );
 }
 
-function CreatorSection({ subscription }: { subscription?: Subscription }) {
-  const canCreateItems = canCreate(subscription);
-  const planName = subscription?.plan?.displayName ?? null;
-  const isSubscribed = !!subscription && subscription.status === "ACTIVE";
-
-  const cards = [
-    {
-      title: "Create a Service",
-      description: "Offer your skills & services to the community",
-      href: "/creator/services/create",
-      icon: Wrench,
-      color: "var(--purple)",
-      bg: "var(--glass-bg-subtle)",
-    },
-    {
-      title: "List a Product",
-      description: "Sell physical or digital products on the marketplace",
-      href: "/creator/products/create",
-      icon: Package,
-      color: "var(--green)",
-      bg: "var(--success-bg)",
-    },
-  ];
-
-  return (
-    <div
-      className="p-6 rounded-2xl"
-      style={{
-        background: "var(--glass-bg)",
-        border: "1px solid var(--glass-border)",
-      }}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <h3
-          className="text-lg font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Creator Tools
-        </h3>
-        {!canCreateItems && (
-          <span
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-            style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}
-          >
-            <Lock className="w-3 h-3" />
-            Locked
-          </span>
-        )}
-      </div>
-
-      {!canCreateItems && (
-        <div
-          className="mb-4 px-4 py-3 rounded-xl text-sm"
-          style={{
-            background: "var(--warning-bg)",
-            border: "1px solid var(--yellow)",
-            color: "var(--text-primary)",
-          }}
-        >
-          {!isSubscribed ? (
-            <>
-              You need an active subscription to create products or services.{" "}
-              <Link
-                href="/plans"
-                className="font-semibold underline"
-                style={{ color: "var(--yellow)" }}
-              >
-                View Plans
-              </Link>
-            </>
-          ) : (
-            <>
-              Your <strong>{planName}</strong> plan doesn't include creator
-              access. Upgrade to <strong>Growth</strong> or{" "}
-              <strong>Elite</strong> to unlock.{" "}
-              <Link
-                href="/plans"
-                className="font-semibold underline"
-                style={{ color: "var(--yellow)" }}
-              >
-                Upgrade now
-              </Link>
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          const locked = !canCreateItems;
-          const inner = (
-            <div
-              className={`p-4 rounded-xl flex items-start gap-3 transition-all ${
-                locked
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:scale-[1.02] cursor-pointer"
-              }`}
-              style={{
-                background: card.bg,
-                border: "1px solid var(--divider)",
-              }}
-            >
-              <div
-                className="p-2 rounded-lg"
-                style={{ background: "var(--glass-bg)" }}
-              >
-                <Icon className="w-5 h-5" style={{ color: card.color }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p
-                    className="font-semibold text-sm"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {card.title}
-                  </p>
-                  {locked && (
-                    <Lock
-                      className="w-3 h-3"
-                      style={{ color: "var(--text-muted)" }}
-                    />
-                  )}
-                </div>
-                <p
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {card.description}
-                </p>
-              </div>
-              {!locked && (
-                <ChevronRight
-                  className="w-4 h-4 mt-0.5 flex-shrink-0"
-                  style={{ color: "var(--text-muted)" }}
-                />
-              )}
-            </div>
-          );
-
-          return locked ? (
-            <div key={card.title}>{inner}</div>
-          ) : (
-            <Link key={card.title} href={card.href}>
-              {inner}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -518,13 +772,8 @@ export default function DashboardPage() {
 
   if (!profile) return null;
 
-  // ✅ FIX: role is an array — derive display role correctly
   const primaryRole = getPrimaryRole(profile.role);
   const isCounselor = profile.role.includes("COUNSELOR");
-  const memberSince = new Date(profile.createdAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
 
   const recentActivities = [
     {
@@ -555,323 +804,229 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-        {/* ── Welcome Header ── */}
-        <div className="flex items-center justify-between">
+      {/* ── Welcome Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1
+            className="text-3xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Welcome back, {profile.name?.split(" ")[0] || "User"}! 👋
+          </h1>
+          <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
+            Here's what's happening with your account today.
+          </p>
+        </div>
+        <span
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
+          style={getRoleBadgeStyle(primaryRole)}
+        >
+          <Crown className="w-3.5 h-3.5" />
+          {primaryRole.charAt(0) + primaryRole.slice(1).toLowerCase()}
+        </span>
+      </div>
+
+      {/* ── Feature Cards (replaces profile summary) ── */}
+      <FeatureCards roles={profile.role} />
+
+      {/* ── Stats ── */}
+      <div>
+        <h2
+          className="text-xl font-semibold mb-4"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Your Activity
+        </h2>
+        <DashboardStats
+          bookings={profile._count.bookings}
+          orders={profile._count.orders}
+          jobApplications={profile._count.jobApplications}
+          communityPosts={profile._count.communityPosts}
+          counselorProfile={profile.counselorProfile}
+          affiliate={profile.affiliate}
+        />
+      </div>
+
+      {/* ── Main Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left: Actions + Courses + Counselor */}
+        <div className="lg:col-span-2 space-y-8">
           <div>
-            <h1
-              className="text-3xl font-bold"
+            <h2
+              className="text-xl font-semibold mb-4"
               style={{ color: "var(--text-primary)" }}
             >
-              Welcome back, {profile.name?.split(" ")[0] || "User"}! 👋
-            </h1>
-            <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
-              Here's what's happening with your account today.
-            </p>
+              Quick Actions
+            </h2>
+            <QuickActions
+              role={primaryRole}
+              isAffiliate={!!profile.affiliate}
+              isCounselor={isCounselor}
+            />
           </div>
-          <span
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
-            style={getRoleBadgeStyle(primaryRole)}
-          >
-            <Crown className="w-3.5 h-3.5" />
-            {primaryRole.charAt(0) + primaryRole.slice(1).toLowerCase()}
-          </span>
-        </div>
 
-        {/* ── Profile Summary ── */}
-        <div
-          className="p-6 rounded-2xl"
-          style={{
-            background: "var(--glass-bg)",
-            border: "1px solid var(--glass-border)",
-          }}
-        >
-          <div className="flex items-start gap-4">
-            <div
-              className="w-16 h-16 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
-              style={{ background: "var(--glass-bg-subtle)" }}
-            >
-              {profile.image ? (
-                <img
-                  src={profile.image}
-                  alt={profile.name || "User"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-8 h-8" style={{ color: "var(--blue)" }} />
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
+          {/* Enrolled Courses */}
+          {enrollments.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
                 <h2
                   className="text-xl font-semibold"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  {profile.name || "User"}
+                  My Courses
                 </h2>
-                <span
-                  className="px-3 py-1 rounded-full text-sm font-semibold"
-                  style={getRoleBadgeStyle(primaryRole)}
+                <Link
+                  href="/dashboard/my-courses"
+                  className="text-sm font-semibold flex items-center gap-1"
+                  style={{ color: "var(--blue)" }}
                 >
-                  {primaryRole.charAt(0) + primaryRole.slice(1).toLowerCase()}
-                </span>
-                {!profile.emailVerified && (
-                  <span
-                    className="px-3 py-1 rounded-full text-sm font-semibold"
-                    style={{
-                      background: "var(--warning-bg)",
-                      color: "var(--yellow)",
-                    }}
-                  >
-                    Email not verified
-                  </span>
-                )}
+                  View All
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-              <div
-                className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {profile.email}
-                </div>
-                {profile.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    {profile.phone}
-                  </div>
-                )}
-                {profile.country && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    {profile.country}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Member since {memberSince}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              <div className="grid grid-cols-1 gap-4">
+                {enrollments.map((item) => {
+                  const { course, progress } = item;
+                  const totalLessons = progress.totalLessons;
+                  const isCompleted = progress.percentage >= 100;
 
-        {/* ── Stats ── */}
-        <div>
-          <h2
-            className="text-xl font-semibold mb-4"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Your Activity
-          </h2>
-          <DashboardStats
-            bookings={profile._count.bookings}
-            orders={profile._count.orders}
-            jobApplications={profile._count.jobApplications}
-            communityPosts={profile._count.communityPosts}
-            counselorProfile={profile.counselorProfile}
-            affiliate={profile.affiliate}
-          />
-        </div>
-
-        {/* ── Main Grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Actions + Counselor + Creator */}
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <h2
-                className="text-xl font-semibold mb-4"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Quick Actions
-              </h2>
-              <QuickActions
-                role={primaryRole}
-                isAffiliate={!!profile.affiliate}
-                isCounselor={isCounselor}
-              />
-            </div>
-
-            {/* Enrolled Courses */}
-            {enrollments.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2
-                    className="text-xl font-semibold"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    My Courses
-                  </h2>
-                  <Link
-                    href="/dashboard/my-courses"
-                    className="text-sm font-semibold flex items-center gap-1"
-                    style={{ color: "var(--blue)" }}
-                  >
-                    View All
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  {enrollments.map((item) => {
-                    const { course, progress } = item;
-                    const totalLessons = progress.totalLessons;
-                    const isCompleted = progress.percentage >= 100;
-
-                    return (
-                      <Link
-                        key={item.enrollment.id}
-                        href={`/learn/${course.id}`}
-                        className="group"
+                  return (
+                    <Link
+                      key={item.enrollment.id}
+                      href={`/learn/${course.id}`}
+                      className="group"
+                    >
+                      <div
+                        className="p-4 rounded-xl transition-all hover:scale-[1.02]"
+                        style={{
+                          background: "var(--glass-bg)",
+                          border: "1px solid var(--glass-border)",
+                        }}
                       >
-                        <div
-                          className="p-4 rounded-xl transition-all hover:scale-[1.02]"
-                          style={{
-                            background: "var(--glass-bg)",
-                            border: "1px solid var(--glass-border)",
-                          }}
-                        >
-                          <div className="flex gap-4">
-                            <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                              {course.thumbnail ? (
-                                <img
-                                  src={course.thumbnail}
-                                  alt={course.title}
-                                  className="w-full h-full object-cover"
+                        <div className="flex gap-4">
+                          <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                            {course.thumbnail ? (
+                              <img
+                                src={course.thumbnail}
+                                alt={course.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center"
+                                style={{ background: "var(--glass-bg-subtle)" }}
+                              >
+                                <BookOpen
+                                  className="w-8 h-8"
+                                  style={{ color: "var(--text-muted)" }}
                                 />
-                              ) : (
-                                <div
-                                  className="w-full h-full flex items-center justify-center"
-                                  style={{
-                                    background: "var(--glass-bg-subtle)",
-                                  }}
-                                >
-                                  <BookOpen
-                                    className="w-8 h-8"
-                                    style={{ color: "var(--text-muted)" }}
-                                  />
-                                </div>
-                              )}
-                              {isCompleted && (
-                                <div
-                                  className="absolute inset-0 flex items-center justify-center"
-                                  style={{
-                                    background: "rgba(0,0,0,0.7)",
-                                  }}
-                                >
-                                  <CheckCircle
-                                    className="w-6 h-6"
-                                    style={{ color: "var(--green)" }}
-                                  />
-                                </div>
-                              )}
+                              </div>
+                            )}
+                            {isCompleted && (
+                              <div
+                                className="absolute inset-0 flex items-center justify-center"
+                                style={{ background: "rgba(0,0,0,0.7)" }}
+                              >
+                                <CheckCircle
+                                  className="w-6 h-6"
+                                  style={{ color: "var(--green)" }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3
+                              className="font-semibold mb-1 truncate"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              {course.title}
+                            </h3>
+                            <p
+                              className="text-sm mb-2 line-clamp-1"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              {course.description}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs mb-2">
+                              <span style={{ color: "var(--text-muted)" }}>
+                                {totalLessons} lessons
+                              </span>
+                              <span
+                                className="px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: "var(--glass-bg-subtle)",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                {course.level}
+                              </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h3
-                                className="font-semibold mb-1 truncate"
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="flex-1 h-1.5 rounded-full overflow-hidden"
+                                style={{ background: "var(--glass-bg-subtle)" }}
+                              >
+                                <div
+                                  className="h-full transition-all"
+                                  style={{
+                                    width: `${progress.percentage}%`,
+                                    background: isCompleted
+                                      ? "var(--green)"
+                                      : "linear-gradient(90deg, var(--purple), var(--blue))",
+                                  }}
+                                />
+                              </div>
+                              <span
+                                className="text-xs font-semibold"
                                 style={{ color: "var(--text-primary)" }}
                               >
-                                {course.title}
-                              </h3>
-                              <p
-                                className="text-sm mb-2 line-clamp-1"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                {course.description}
-                              </p>
-                              <div className="flex items-center gap-4 text-xs mb-2">
-                                <span
-                                  style={{ color: "var(--text-muted)" }}
-                                >
-                                  {totalLessons} lessons
-                                </span>
-                                <span
-                                  className="px-2 py-0.5 rounded-full"
-                                  style={{
-                                    background: "var(--glass-bg-subtle)",
-                                    color: "var(--text-secondary)",
-                                  }}
-                                >
-                                  {course.level}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="flex-1 h-1.5 rounded-full overflow-hidden"
-                                  style={{
-                                    background: "var(--glass-bg-subtle)",
-                                  }}
-                                >
-                                  <div
-                                    className="h-full transition-all"
-                                    style={{
-                                      width: `${progress.percentage}%`,
-                                      background: isCompleted
-                                        ? "var(--green)"
-                                        : "linear-gradient(90deg, var(--purple), var(--blue))",
-                                    }}
-                                  />
-                                </div>
-                                <span
-                                  className="text-xs font-semibold"
-                                  style={{ color: "var(--text-primary)" }}
-                                >
-                                  {progress.percentage}%
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <PlayCircle
-                                className="w-8 h-8 group-hover:scale-110 transition-transform"
-                                style={{ color: "var(--blue)" }}
-                              />
+                                {progress.percentage}%
+                              </span>
                             </div>
                           </div>
+                          <div className="flex items-center">
+                            <PlayCircle
+                              className="w-8 h-8 group-hover:scale-110 transition-transform"
+                              style={{ color: "var(--blue)" }}
+                            />
+                          </div>
                         </div>
-                      </Link>
-                    );
-                  })}
-                </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Counselor profile card — only shown to counselors */}
-            {isCounselor && profile.counselorProfile && (
-              <div>
-                <h2
-                  className="text-xl font-semibold mb-4"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Your Counselor Profile
-                </h2>
-                <CounselorCard profile={profile.counselorProfile} />
-              </div>
-            )}
-
-            {/* Creator tools — gated by plan */}
+          {/* Counselor profile card — only shown to counselors */}
+          {isCounselor && profile.counselorProfile && (
             <div>
               <h2
                 className="text-xl font-semibold mb-4"
                 style={{ color: "var(--text-primary)" }}
               >
-                Sell on Gracyglobal
+                Your Counselor Profile
               </h2>
-              <CreatorSection subscription={profile.subscription} />
+              <CounselorCard profile={profile.counselorProfile} />
             </div>
-          </div>
-
-          {/* Right: Subscription + Activity */}
-          <div className="space-y-8">
-            <div>
-              <h2
-                className="text-xl font-semibold mb-4"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Subscription
-              </h2>
-              <SubscriptionStatus subscription={profile.subscription} />
-            </div>
-            <RecentActivity activities={recentActivities} />
-          </div>
+          )}
         </div>
+
+        {/* Right: Subscription + Activity */}
+        <div className="space-y-8">
+          <div>
+            <h2
+              className="text-xl font-semibold mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Subscription
+            </h2>
+            <SubscriptionStatus subscription={profile.subscription} />
+          </div>
+          <RecentActivity activities={recentActivities} />
+        </div>
+      </div>
     </div>
   );
 }
