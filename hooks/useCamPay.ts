@@ -1,5 +1,4 @@
-// hooks/useCamPay.ts
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type PaymentStatus =
   | "idle"
@@ -13,6 +12,16 @@ export function useCamPay() {
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [reference, setReference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  useEffect(() => () => clearPolling(), []);
 
   const pay = async ({
     amount,
@@ -29,6 +38,8 @@ export function useCamPay() {
     onSuccess?: () => void;
     onFailure?: () => void;
   }) => {
+    if (status === "pending" || status === "polling") return;
+    clearPolling();
     setStatus("pending");
     setError(null);
 
@@ -45,9 +56,9 @@ export function useCamPay() {
       setReference(data.reference);
       setStatus("polling");
 
-      // Poll every 5s, max 60s
       let attempts = 0;
-      const interval = setInterval(async () => {
+
+      intervalRef.current = setInterval(async () => {
         attempts++;
         try {
           const statusRes = await fetch(
@@ -56,23 +67,26 @@ export function useCamPay() {
           const statusData = await statusRes.json();
 
           if (statusData.status === "SUCCESSFUL") {
-            clearInterval(interval);
+            clearPolling();
             setStatus("success");
             onSuccess?.();
-          } else if (statusData.status === "FAILED" || attempts >= 12) {
-            clearInterval(interval);
+          } else if (statusData.status === "FAILED") {
+            clearPolling();
             setStatus("failed");
-            setError(
-              statusData.status === "FAILED"
-                ? "Payment was declined."
-                : "Payment timed out.",
-            );
+            setError("Payment was declined.");
             onFailure?.();
+          } else if (attempts >= 12) {
+            clearPolling();
+            setStatus("error");
+            setError(
+              "Timed out waiting for confirmation. Check your transaction history.",
+            );
+            // intentionally NOT calling onFailure — payment may still process
           }
         } catch {
-          clearInterval(interval);
+          clearPolling();
           setStatus("error");
-          setError("Could not verify payment.");
+          setError("Could not verify payment status.");
         }
       }, 5000);
     } catch (err: any) {
@@ -82,6 +96,7 @@ export function useCamPay() {
   };
 
   const reset = () => {
+    clearPolling();
     setStatus("idle");
     setReference(null);
     setError(null);

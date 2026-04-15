@@ -9,41 +9,10 @@ const BASE_URL =
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
 export async function getCamPayToken(): Promise<string> {
-  // Return cached token if still valid (tokens expire in 24h, we refresh after 23h)
-  if (tokenCache && Date.now() < tokenCache.expiresAt) {
-    console.log("🔑 Using cached CamPay token");
-    return tokenCache.token;
-  }
-
-  console.log("🔑 Fetching new CamPay token...");
-
-  const res = await fetch(`${BASE_URL}/token/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: process.env.CAMPAY_USERNAME,
-      password: process.env.CAMPAY_PASSWORD,
-    }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    console.error("❌ CamPay token error:", error);
-    throw new Error("Failed to get CamPay token");
-  }
-
-  const data = await res.json();
-
-  // Cache token for 23 hours
-  tokenCache = {
-    token: data.token,
-    expiresAt: Date.now() + 23 * 60 * 60 * 1000,
-  };
-
-  console.log("✅ CamPay token obtained");
-  return data.token;
+  const token = process.env.CAMPAY_PAYMENT_TOKEN;
+  if (!token) throw new Error("CAMPAY_PAYMENT_TOKEN is not set");
+  return token;
 }
-
 /**
  * Format phone number to CamPay standard (237XXXXXXXXX)
  * Accepts: 6XXXXXXXX, 237XXXXXXXX, +237XXXXXXXX, 06XXXXXXXX
