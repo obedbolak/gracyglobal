@@ -35,6 +35,9 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      // data-profile-menu must be on the wrapper that contains BOTH
+      // the toggle button AND the dropdown div — so clicks inside either
+      // are correctly ignored and links/buttons inside can fire.
       if (!target.closest("[data-profile-menu]")) {
         setShowProfileMenu(false);
       }
@@ -129,8 +132,8 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* Profile icon — always visible, dropdown changes based on auth state */}
-            <div className="relative">
+            {/* ✅ FIX: data-profile-menu wraps BOTH the button AND the dropdown */}
+            <div className="relative" data-profile-menu>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="relative p-2 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
@@ -162,7 +165,6 @@ export default function Navbar() {
                 >
                   {isAuthenticated ? (
                     <>
-                      {/* Authenticated: show user info + dashboard + sign out */}
                       <div
                         className="p-3 border-b"
                         style={{ borderColor: "var(--divider)" }}
@@ -219,7 +221,6 @@ export default function Navbar() {
                     </>
                   ) : (
                     <>
-                      {/* Unauthenticated: show login + sign up */}
                       <div
                         className="p-3 border-b"
                         style={{ borderColor: "var(--divider)" }}
@@ -277,6 +278,7 @@ export default function Navbar() {
               )}
             </div>
           </div>
+
           {/* Mobile toggle */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle size="sm" />
