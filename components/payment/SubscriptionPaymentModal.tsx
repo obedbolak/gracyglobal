@@ -172,7 +172,7 @@ export default function SubscriptionPaymentModal({
           </button>
         </div>
 
-        {/* Content */}
+        {/* Content lets make it work*/}
         <div className="p-6 space-y-6">
           {/* Plan Summary */}
           <div className="bg-gray-50 rounded-lg p-4">
