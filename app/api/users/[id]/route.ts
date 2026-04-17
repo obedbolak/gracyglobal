@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        subscription: {
+        subscriptions: {
           include: { plan: true },
         },
         _count: {
