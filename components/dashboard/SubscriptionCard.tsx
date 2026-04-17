@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSubscription } from "@/context/SubscriptionContext";
+import { useSubscription } from "@/hooks/useSubscription"; // ✅ correct import
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Crown, Calendar, Zap, Users, AlertCircle } from "lucide-react";
@@ -29,7 +29,7 @@ export default function SubscriptionCard() {
     );
   }
 
-  const currentPlan = getCurrentPlanCode();
+  const currentPlan = getCurrentPlanCode() ?? "free"; // ✅ null-safe
   const sessionsRemaining = getSessionsRemaining();
   const planDisplayName = subscription?.plan?.name || "Free";
 
@@ -177,11 +177,13 @@ export default function SubscriptionCard() {
       )}
 
       {/* Payment Modal */}
-      {subscription && (
+      {isPaymentModalOpen && subscription && (
         <SubscriptionPaymentModal
-          isOpen={isPaymentModalOpen}
+          planCode={subscription.plan.planCode} // ✅ correct props
+          paymentMethodId="MOBILE_MONEY_MTN"
+          onSuccess={() => setIsPaymentModalOpen(false)}
+          onError={(err) => console.error(err)}
           onClose={() => setIsPaymentModalOpen(false)}
-          subscription={subscription}
         />
       )}
     </motion.div>
