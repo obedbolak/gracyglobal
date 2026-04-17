@@ -30,19 +30,21 @@ model User {
   counselorProfile Counselor?
   jobApplications  JobApplication[]
   orders           Order[]
-  communityMembers CommunityMember[]   // was: communityMember CommunityMember?
+  communityMembers CommunityMember[] // was: communityMember CommunityMember?
   communityPosts   CommunityPost[]
   postComments     PostComment[]
   postReactions    PostReaction[]
   bookings         Booking[]
   affiliate        Affiliate?
-  subscription     Subscription?
+  subscriptions    UserSubscription[]
+  payments         Payment[]
   enrollments      Enrollment[]
   quizAttempts     QuizAttempt[]
   liveAttendances  LiveAttendance[]
   verificationOTP  VerificationOTP[]
 
-  teacherCourses Course[] @relation("TeacherCourses")  // ← ADD THIS LINE
+  teacherCourses Course[]  @relation("TeacherCourses") // ← ADD THIS LINE
+  sellerProducts Product[] @relation("SellerProducts") // ← ADD THIS
 
   @@map("users")
 }
@@ -52,7 +54,7 @@ enum UserRole {
   COUNSELOR
   ADMIN
   VOLUNTEER
-  TEACHER    // ← NEW
+  TEACHER // ← NEW
 }
 
 // ─── AUTH (NextAuth) ──────────────────────────────────────────────────────────
@@ -106,55 +108,90 @@ model VerificationOTP {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("verification_otps")
 }
 
-// ─── PLANS & SUBSCRIPTIONS ───────────────────────────────────────────────────
+// ─── NEW PRICING SYSTEM ──────────────────────────────────────────────────────
 
-model Plan {
-  id                String   @id @default(cuid())
-  name              String   @unique // "free" | "starter" | "growth" | "elite"
-  displayName       String // "Free" | "Starter" | "Growth" | "Elite / Pro"
-  description       String
-  priceMonthly      Int      @default(0) // CFA
-  priceAnnual       Int      @default(0) // CFA per month billed annually
-  pricePerSession   Int? // CFA per session (null = unlimited)
-  counselorSessions Int      @default(0) // sessions per month (0 = unlimited)
-  highlighted       Boolean  @default(false)
-  active            Boolean  @default(true)
-  sortOrder         Int      @default(0)
-  createdAt         DateTime @default(now())
+model PricingPlan {
+  id       String       @id @default(cuid())
+  planCode String       @unique // "C1", "C2", "C3", "M1", "M2", etc.
+  category PlanCategory
+  name     String // "Monthly", "Yearly", "Free", etc.
+  price    Int          @default(0) // in FCFA
+  interval PlanInterval
 
-  subscriptions Subscription[]
+  // Commission & limits
+  commissionRate Int? // percentage (null if N/A)
+  productLimit   Int? // for marketplace
+  leadLimit      Int? // for services
+  courseLimit    Int? // for teachers
 
-  @@map("plans")
+  // Features
+  features String[] // JSON array of feature strings
+
+  // Metadata
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  subscriptions UserSubscription[]
+
+  @@map("pricing_plans")
 }
 
-model Subscription {
-  id                 String              @id @default(cuid())
-  userId             String              @unique
-  planId             String
-  billing            SubscriptionBilling @default(MONTHLY)
-  status             SubscriptionStatus  @default(ACTIVE)
-  currentPeriodStart DateTime            @default(now())
-  currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean             @default(false)
-  sessionsUsed       Int                 @default(0)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan     Plan                  @relation(fields: [planId], references: [id])
-  payments SubscriptionPayment[]
-
-  @@map("subscriptions")
+enum PlanCategory {
+  COUNSELLOR
+  MARKETPLACE
+  SERVICE
+  TEACHER
+  STUDENT
 }
 
-enum SubscriptionBilling {
+enum PlanInterval {
   MONTHLY
-  ANNUAL
-  PER_SESSION
+  YEARLY
+  ONGOING // for free plans
+  PER_LEAD // for pay-per-lead
+  PER_USE // for pay-as-you-go
+}
+
+// ─── USER SUBSCRIPTIONS ──────────────────────────────────────────────────────
+
+model UserSubscription {
+  id     String @id @default(cuid())
+  userId String
+  planId String
+
+  // Status & billing
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+
+  // Usage tracking
+  sessionsUsed Int @default(0)
+  leadsUsed    Int @default(0)
+  productsUsed Int @default(0)
+  coursesUsed  Int @default(0)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     PricingPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@unique([userId, planId]) // one subscription per plan per user
+  @@index([status]) // ← ADD THIS
+  @@index([userId, status])
+  @@map("user_subscriptions")
 }
 
 enum SubscriptionStatus {
@@ -165,19 +202,47 @@ enum SubscriptionStatus {
   TRIALING
 }
 
-model SubscriptionPayment {
-  id             String        @id @default(cuid())
-  subscriptionId String
-  amount         Int // CFA
-  method         PayoutMethod
-  reference      String?
-  status         PaymentStatus @default(PENDING)
-  paidAt         DateTime?
-  createdAt      DateTime      @default(now())
+// ─── PAYMENTS ────────────────────────────────────────────────────────────────
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+model Payment {
+  id             String  @id @default(cuid())
+  userId         String
+  subscriptionId String? // null for one-time payments
 
-  @@map("subscription_payments")
+  // Payment details
+  amount    Int // in FCFA
+  currency  String        @default("XAF")
+  method    PaymentMethod
+  reference String? // transaction ID from payment provider
+
+  // Status
+  status PaymentStatus @default(PENDING)
+  paidAt DateTime?
+
+  // Metadata
+  description String?
+  metadata    Json? // store additional payment info
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  //webhooks & retries
+  webhookData   Json?
+  webhookStatus String?
+
+  // Relations
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription UserSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY_MTN
+  MOBILE_MONEY_ORANGE
+  BANK_TRANSFER
+  CARD
+  CASH
 }
 
 enum PaymentStatus {
@@ -185,9 +250,36 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+  CANCELLED
 }
 
-// ─── COMMUNITY MEMBERSHIP ────────────────────────────────────────────────────
+// ─── USAGE TRACKING (Optional but recommended) ───────────────────────────────
+
+model UsageLog {
+  id             String  @id @default(cuid())
+  userId         String
+  subscriptionId String?
+
+  // What was used
+  type        UsageType
+  quantity    Int       @default(1)
+  description String?
+
+  // Metadata
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("usage_logs")
+}
+
+enum UsageType {
+  SESSION
+  LEAD
+  PRODUCT_LISTED
+  COURSE_UPLOADED
+  COMMISSION_CHARGED
+}
 
 // ─── COUNSELORS ──────────────────────────────────────────────────────────────
 
@@ -320,6 +412,7 @@ enum ApplicationStatus {
 model Product {
   id          String   @id @default(cuid())
   name        String
+  sellerId    String? // ← ADD THIS
   description String   @db.Text
   price       Int
   images      String[]
@@ -336,6 +429,7 @@ model Product {
   createdAt   DateTime @default(now())
 
   orderItems OrderItem[]
+  seller     User?       @relation("SellerProducts", fields: [sellerId], references: [id]) // ← ADD THIS
 
   @@map("products")
 }
@@ -378,24 +472,24 @@ enum OrderStatus {
 // ─── COMMUNITY POSTS ─────────────────────────────────────────────────────────
 
 model CommunityPost {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   communityId String
-  title       String?     // optional — not all posts need a title
-  content     String?     @db.Text   // text/caption
-  category    String?     // e.g. "Announcement", "Discussion", "Resource"
-  type        PostType    @default(TEXT)
+  title       String? // optional — not all posts need a title
+  content     String?  @db.Text // text/caption
+  category    String? // e.g. "Announcement", "Discussion", "Resource"
+  type        PostType @default(TEXT)
 
   // media
-  mediaUrl    String?     // image, video, or document URL (from Cloudinary)
-  mediaType   String?     // e.g. "image/jpeg", "video/mp4", "application/pdf"
-  linkUrl     String?     // for LINK type posts
-  linkPreview Json?       // { title, description, image, url } scraped from link
+  mediaUrl    String? // image, video, or document URL (from Cloudinary)
+  mediaType   String? // e.g. "image/jpeg", "video/mp4", "application/pdf"
+  linkUrl     String? // for LINK type posts
+  linkPreview Json? // { title, description, image, url } scraped from link
 
-  tags        String[]
-  published   Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  tags      String[]
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user      User           @relation(fields: [userId], references: [id])
   community Community      @relation(fields: [communityId], references: [id])
@@ -433,16 +527,16 @@ model Community {
 
 // ── UPDATED: now links to a specific community, removed @unique on userId ──
 model CommunityMember {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
   communityId String
   role        MemberRole @default(MEMBER)
-  joinedAt    DateTime  @default(now())
+  joinedAt    DateTime   @default(now())
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, communityId])  // one membership per community per user
+  @@unique([userId, communityId]) // one membership per community per user
   @@map("community_members")
 }
 
@@ -462,7 +556,7 @@ model PostComment {
   updatedAt DateTime @updatedAt
 
   communityPost CommunityPost @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("post_comments")
 }
@@ -475,9 +569,9 @@ model PostReaction {
   type   ReactionType
 
   communityPost CommunityPost @relation("PostReactions", fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, postId, type])  // one reaction type per user per post
+  @@unique([userId, postId, type]) // one reaction type per user per post
   @@map("post_reactions")
 }
 
@@ -591,8 +685,8 @@ model Course {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-   teacherId   String?                                    // ← ADD THIS
-  teacher     User?       @relation("TeacherCourses", fields: [teacherId], references: [id])  // ← ADD THIS
+  teacherId String? // ← ADD THIS
+  teacher   User?   @relation("TeacherCourses", fields: [teacherId], references: [id]) // ← ADD THIS
 
   sections    CourseSection[]
   enrollments Enrollment[]
