@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
           reference: paymentReference,
         },
         data: {
-          status: "SUCCESSFUL",
+          status: "PAID",
         },
       });
 
