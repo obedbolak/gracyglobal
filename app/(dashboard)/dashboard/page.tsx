@@ -32,7 +32,7 @@ import {
   Check,
 } from "lucide-react";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── UPDATED Types ─────────────────────────────────────────────────────────────
 
 interface CounselorProfile {
   id: string;
@@ -45,23 +45,32 @@ interface CounselorProfile {
   bio?: string;
 }
 
-interface Plan {
+interface PricingPlan {
   id: string;
+  planCode: string;
+  category: string; // "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER" | "STUDENT"
   name: string;
-  displayName: string;
-  priceMonthly: number;
-  counselorSessions: number;
-  features?: string[];
+  price: number; // in FCFA
+  interval: string; // "MONTHLY" | "YEARLY" | "ONGOING" | "PER_LEAD"
+  commissionRate: number | null;
+  productLimit: number | null;
+  leadLimit: number | null;
+  courseLimit: number | null;
+  features: string[];
+  active: boolean;
+  sortOrder: number;
 }
 
-interface Subscription {
+interface UserSubscription {
   id: string;
   status: string;
-  billing: string;
   currentPeriodEnd: string;
   sessionsUsed: number;
+  leadsUsed: number;
+  productsUsed: number;
+  coursesUsed: number;
   cancelAtPeriodEnd: boolean;
-  plan: Plan;
+  plan: PricingPlan;
 }
 
 interface UserProfile {
@@ -75,7 +84,7 @@ interface UserProfile {
   createdAt: string;
   emailVerified?: string;
   counselorProfile?: CounselorProfile;
-  subscription?: Subscription;
+  subscriptions?: UserSubscription[]; // Changed from subscription to subscriptions
   affiliate?: {
     id: string;
     code: string;
@@ -119,6 +128,7 @@ function getPrimaryRole(roles: string[]): string {
   if (roles.includes("ADMIN")) return "ADMIN";
   if (roles.includes("COUNSELOR")) return "COUNSELOR";
   if (roles.includes("VOLUNTEER")) return "VOLUNTEER";
+  if (roles.includes("TEACHER")) return "TEACHER";
   return "USER";
 }
 
@@ -130,46 +140,87 @@ function getRoleBadgeStyle(role: string) {
       return { background: "var(--info-bg)", color: "var(--blue)" };
     case "VOLUNTEER":
       return { background: "var(--success-bg)", color: "var(--green)" };
+    case "TEACHER":
+      return {
+        background: "var(--purple-bg, rgba(99,74,221,0.1))",
+        color: "var(--purple)",
+      };
     default:
       return { background: "var(--glass-bg)", color: "var(--text-secondary)" };
   }
 }
 
-// ─── Plans Modal ───────────────────────────────────────────────────────────────
+// ─── UPDATED Plans Modal ───────────────────────────────────────────────────────
 
 interface PlansModalProps {
   open: boolean;
   onClose: () => void;
   featureName: string;
+  category: string; // "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER"
 }
 
-function PlansModal({ open, onClose, featureName }: PlansModalProps) {
-  const [plans, setPlans] = useState<Plan[]>([]);
+function PlansModal({ open, onClose, featureName, category }: PlansModalProps) {
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!open) return;
-    fetch("/api/plans")
+
+    fetch(`/api/plans?category=${category}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) setPlans(d.data ?? []);
+        if (d.success) {
+          setPlans(d.data ?? []);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, category]);
 
   if (!open) return null;
 
+  const getCategoryIcon = () => {
+    switch (category) {
+      case "COUNSELLOR":
+        return "💬";
+      case "TEACHER":
+        return "🎓";
+      case "SERVICE":
+        return "🛠️";
+      case "MARKETPLACE":
+        return "🛒";
+      default:
+        return "✨";
+    }
+  };
+
+  const getIntervalLabel = (interval: string) => {
+    switch (interval) {
+      case "MONTHLY":
+        return "/month";
+      case "YEARLY":
+        return "/year";
+      case "PER_LEAD":
+        return "/lead";
+      case "ONGOING":
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  const getFeatureLabel = (feature: string) => {
+    return feature.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   return (
-    // Backdrop
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
-      {/* Modal */}
       <div
-        className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
+        className="relative w-full max-w-3xl rounded-2xl overflow-hidden"
         style={{
           background: "var(--bg-primary, #0f0f12)",
           border: "1px solid var(--glass-border)",
@@ -195,14 +246,16 @@ function PlansModal({ open, onClose, featureName }: PlansModalProps) {
             <X className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-5 h-5 text-white opacity-90" />
-            <p className="text-white/80 text-sm font-medium">Unlock Feature</p>
+            <span className="text-2xl">{getCategoryIcon()}</span>
+            <p className="text-white/80 text-sm font-medium">
+              Choose Your Plan
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-white">
-            Get access to {featureName}
+          <h2 className="text-2xl font-bold text-white">
+            {featureName} Pricing
           </h2>
           <p className="text-white/70 text-sm mt-1">
-            Choose a plan that works for you and start using this feature today.
+            Select a plan that fits your needs. All plans in FCFA.
           </p>
         </div>
 
@@ -218,122 +271,212 @@ function PlansModal({ open, onClose, featureName }: PlansModalProps) {
           ) : plans.length === 0 ? (
             <div className="text-center py-8">
               <p style={{ color: "var(--text-secondary)" }}>
-                No plans available right now.
+                No plans available for this category yet.
               </p>
-              <Link
-                href="/plans"
-                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+              <button
+                onClick={onClose}
+                className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
                 style={{
                   background:
                     "linear-gradient(135deg, var(--purple), var(--blue))",
                 }}
-                onClick={onClose}
               >
-                View all plans
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+                Close
+              </button>
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                {plans.slice(0, 4).map((plan, i) => {
-                  const isPopular = i === 1;
-                  return (
-                    <div
-                      key={plan.id}
-                      className="p-4 rounded-xl relative"
-                      style={{
-                        background: isPopular
-                          ? "linear-gradient(135deg, rgba(var(--purple-rgb,99,74,221),0.12), rgba(var(--blue-rgb,59,130,246),0.08))"
-                          : "var(--glass-bg-subtle)",
-                        border: isPopular
-                          ? "1.5px solid var(--purple)"
-                          : "1px solid var(--divider)",
-                      }}
-                    >
-                      {isPopular && (
-                        <span
-                          className="absolute -top-3 left-4 px-2.5 py-0.5 rounded-full text-xs font-bold text-white"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, var(--purple), var(--blue))",
-                          }}
-                        >
-                          Most Popular
-                        </span>
-                      )}
-                      <p
-                        className="font-bold text-base mb-0.5"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {plan.displayName}
-                      </p>
-                      <p
-                        className="text-2xl font-bold mb-3"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {plans.map((plan, i) => {
+                const isFree = plan.price === 0;
+                const isPopular = i === 1 && !isFree; // Middle plan is usually popular
+                const isYearly = plan.interval === "YEARLY";
+
+                return (
+                  <div
+                    key={plan.id}
+                    className="p-5 rounded-xl relative flex flex-col"
+                    style={{
+                      background: isPopular
+                        ? "linear-gradient(135deg, rgba(var(--purple-rgb,99,74,221),0.15), rgba(var(--blue-rgb,59,130,246),0.1))"
+                        : "var(--glass-bg)",
+                      border: isPopular
+                        ? "2px solid var(--purple)"
+                        : "1px solid var(--divider)",
+                    }}
+                  >
+                    {isPopular && (
+                      <span
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap"
                         style={{
-                          color: isPopular
-                            ? "var(--purple)"
-                            : "var(--text-primary)",
+                          background:
+                            "linear-gradient(135deg, var(--purple), var(--blue))",
                         }}
                       >
-                        {plan.priceMonthly.toLocaleString()}{" "}
-                        <span
-                          className="text-sm font-normal"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          XAF/mo
-                        </span>
+                        ⭐ Most Popular
+                      </span>
+                    )}
+
+                    {/* Plan Name */}
+                    <div className="mb-4">
+                      <p
+                        className="text-sm font-medium mb-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {plan.name}
                       </p>
-                      {plan.counselorSessions > 0 && (
-                        <div
-                          className="flex items-center gap-1.5 text-xs mb-3"
-                          style={{ color: "var(--text-secondary)" }}
+                      <div className="flex items-baseline gap-1">
+                        <span
+                          className="text-3xl font-bold"
+                          style={{
+                            color: isPopular
+                              ? "var(--purple)"
+                              : "var(--text-primary)",
+                          }}
                         >
-                          <Check
-                            className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: "var(--green)" }}
-                          />
-                          {plan.counselorSessions} counselor session
-                          {plan.counselorSessions > 1 ? "s" : ""}/mo
+                          {isFree ? "Free" : plan.price.toLocaleString()}
+                        </span>
+                        {!isFree && (
+                          <span
+                            className="text-sm"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            FCFA{getIntervalLabel(plan.interval)}
+                          </span>
+                        )}
+                      </div>
+                      {isYearly && (
+                        <p
+                          className="text-xs mt-1"
+                          style={{ color: "var(--green)" }}
+                        >
+                          💰 Save{" "}
+                          {Math.round(
+                            (1 - plan.price / (plan.price * 1.2)) * 100,
+                          )}
+                          % vs monthly
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Key Stats */}
+                    <div className="mb-4 space-y-2">
+                      {plan.commissionRate !== null && (
+                        <div
+                          className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                          style={{ background: "var(--glass-bg-subtle)" }}
+                        >
+                          <span style={{ color: "var(--text-muted)" }}>
+                            Commission:
+                          </span>
+                          <span
+                            className="font-semibold"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {plan.commissionRate}%
+                          </span>
                         </div>
                       )}
-                      <Link
-                        href={`/plans?plan=${plan.id}`}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                        style={
-                          isPopular
-                            ? {
-                                background:
-                                  "linear-gradient(135deg, var(--purple), var(--blue))",
-                                color: "#fff",
-                              }
-                            : {
-                                background: "var(--glass-bg)",
-                                border: "1px solid var(--divider)",
-                                color: "var(--text-primary)",
-                              }
-                        }
-                        onClick={onClose}
-                      >
-                        Choose {plan.displayName}
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
+                      {plan.productLimit !== null && (
+                        <div
+                          className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                          style={{ background: "var(--glass-bg-subtle)" }}
+                        >
+                          <Package
+                            className="w-3.5 h-3.5"
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {plan.productLimit === 0
+                              ? "Unlimited"
+                              : plan.productLimit}{" "}
+                            products
+                          </span>
+                        </div>
+                      )}
+                      {plan.leadLimit !== null && (
+                        <div
+                          className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                          style={{ background: "var(--glass-bg-subtle)" }}
+                        >
+                          <Zap
+                            className="w-3.5 h-3.5"
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {plan.leadLimit} leads/month
+                          </span>
+                        </div>
+                      )}
+                      {plan.courseLimit !== null && (
+                        <div
+                          className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                          style={{ background: "var(--glass-bg-subtle)" }}
+                        >
+                          <BookOpen
+                            className="w-3.5 h-3.5"
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {plan.courseLimit === 0
+                              ? "Unlimited"
+                              : plan.courseLimit}{" "}
+                            courses
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-              <div className="text-center">
-                <Link
-                  href="/plans"
-                  className="text-sm font-semibold inline-flex items-center gap-1"
-                  style={{ color: "var(--blue)" }}
-                  onClick={onClose}
-                >
-                  See full plan comparison
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </>
+
+                    {/* Features */}
+                    <div className="flex-1 mb-5">
+                      <p
+                        className="text-xs font-semibold mb-2"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Features:
+                      </p>
+                      <ul className="space-y-1.5">
+                        {plan.features.slice(0, 5).map((feature, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-2 text-xs"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            <Check
+                              className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
+                              style={{ color: "var(--green)" }}
+                            />
+                            <span>{getFeatureLabel(feature)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* CTA Button */}
+                    <Link
+                      href={`/plans/subscribe?planCode=${plan.planCode}`}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                      style={
+                        isPopular
+                          ? {
+                              background:
+                                "linear-gradient(135deg, var(--purple), var(--blue))",
+                              color: "#fff",
+                            }
+                          : {
+                              background: "var(--glass-bg-subtle)",
+                              border: "1px solid var(--divider)",
+                              color: "var(--text-primary)",
+                            }
+                      }
+                      onClick={onClose}
+                    >
+                      {isFree ? "Get Started Free" : `Choose ${plan.name}`}
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -341,7 +484,7 @@ function PlansModal({ open, onClose, featureName }: PlansModalProps) {
   );
 }
 
-// ─── Feature Cards ─────────────────────────────────────────────────────────────
+// ─── UPDATED Feature Cards ─────────────────────────────────────────────────────
 
 interface FeatureCardsProps {
   roles: string[];
@@ -358,6 +501,7 @@ const FEATURES = [
     bg: "rgba(99,74,221,0.08)",
     href: "/teacher",
     requiredRole: "TEACHER",
+    category: "TEACHER", // Maps to PlanCategory
   },
   {
     key: "COUNSELOR",
@@ -369,6 +513,7 @@ const FEATURES = [
     bg: "rgba(59,130,246,0.08)",
     href: "/counselor",
     requiredRole: "COUNSELOR",
+    category: "COUNSELLOR", // Note: COUNSELLOR (with U) in schema
   },
   {
     key: "SERVICE",
@@ -380,6 +525,7 @@ const FEATURES = [
     bg: "rgba(34,197,94,0.08)",
     href: "/creator/services/create",
     requiredRole: "CREATOR",
+    category: "SERVICE",
   },
   {
     key: "PRODUCT",
@@ -391,16 +537,27 @@ const FEATURES = [
     bg: "rgba(245,158,11,0.08)",
     href: "/creator/products/create",
     requiredRole: "CREATOR",
+    category: "MARKETPLACE",
   },
 ];
 
 function FeatureCards({ roles }: FeatureCardsProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
 
-  const handleLockedClick = (featureTitle: string) => {
-    setActiveFeature(featureTitle);
-    setModalOpen(true);
+  const handleCardClick = (
+    featureTitle: string,
+    category: string,
+    hasAccess: boolean,
+  ) => {
+    if (!hasAccess) {
+      // Show pricing modal if no access
+      setActiveFeature(featureTitle);
+      setActiveCategory(category);
+      setModalOpen(true);
+    }
+    // If has access, the Link will navigate naturally
   };
 
   return (
@@ -440,92 +597,61 @@ function FeatureCards({ roles }: FeatureCardsProps) {
             const hasAccess =
               roles.includes(feature.requiredRole) || roles.includes("ADMIN");
 
-            return hasAccess ? (
-              <Link key={feature.key} href={feature.href}>
+            // Wrapper component to handle both link and button behavior
+            const CardContent = () => (
+              <div
+                className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
+                style={{
+                  background: hasAccess ? feature.bg : "var(--glass-bg-subtle)",
+                  border: "1px solid var(--divider)",
+                  opacity: hasAccess ? 1 : 0.75,
+                }}
+              >
                 <div
-                  className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
-                  style={{
-                    background: feature.bg,
-                    border: "1px solid var(--divider)",
-                  }}
+                  className="p-2 rounded-lg flex-shrink-0"
+                  style={{ background: "var(--glass-bg)" }}
                 >
-                  <div
-                    className="p-2 rounded-lg flex-shrink-0"
-                    style={{ background: "var(--glass-bg)" }}
-                  >
-                    <Icon
-                      className="w-5 h-5"
-                      style={{ color: feature.color }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p
-                        className="font-semibold text-sm"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {feature.title}
-                      </p>
+                  <Icon
+                    className="w-5 h-5"
+                    style={{
+                      color: hasAccess ? feature.color : "var(--text-muted)",
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p
+                      className="font-semibold text-sm"
+                      style={{
+                        color: hasAccess
+                          ? "var(--text-primary)"
+                          : "var(--text-secondary)",
+                      }}
+                    >
+                      {feature.title}
+                    </p>
+                    {hasAccess ? (
                       <CheckCircle
                         className="w-3.5 h-3.5 flex-shrink-0"
                         style={{ color: "var(--green)" }}
                       />
-                    </div>
-                    <p
-                      className="text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {feature.description}
-                    </p>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 mt-0.5 flex-shrink-0"
-                    style={{ color: "var(--text-muted)" }}
-                  />
-                </div>
-              </Link>
-            ) : (
-              <button
-                key={feature.key}
-                onClick={() => handleLockedClick(feature.title)}
-                className="text-left w-full"
-              >
-                <div
-                  className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.01] cursor-pointer opacity-75 hover:opacity-90"
-                  style={{
-                    background: "var(--glass-bg-subtle)",
-                    border: "1px solid var(--divider)",
-                  }}
-                >
-                  <div
-                    className="p-2 rounded-lg flex-shrink-0"
-                    style={{ background: "var(--glass-bg)" }}
-                  >
-                    <Icon
-                      className="w-5 h-5"
-                      style={{ color: "var(--text-muted)" }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p
-                        className="font-semibold text-sm"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {feature.title}
-                      </p>
+                    ) : (
                       <Lock
                         className="w-3 h-3 flex-shrink-0"
                         style={{ color: "var(--text-muted)" }}
                       />
-                    </div>
-                    <p
-                      className="text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {feature.description}
-                    </p>
+                    )}
                   </div>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {feature.description}
+                  </p>
+                </div>
+                {hasAccess ? (
+                  <ChevronRight
+                    className="w-4 h-4 mt-0.5 flex-shrink-0"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                ) : (
                   <span
                     className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold mt-0.5"
                     style={{
@@ -533,9 +659,25 @@ function FeatureCards({ roles }: FeatureCardsProps) {
                       color: "var(--yellow)",
                     }}
                   >
-                    Unlock
+                    View Pricing
                   </span>
-                </div>
+                )}
+              </div>
+            );
+
+            return hasAccess ? (
+              <Link key={feature.key} href={feature.href}>
+                <CardContent />
+              </Link>
+            ) : (
+              <button
+                key={feature.key}
+                onClick={() =>
+                  handleCardClick(feature.title, feature.category, false)
+                }
+                className="text-left w-full"
+              >
+                <CardContent />
               </button>
             );
           })}
@@ -546,12 +688,13 @@ function FeatureCards({ roles }: FeatureCardsProps) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         featureName={activeFeature}
+        category={activeCategory}
       />
     </>
   );
 }
 
-// ─── Counselor Card ────────────────────────────────────────────────────────────
+// ─── Counselor Card (unchanged) ────────────────────────────────────────────────
 
 function CounselorCard({ profile }: { profile: CounselorProfile }) {
   return (
@@ -687,7 +830,7 @@ function CounselorCard({ profile }: { profile: CounselorProfile }) {
   );
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -775,6 +918,11 @@ export default function DashboardPage() {
   const primaryRole = getPrimaryRole(profile.role);
   const isCounselor = profile.role.includes("COUNSELOR");
 
+  // Get active subscription (if any)
+  const activeSubscription = profile.subscriptions?.find(
+    (sub) => sub.status === "ACTIVE",
+  );
+
   const recentActivities = [
     {
       id: "1",
@@ -826,7 +974,7 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      {/* ── Feature Cards (replaces profile summary) ── */}
+      {/* ── Feature Cards ── */}
       <FeatureCards roles={profile.role} />
 
       {/* ── Stats ── */}
@@ -999,7 +1147,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Counselor profile card — only shown to counselors */}
+          {/* Counselor profile card */}
           {isCounselor && profile.counselorProfile && (
             <div>
               <h2
@@ -1022,7 +1170,7 @@ export default function DashboardPage() {
             >
               Subscription
             </h2>
-            <SubscriptionStatus subscription={profile.subscription} />
+            <SubscriptionStatus subscription={activeSubscription} />
           </div>
           <RecentActivity activities={recentActivities} />
         </div>

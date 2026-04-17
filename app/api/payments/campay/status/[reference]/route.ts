@@ -15,7 +15,6 @@ export async function GET(
     }
 
     const { reference } = await params;
-
     if (!reference) {
       return NextResponse.json(
         { error: "Reference is required" },
@@ -24,30 +23,27 @@ export async function GET(
     }
 
     console.log(`🔍 Checking status for reference: ${reference}`);
-
     const result = await getTransactionStatus(reference);
-
     console.log(`📊 Transaction status:`, result);
 
     if (result.status === "SUCCESSFUL") {
       console.log(`✅ Payment successful: ${reference}`);
 
-      const payment = await prisma.subscriptionPayment.findFirst({
+      // ✅ was: prisma.subscriptionPayment → correct model is prisma.payment
+      const payment = await prisma.payment.findFirst({
         where: { reference },
         include: { subscription: true },
       });
 
       if (payment && payment.status !== "PAID") {
-        await prisma.subscriptionPayment.update({
+        await prisma.payment.update({
           where: { id: payment.id },
-          data: {
-            status: "PAID",
-            paidAt: new Date(),
-          },
+          data: { status: "PAID", paidAt: new Date() },
         });
 
-        await prisma.subscription.update({
-          where: { id: payment.subscriptionId },
+        // ✅ was: prisma.subscription → correct model is prisma.userSubscription
+        await prisma.userSubscription.update({
+          where: { id: payment.subscriptionId! },
           data: {
             status: "ACTIVE",
             currentPeriodStart: new Date(),
@@ -83,12 +79,13 @@ export async function GET(
     } else if (result.status === "FAILED") {
       console.log(`❌ Payment failed: ${reference}`);
 
-      const payment = await prisma.subscriptionPayment.findFirst({
+      // ✅ was: prisma.subscriptionPayment → correct model is prisma.payment
+      const payment = await prisma.payment.findFirst({
         where: { reference },
       });
 
       if (payment && payment.status !== "FAILED") {
-        await prisma.subscriptionPayment.update({
+        await prisma.payment.update({
           where: { id: payment.id },
           data: { status: "FAILED" },
         });
@@ -120,10 +117,7 @@ export async function GET(
   } catch (err: any) {
     console.error("❌ Status check error:", err);
     return NextResponse.json(
-      {
-        error: err.message || "Status check failed",
-        details: err.toString(),
-      },
+      { error: err.message || "Status check failed", details: err.toString() },
       { status: 500 },
     );
   }

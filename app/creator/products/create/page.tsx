@@ -18,9 +18,13 @@ export default async function CreatorProductCreatePage() {
   }
 
   // Check subscription
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId: session.user.id },
+  const subscription = await prisma.userSubscription.findFirst({
+    where: {
+      userId: session.user.id,
+      status: "ACTIVE",
+    },
     include: { plan: true },
+    orderBy: { createdAt: "desc" }, // get the most recent if multiple
   });
 
   const hasAccess =

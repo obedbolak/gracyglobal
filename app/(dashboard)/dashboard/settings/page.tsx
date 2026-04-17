@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import ImageUpload from "@/components/shared/ImageUpload";
 
+interface UserPaymentMethod {
+  id: string;
+  method: string;
+  label: string;
+  details?: { value?: string } | null;
+  isDefault: boolean;
+  createdAt: string;
+}
+
 interface UserProfile {
   id: string;
   name?: string | null;
@@ -30,6 +39,7 @@ interface UserProfile {
   createdAt?: string;
   emailVerified?: string | null;
   role?: string[];
+  paymentMethods?: UserPaymentMethod[];
 }
 
 export default function DashboardSettingsPage() {
@@ -39,7 +49,15 @@ export default function DashboardSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<UserPaymentMethod[]>([]);
+  const [newPaymentMethod, setNewPaymentMethod] = useState({
+    method: "MOBILE_MONEY_MTN",
+    label: "MTN Mobile Money",
+    value: "",
+  });
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -70,6 +88,7 @@ export default function DashboardSettingsPage() {
       if (!res.ok || !data.success)
         throw new Error(data.error || "Failed to load profile");
       setProfile(data.data);
+      setPaymentMethods(data.data.paymentMethods ?? []);
       setForm({
         name: data.data.name ?? "",
         phone: data.data.phone ?? "",
@@ -387,6 +406,245 @@ export default function DashboardSettingsPage() {
                 </p>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* Saved Payment Methods */}
+        <section
+          className="p-4 sm:p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2
+                className="font-semibold text-sm sm:text-base"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Saved Payment Methods
+              </h2>
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Save a payment method here and choose it when subscribing or
+                checking out.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {paymentMethods.length > 0 ? (
+              paymentMethods.map((method) => (
+                <div
+                  key={method.id}
+                  className="rounded-2xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] p-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p
+                        className="font-semibold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {method.label}
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {method.method.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {method.isDefault && (
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-[var(--success-bg)] text-[var(--green)]">
+                          Default
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm("Delete this payment method?"))
+                            return;
+                          setPaymentLoading(true);
+                          try {
+                            const res = await fetch(
+                              `/api/user/payment-methods/${method.id}`,
+                              {
+                                method: "DELETE",
+                              },
+                            );
+                            const data = await res.json();
+                            if (!res.ok || !data.success) {
+                              throw new Error(data.error || "Failed to delete");
+                            }
+                            setPaymentMethods((prev) =>
+                              prev.filter((item) => item.id !== method.id),
+                            );
+                            setPaymentError("");
+                          } catch (err: any) {
+                            setPaymentError(err.message);
+                          } finally {
+                            setPaymentLoading(false);
+                          }
+                        }}
+                        className="text-xs font-semibold text-[var(--red)] hover:text-[var(--red-dark)]"
+                        disabled={paymentLoading}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    className="mt-3 text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {method.details?.value ?? "No details saved"}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div
+                className="rounded-2xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] p-4 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                No payment methods on file. Add one below to save for future
+                payments.
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Payment type
+              </label>
+              <select
+                value={newPaymentMethod.method}
+                onChange={(e) => {
+                  const method = e.target.value;
+                  const defaultLabels: Record<string, string> = {
+                    MOBILE_MONEY_MTN: "MTN Mobile Money",
+                    MOBILE_MONEY_ORANGE: "Orange Mobile Money",
+                    BANK_TRANSFER: "Bank Transfer",
+                    CARD: "Card",
+                    CASH: "Cash",
+                  };
+                  setNewPaymentMethod((prev) => ({
+                    ...prev,
+                    method,
+                    label: prev.label || defaultLabels[method] || method,
+                  }));
+                }}
+                className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none"
+              >
+                <option value="MOBILE_MONEY_MTN">MTN Mobile Money</option>
+                <option value="MOBILE_MONEY_ORANGE">Orange Mobile Money</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CARD">Card</option>
+                <option value="CASH">Cash</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Label
+              </label>
+              <input
+                value={newPaymentMethod.label}
+                onChange={(e) =>
+                  setNewPaymentMethod((prev) => ({
+                    ...prev,
+                    label: e.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none"
+                placeholder="e.g. MTN Mobile Money"
+              />
+            </div>
+
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Phone / details
+              </label>
+              <input
+                value={newPaymentMethod.value}
+                onChange={(e) =>
+                  setNewPaymentMethod((prev) => ({
+                    ...prev,
+                    value: e.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--divider)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none"
+                placeholder="e.g. +237 6XX XXX XXX"
+              />
+            </div>
+          </div>
+
+          {paymentError && (
+            <div className="rounded-2xl bg-[var(--error-bg)] border border-[var(--error-border)] p-4 text-sm text-[var(--error-text)]">
+              {paymentError}
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-xs text-[var(--text-muted)]">
+              Saved payment methods can be used during checkout or when
+              subscribing to a plan.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                setPaymentError("");
+                if (!newPaymentMethod.value.trim()) {
+                  setPaymentError("Please enter payment details.");
+                  return;
+                }
+                setPaymentLoading(true);
+                try {
+                  const res = await fetch("/api/user/payment-methods", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      method: newPaymentMethod.method,
+                      label: newPaymentMethod.label,
+                      value: newPaymentMethod.value.trim(),
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok || !data.success) {
+                    throw new Error(
+                      data.error || "Failed to save payment method",
+                    );
+                  }
+                  setPaymentMethods((prev) => [data.data, ...prev]);
+                  setNewPaymentMethod({
+                    method: "MOBILE_MONEY_MTN",
+                    label: "MTN Mobile Money",
+                    value: "",
+                  });
+                } catch (err: any) {
+                  setPaymentError(err.message);
+                } finally {
+                  setPaymentLoading(false);
+                }
+              }}
+              disabled={paymentLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--purple)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {paymentLoading ? "Saving..." : "Save payment method"}
+            </button>
           </div>
         </section>
 

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "seed": "tsx prisma/seed-communities.ts",
+    "seed": "tsx prisma/seed-plans.ts",
     "init-plans": "tsx scripts/init-plans.ts"
   },
   "dependencies": {

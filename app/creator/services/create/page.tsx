@@ -14,13 +14,18 @@ export default async function CreatorServiceCreatePage() {
     redirect("/login?callbackUrl=/creator/services/create");
   }
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId: session.user.id },
+  // ✅ findFirst because userId is not unique alone (@@unique is [userId, planId])
+  const subscription = await prisma.userSubscription.findFirst({
+    where: {
+      userId: session.user.id,
+      status: "ACTIVE",
+    },
     include: { plan: true },
+    orderBy: { createdAt: "desc" },
   });
 
   const hasAccess =
-    subscription?.status === "ACTIVE" &&
+    subscription &&
     CREATOR_PLANS.includes(subscription.plan.name.toLowerCase());
 
   if (!hasAccess) {

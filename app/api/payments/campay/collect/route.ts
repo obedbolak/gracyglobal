@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
       subscriptionId,
     } = await req.json();
 
-    // Validation
     if (!amount || !phone || !description) {
       return NextResponse.json(
         { error: "amount, phone, and description are required" },
@@ -28,12 +27,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Environment-based validation
     const isDemoMode = process.env.CAMPAY_ENV !== "PROD";
-    const minAmount = isDemoMode ? 5 : 100; // 5 XAF in demo, 100 XAF in prod
-    const maxAmount = isDemoMode ? 25 : 10000000; // 25 XAF in demo, 10M in prod
+    const minAmount = isDemoMode ? 5 : 100;
+    const maxAmount = isDemoMode ? 25 : 10000000;
 
-    // Validate minimum amount
     if (amount < minAmount) {
       return NextResponse.json(
         {
@@ -45,7 +42,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate maximum amount
     if (amount > maxAmount) {
       return NextResponse.json(
         {
@@ -57,7 +53,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Format phone number (handles 6XXXXXXXX, 237XXXXXXXX, etc.)
     let formattedPhone: string;
     try {
       formattedPhone = formatPhoneNumber(phone);
@@ -74,7 +69,6 @@ export async function POST(req: NextRequest) {
       environment: isDemoMode ? "DEMO" : "PRODUCTION",
     });
 
-    // Initiate collection with CamPay
     const result = await initiateCollection({
       amount: parseInt(amount),
       from: formattedPhone,
@@ -84,21 +78,25 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ CamPay response:", result);
 
-    // Store payment record for subscription
+    // ✅ was: prisma.subscriptionPayment → prisma.payment
+    // ✅ added: userId (required field)
+    // ✅ fixed: method "MOBILE_MONEY" → "MOBILE_MONEY_MTN" (must match PaymentMethod enum)
+    // ✅ added: description (good practice, optional but in schema)
     if (subscriptionId) {
-      await prisma.subscriptionPayment.create({
+      await prisma.payment.create({
         data: {
+          userId: session.user.id,
           subscriptionId,
           amount: parseInt(amount),
-          method: "MOBILE_MONEY",
+          method: "MOBILE_MONEY_MTN", // ⚠️ or MOBILE_MONEY_ORANGE — detect from phone if needed
           reference: result.reference,
           status: "PENDING",
+          description,
         },
       });
-      console.log(`💾 Subscription payment created: ${result.reference}`);
+      console.log(`💾 Payment record created: ${result.reference}`);
     }
 
-    // Update order status if orderId provided
     if (orderId) {
       await prisma.order.update({
         where: { id: orderId },

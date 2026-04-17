@@ -27,8 +27,15 @@ export default async function UserDetailsPage({ params }: PageProps) {
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
-      subscription: {
+      subscriptions: {
+        where: {
+          status: {
+            in: ["ACTIVE", "TRIALING"],
+          },
+        },
         include: { plan: true },
+        take: 1,
+        orderBy: { createdAt: "desc" },
       },
       enrollments: {
         include: { course: true },
@@ -63,6 +70,12 @@ export default async function UserDetailsPage({ params }: PageProps) {
     notFound();
   }
 
+  // Transform subscriptions array to single subscription for easier access
+  const userWithSubscription = {
+    ...user,
+    subscription: user.subscriptions[0] || null,
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -76,16 +89,16 @@ export default async function UserDetailsPage({ params }: PageProps) {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-              User Details
+              {userWithSubscription.name || "Unnamed User"}
             </h1>
             <p className="text-[var(--text-muted)] mt-1">
-              View and manage user information
+              {userWithSubscription.email}
             </p>
           </div>
         </div>
 
         <Link
-          href={`/admin/users/${user.id}/edit`}
+          href={`/admin/users/${userWithSubscription.id}/edit`}
           className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
         >
           <Edit className="w-5 h-5" />
@@ -105,7 +118,8 @@ export default async function UserDetailsPage({ params }: PageProps) {
           ) : (
             <div className="w-24 h-24 rounded-full bg-[var(--purple-faint)] flex items-center justify-center">
               <span className="text-3xl font-bold text-[var(--purple)]">
-                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                {userWithSubscription.name?.charAt(0) ||
+                  userWithSubscription.email.charAt(0).toUpperCase()}
               </span>
             </div>
           )}
@@ -114,23 +128,25 @@ export default async function UserDetailsPage({ params }: PageProps) {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-                  {user.name || "No name provided"}
+                  {userWithSubscription.name || "No name provided"}
                 </h2>
-                <p className="text-[var(--text-muted)] mt-1">{user.email}</p>
+                <p className="text-[var(--text-muted)] mt-1">
+                  {userWithSubscription.email}
+                </p>
               </div>
 
               <span
                 className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  hasRole(user.role, "ADMIN")
-                    ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
-                    : hasRole(user.role, "COUNSELOR")
-                      ? "bg-[var(--blue-faint)] text-[var(--blue)]"
-                      : hasRole(user.role, "VOLUNTEER")
-                        ? "bg-[var(--purple-faint)] text-[var(--purple)]"
-                        : "badge-neutral"
+                  hasRole(userWithSubscription.role, "ADMIN")
+                    ? "bg-[var(--badge-scarlet-bg)] text-[var(--badge-scarlet-text)]"
+                    : hasRole(userWithSubscription.role, "COUNSELOR")
+                      ? "bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)]"
+                      : hasRole(userWithSubscription.role, "VOLUNTEER")
+                        ? "bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)]"
+                        : "bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-text)]"
                 }`}
               >
-                {roleLabel(user.role)}
+                {roleLabel(userWithSubscription.role)}
               </span>
             </div>
 
@@ -156,7 +172,10 @@ export default async function UserDetailsPage({ params }: PageProps) {
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4 text-[var(--text-muted)]" />
                 <span className="text-[var(--text-secondary)]">
-                  Joined {new Date(user.createdAt).toLocaleDateString()}
+                  Joined{" "}
+                  {new Date(
+                    userWithSubscription.createdAt,
+                  ).toLocaleDateString()}
                 </span>
               </div>
             </div>
@@ -171,7 +190,7 @@ export default async function UserDetailsPage({ params }: PageProps) {
             <GraduationCap className="w-8 h-8 text-[var(--purple)]" />
             <div>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
-                {user._count.enrollments}
+                {userWithSubscription._count.enrollments}
               </p>
               <p className="text-sm text-[var(--text-muted)]">
                 Courses Enrolled
@@ -185,7 +204,7 @@ export default async function UserDetailsPage({ params }: PageProps) {
             <CalendarIcon className="w-8 h-8 text-[var(--blue)]" />
             <div>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
-                {user._count.bookings}
+                {userWithSubscription._count.bookings}
               </p>
               <p className="text-sm text-[var(--text-muted)]">Bookings Made</p>
             </div>
@@ -197,7 +216,7 @@ export default async function UserDetailsPage({ params }: PageProps) {
             <ShoppingBag className="w-8 h-8 text-[var(--scarlet)]" />
             <div>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
-                {user._count.orders}
+                {userWithSubscription._count.orders}
               </p>
               <p className="text-sm text-[var(--text-muted)]">Orders Placed</p>
             </div>
@@ -209,7 +228,7 @@ export default async function UserDetailsPage({ params }: PageProps) {
             <Shield className="w-8 h-8 text-[var(--purple)]" />
             <div>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
-                {user._count.jobApplications}
+                {userWithSubscription._count.jobApplications}
               </p>
               <p className="text-sm text-[var(--text-muted)]">
                 Job Applications
@@ -224,37 +243,37 @@ export default async function UserDetailsPage({ params }: PageProps) {
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           Subscription
         </h3>
-        {user.subscription ? (
+        {userWithSubscription.subscription ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)]">Plan</span>
               <span className="font-semibold text-[var(--text-primary)]">
-                {user.subscription.plan.displayName}
+                {userWithSubscription.subscription.plan.name}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)]">Billing</span>
               <span className="font-medium text-[var(--text-secondary)]">
-                {user.subscription.billing}
+                {userWithSubscription.subscription.plan.interval}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)]">Status</span>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  user.subscription.status === "ACTIVE"
+                  userWithSubscription.subscription.status === "ACTIVE"
                     ? "bg-[var(--success-bg)] text-[var(--success-text)]"
                     : "bg-[var(--error-bg)] text-[var(--error-text)]"
                 }`}
               >
-                {user.subscription.status}
+                {userWithSubscription.subscription.status}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)]">Period Ends</span>
               <span className="font-medium text-[var(--text-secondary)]">
                 {new Date(
-                  user.subscription.currentPeriodEnd,
+                  userWithSubscription.subscription.currentPeriodEnd,
                 ).toLocaleDateString()}
               </span>
             </div>
@@ -300,9 +319,9 @@ export default async function UserDetailsPage({ params }: PageProps) {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       enrollment.status === "ACTIVE"
-                        ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+                        ? "bg-[var(--info-bg)] text-[var(--info-text)]"
                         : enrollment.status === "COMPLETED"
-                          ? "bg-[var(--blue-faint)] text-[var(--blue)]"
+                          ? "bg-[var(--success-bg)] text-[var(--success-text)]"
                           : "bg-[var(--error-bg)] text-[var(--error-text)]"
                     }`}
                   >

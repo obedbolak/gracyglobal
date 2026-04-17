@@ -21,6 +21,7 @@ export async function GET() {
         phone: true,
         createdAt: true,
         emailVerified: true,
+
         counselorProfile: {
           select: {
             id: true,
@@ -33,6 +34,7 @@ export async function GET() {
             bio: true,
           },
         },
+
         affiliate: {
           select: {
             id: true,
@@ -43,27 +45,50 @@ export async function GET() {
             pendingPayout: true,
           },
         },
-        // ✅ Include subscription with plan so dashboard can gate features
-        subscription: {
+
+        paymentMethods: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            method: true,
+            label: true,
+            details: true,
+            isDefault: true,
+            createdAt: true,
+          },
+        },
+
+        // ✅ Updated: was `subscription` (singular), now `subscriptions` (array)
+        subscriptions: {
+          where: { status: "ACTIVE" }, // only return active ones
           select: {
             id: true,
             status: true,
-            billing: true,
-            currentPeriodEnd: true,
             currentPeriodStart: true,
-            sessionsUsed: true,
+            currentPeriodEnd: true,
             cancelAtPeriodEnd: true,
+            sessionsUsed: true,
+            leadsUsed: true,
+            productsUsed: true,
+            coursesUsed: true,
             plan: {
               select: {
                 id: true,
+                planCode: true,
                 name: true,
-                displayName: true,
-                priceMonthly: true,
-                counselorSessions: true,
+                category: true,
+                price: true,
+                interval: true,
+                features: true,
+                commissionRate: true,
+                productLimit: true,
+                leadLimit: true,
+                courseLimit: true,
               },
             },
           },
         },
+
         _count: {
           select: {
             bookings: true,
@@ -96,19 +121,23 @@ export async function PATCH(req: NextRequest) {
         return err("Name must be at least 2 characters");
       }
     }
+
     if (phone !== undefined && phone !== null) {
       if (typeof phone !== "string" || !/^\+?[\d\s\-()]{7,20}$/.test(phone)) {
         return err("Invalid phone number format");
       }
     }
+
     if (country !== undefined && typeof country !== "string") {
       return err("Country must be a string");
     }
+
     if (image !== undefined && image !== null) {
       if (typeof image !== "string" || !image.startsWith("http")) {
         return err("Image must be a valid URL");
       }
     }
+
     if (password !== undefined && password !== null) {
       if (typeof password !== "string" || password.length < 8) {
         return err("Password must be at least 8 characters");

@@ -35,7 +35,7 @@ export function useCamPay() {
     phone: string;
     description: string;
     externalReference?: string;
-    onSuccess?: () => void;
+    onSuccess?: (transactionId: string) => void; // ✅ Fixed
     onFailure?: () => void;
   }) => {
     if (status === "pending" || status === "polling") return;
@@ -57,7 +57,6 @@ export function useCamPay() {
       setStatus("polling");
 
       let attempts = 0;
-
       intervalRef.current = setInterval(async () => {
         attempts++;
         try {
@@ -69,7 +68,7 @@ export function useCamPay() {
           if (statusData.status === "SUCCESSFUL") {
             clearPolling();
             setStatus("success");
-            onSuccess?.();
+            onSuccess?.(data.reference); // ✅ Fixed
           } else if (statusData.status === "FAILED") {
             clearPolling();
             setStatus("failed");
@@ -81,7 +80,6 @@ export function useCamPay() {
             setError(
               "Timed out waiting for confirmation. Check your transaction history.",
             );
-            // intentionally NOT calling onFailure — payment may still process
           }
         } catch {
           clearPolling();

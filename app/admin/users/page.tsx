@@ -15,18 +15,36 @@ export default async function UsersPage() {
           orders: true,
         },
       },
-      subscription: {
+      subscriptions: {
+        where: {
+          status: {
+            in: ["ACTIVE", "TRIALING"],
+          },
+        },
         include: { plan: true },
+        take: 1, // Get the most recent active subscription
+        orderBy: { createdAt: "desc" },
       },
     },
   });
 
+  // Transform the data to have a single subscription field for easier access
+  const usersWithSubscription = users.map((user) => ({
+    ...user,
+    subscription: user.subscriptions[0] || null,
+  }));
+
   const stats = {
-    total: users.length,
-    admins: users.filter((u) => u.role.includes("ADMIN")).length,
-    counselors: users.filter((u) => u.role.includes("COUNSELOR")).length,
-    volunteers: users.filter((u) => u.role.includes("VOLUNTEER")).length,
-    users: users.filter((u) => u.role.includes("USER")).length,
+    total: usersWithSubscription.length,
+    admins: usersWithSubscription.filter((u) => u.role.includes("ADMIN"))
+      .length,
+    counselors: usersWithSubscription.filter((u) =>
+      u.role.includes("COUNSELOR"),
+    ).length,
+    volunteers: usersWithSubscription.filter((u) =>
+      u.role.includes("VOLUNTEER"),
+    ).length,
+    users: usersWithSubscription.filter((u) => u.role.includes("USER")).length,
   };
 
   return (
@@ -153,7 +171,7 @@ export default async function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--divider)]">
-              {users.map((user) => (
+              {usersWithSubscription.map((user) => (
                 <tr
                   key={user.id}
                   className="hover:bg-[var(--glass-bg-subtle)] transition-colors"
@@ -195,12 +213,12 @@ export default async function UsersPage() {
                             key={role}
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
                               role === "ADMIN"
-                                ? "bg-[var(--scarlet-faint)] text-[var(--scarlet)]"
+                                ? "bg-[var(--badge-scarlet-bg)] text-[var(--badge-scarlet-text)]"
                                 : role === "COUNSELOR"
-                                  ? "bg-[var(--blue-faint)] text-[var(--blue)]"
+                                  ? "bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)]"
                                   : role === "VOLUNTEER"
-                                    ? "bg-[var(--purple-faint)] text-[var(--purple)]"
-                                    : "badge-neutral"
+                                    ? "bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)]"
+                                    : "bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-text)]"
                             }`}
                           >
                             {role}
@@ -215,7 +233,7 @@ export default async function UsersPage() {
                     {user.subscription ? (
                       <div>
                         <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {user.subscription.plan.displayName}
+                          {user.subscription.plan.name}
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
                           {user.subscription.status}
