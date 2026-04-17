@@ -10,6 +10,8 @@ const ALLOWED_METHODS = [
   "CASH",
 ] as const;
 
+type AllowedMethod = (typeof ALLOWED_METHODS)[number];
+
 export async function GET() {
   const user = await requireUser();
   if (!user) return err("Unauthorized", 401);
@@ -29,7 +31,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { method, label, value } = body;
 
-  if (typeof method !== "string" || !ALLOWED_METHODS.includes(method)) {
+  if (
+    typeof method !== "string" ||
+    !ALLOWED_METHODS.includes(method as AllowedMethod)
+  ) {
     return err("Invalid payment method");
   }
 
@@ -48,7 +53,7 @@ export async function POST(req: NextRequest) {
   const paymentMethod = await prisma.userPaymentMethod.create({
     data: {
       userId: user.id,
-      method,
+      method: method as AllowedMethod, // ✅ cast after validation
       label: label.trim(),
       details: { value: value.trim() },
       isDefault: existingCount === 0,
