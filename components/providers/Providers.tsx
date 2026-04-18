@@ -14,7 +14,10 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider>
+    <SessionProvider
+      refetchInterval={5 * 60} // re-check session every 5 min
+      refetchOnWindowFocus={false} // don't refetch just because user switched tabs
+    >
       <AuthProvider>
         <CommunityMembershipProvider>
           <SubscriptionProvider>

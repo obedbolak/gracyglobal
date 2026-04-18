@@ -1,31 +1,34 @@
 // middleware.ts
-
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { UserRole } from "@prisma/client";
+
+const PUBLIC_AUTH_PATHS = ["/login", "/register"];
+
+const ROLE_PROTECTED_PATHS: { prefix: string; role: UserRole }[] = [
+  { prefix: "/admin", role: UserRole.ADMIN },
+  { prefix: "/teacher", role: UserRole.TEACHER },
+  { prefix: "/counselor", role: UserRole.COUNSELOR },
+];
 
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Role-based redirects
+    // ── Redirect authenticated users away from auth pages ────────────────
+    if (token && PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // ── Role-based route protection ──────────────────────────────────────
     if (token) {
-      const role = token.role as string | string[];
-      const roles = Array.isArray(role) ? role : [role];
+      const roles = token.role as UserRole[];
 
-      // Non-admin trying to access admin pages
-      if (!roles.includes("ADMIN") && path.startsWith("/admin")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-
-      // Non-teacher trying to access teacher pages
-      if (!roles.includes("TEACHER") && path.startsWith("/teacher")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-
-      // Non-counselor trying to access counselor pages
-      if (!roles.includes("COUNSELOR") && path.startsWith("/counselor")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
+      for (const { prefix, role } of ROLE_PROTECTED_PATHS) {
+        if (path.startsWith(prefix) && !roles.includes(role)) {
+          return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
       }
     }
 
@@ -33,17 +36,28 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+
+        // Allow unauthenticated access to public auth pages
+        if (PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
+          return true;
+        }
+
+        // All other matched routes require a token
+        return !!token;
+      },
     },
   },
 );
 
-// Protect these routes
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
     "/counselor/:path*",
     "/teacher/:path*",
+    "/login",
+    "/register",
   ],
 };

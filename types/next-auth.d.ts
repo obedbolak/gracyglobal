@@ -1,25 +1,31 @@
 // types/next-auth.d.ts
-// Extends NextAuth's built-in types to include id and role
-
-import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
-import { JWT } from "next-auth/jwt";
+import { DefaultSession, DefaultUser } from "next-auth";
+import { JWT as DefaultJWT } from "next-auth/jwt";
+import { UserRole } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: string | string[];
+      role: UserRole[];
+      name: string | null;
+      email: string;
+      image: string | null | undefined;
     } & DefaultSession["user"];
   }
 
   interface User extends DefaultUser {
-    role: string | string[];
+    role: UserRole[];
   }
 }
 
 declare module "next-auth/jwt" {
-  interface JWT {
+  interface JWT extends DefaultJWT {
     id: string;
-    role: string | string[];
+    role: UserRole[];
+    rolesFetchedAt?: number;
+    name?: string | null;
+    email?: string;
+    picture?: string | null;
   }
 }
