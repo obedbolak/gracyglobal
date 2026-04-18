@@ -105,7 +105,6 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.name = user.name;
-        session.user.email = token.email ?? undefined;
         token.picture = user.image;
         token.role = (user as any).role ?? [UserRole.USER];
         token.rolesFetchedAt = Date.now(); // ✅ Track when we last fetched
