@@ -995,7 +995,7 @@ export default function SubscriptionPage() {
         )}
       </div>
 
-      {/* ── Payment Modal ─────────────────────────────────────────────────── */}
+      {/* ── Payment Modal  that makes sense for paid plans ──────────────────────────────────────────────────── */}
       {pendingPayment && (
         <SubscriptionPaymentModal
           planCode={pendingPayment.planCode}
