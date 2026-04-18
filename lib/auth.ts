@@ -13,10 +13,9 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // ✅ Only update session once per day
+    updateAge: 24 * 60 * 60, // Only update session once per day
   },
 
-  // ✅ Explicit cookie config for persistence
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -25,7 +24,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 30 * 24 * 60 * 60, // 30 days - matches session maxAge
+        maxAge: 30 * 24 * 60 * 60, // 30 days — matches session maxAge
       },
     },
   },
@@ -47,7 +46,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
-        // ✅ Select only what you need
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           select: {
@@ -86,14 +84,13 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-      // ✅ Ensure Google users get default role
       profile(profile) {
         return {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          role: [UserRole.USER], // ✅ Default role for Google OAuth
+          role: [UserRole.USER], // Default role for Google OAuth
         };
       },
     }),
@@ -101,29 +98,35 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user, trigger, session }) {
+      // Track whether this is a fresh sign-in to avoid double DB fetch
+      const justSignedIn = !!user;
+
       // ── First sign-in: attach user data to token ──────────────────────
-      if (user) {
+      if (justSignedIn) {
         token.id = user.id;
         token.name = user.name;
+        // FIX: removed `session.user.email = ...` — session is undefined here
         token.picture = user.image;
-        token.role = (user as any).role ?? [UserRole.USER];
-        token.rolesFetchedAt = Date.now(); // ✅ Track when we last fetched
+        token.role = (user as any).role?.length
+          ? (user as any).role
+          : [UserRole.USER];
+        token.rolesFetchedAt = Date.now();
       }
 
-      // ── Manual session update triggered (e.g. after role change) ──────
-      // Call: update() from useSession() to trigger this
+      // ── Manual session update (e.g. after role change) ────────────────
+      // Trigger with: update() from useSession()
       if (trigger === "update" && session?.role) {
         token.role = session.role;
         token.rolesFetchedAt = Date.now();
       }
 
-      // ── Refresh roles from DB every 1 hour only ────────────────────────
-      // ✅ NOT on every request — this was your main performance issue
+      // ── Refresh roles from DB every 1 hour ────────────────────────────
+      // FIX: skip when justSignedIn — avoids double DB fetch on login
       const ONE_HOUR = 60 * 60 * 1000;
       const lastFetched = (token.rolesFetchedAt as number) ?? 0;
       const shouldRefresh = Date.now() - lastFetched > ONE_HOUR;
 
-      if (token.id && shouldRefresh) {
+      if (token.id && shouldRefresh && !justSignedIn) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -136,14 +139,15 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (dbUser) {
-            token.role = dbUser.role;
+            // FIX: fall back to [USER] if DB role array is empty (e.g. Google OAuth users)
+            token.role = dbUser.role?.length ? dbUser.role : [UserRole.USER];
             token.name = dbUser.name;
             token.picture = dbUser.image;
             token.email = dbUser.email;
             token.rolesFetchedAt = Date.now();
           }
         } catch (error) {
-          // ✅ Don't crash if DB is unreachable — use cached token data
+          // Don't crash if DB is unreachable — use cached token data
           console.error("[JWT] Failed to refresh user from DB:", error);
         }
       }
@@ -164,10 +168,8 @@ export const authOptions: NextAuthOptions = {
   },
 
   events: {
-    // ✅ Clean up expired sessions from DB (for OAuth users)
     async signOut({ token }) {
       if (token?.id) {
-        // Optional: log signout or clear any server-side cache
         console.log(`[Auth] User signed out: ${token.id}`);
       }
     },
