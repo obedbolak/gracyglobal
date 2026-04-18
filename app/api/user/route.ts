@@ -60,7 +60,6 @@ export async function GET() {
 
         // ✅ Updated: was `subscription` (singular), now `subscriptions` (array)
         subscriptions: {
-          where: { status: "ACTIVE" }, // only return active ones
           select: {
             id: true,
             status: true,

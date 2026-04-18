@@ -523,7 +523,7 @@ const FEATURES = [
     icon: Wrench,
     color: "var(--green)",
     bg: "rgba(34,197,94,0.08)",
-    href: "/creator/services/create",
+    href: "/dashboard/creator?tab=services", // ✅ CHANGED
     requiredRole: "CREATOR",
     category: "SERVICE",
   },
@@ -535,7 +535,7 @@ const FEATURES = [
     icon: Package,
     color: "var(--yellow, #f59e0b)",
     bg: "rgba(245,158,11,0.08)",
-    href: "/creator/products/create",
+    href: "/dashboard/creator?tab=products", // ✅ CHANGED
     requiredRole: "CREATOR",
     category: "MARKETPLACE",
   },
@@ -918,10 +918,10 @@ export default function DashboardPage() {
   const primaryRole = getPrimaryRole(profile.role);
   const isCounselor = profile.role.includes("COUNSELOR");
 
-  // Get active subscription (if any)
-  const activeSubscription = profile.subscriptions?.find(
-    (sub) => sub.status === "ACTIVE",
-  );
+  // Get active subscription (prioritize ACTIVE, then TRIALING, then others)
+  const activeSubscription =
+    profile.subscriptions?.find((sub) => sub.status === "ACTIVE") ||
+    profile.subscriptions?.[0];
 
   const recentActivities = [
     {

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader } from "lucide-react";
+import { X, Loader2, Phone, CheckCircle, AlertTriangle } from "lucide-react";
 import { useCamPay } from "@/hooks/useCamPay";
+import { Button } from "@/components/ui/button";
 
 interface SubscriptionPaymentModalProps {
   planCode: string;
+  subscriptionId?: string;
   paymentMethodId: string;
   phone?: string;
   onSuccess: (transactionId: string) => void;
@@ -25,6 +27,7 @@ interface Plan {
 
 export default function SubscriptionPaymentModal({
   planCode,
+  subscriptionId,
   paymentMethodId,
   phone: initialPhone,
   onSuccess,
@@ -72,41 +75,45 @@ export default function SubscriptionPaymentModal({
     setPhoneError("");
 
     try {
-      // First create the subscription
-      const subscriptionRes = await fetch("/api/plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planCode: plan.planCode,
-          paymentMethodId,
-        }),
-      });
+      let subId = subscriptionId;
 
-      const subscriptionData = await subscriptionRes.json();
+      // If no existing subscription, create one
+      if (!subId) {
+        const subscriptionRes = await fetch("/api/plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planCode: plan.planCode,
+            paymentMethodId,
+          }),
+        });
 
-      if (!subscriptionRes.ok || !subscriptionData.success) {
-        throw new Error(
-          subscriptionData.error || "Failed to create subscription",
-        );
+        const subscriptionData = await subscriptionRes.json();
+
+        if (!subscriptionRes.ok || !subscriptionData.success) {
+          throw new Error(
+            subscriptionData.error || "Failed to create subscription",
+          );
+        }
+
+        subId = subscriptionData.data.subscription.id;
       }
 
-      const { subscription, payment } = subscriptionData.data;
-
-      // Now process the payment
+      // Process payment
       await pay({
         amount: plan.price,
         phone: phone.trim(),
         description: `Payment for ${plan.name} - ${plan.category}`,
-        externalReference: subscription.id,
+        externalReference: subId,
         onSuccess: async (transactionId: string) => {
           try {
-            // Confirm payment and activate subscription
+            // Confirm payment
             const confirmRes = await fetch("/api/payments/confirm", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                subscriptionId: subscription.id,
-                transactionId,
+                subscriptionId: subId,
+                paymentReference: transactionId,
                 status: "SUCCESSFUL",
               }),
             });
@@ -131,8 +138,8 @@ export default function SubscriptionPaymentModal({
         },
       });
     } catch (err: any) {
-      console.error("Subscription creation error:", err);
-      onError(err.message || "Failed to create subscription");
+      console.error("Payment error:", err);
+      onError(err.message || "Failed to process payment");
       reset();
     }
   };
@@ -142,11 +149,29 @@ export default function SubscriptionPaymentModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-          <div className="flex items-center justify-center">
-            <Loader className="w-6 h-6 animate-spin mr-2" />
-            <span>Loading plan details...</span>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{
+          background: "var(--modal-backdrop)",
+          backdropFilter: "var(--modal-blur)",
+        }}
+      >
+        <div
+          className="rounded-2xl max-w-md w-full p-6"
+          style={{
+            background: "var(--modal-bg)",
+            border: "1px solid var(--modal-border)",
+            boxShadow: "var(--modal-shadow)",
+          }}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <Loader2
+              className="w-6 h-6 animate-spin"
+              style={{ color: "var(--blue)" }}
+            />
+            <span style={{ color: "var(--text-primary)" }}>
+              Loading plan details...
+            </span>
           </div>
         </div>
       </div>
@@ -156,71 +181,199 @@ export default function SubscriptionPaymentModal({
   if (!plan) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background: "var(--modal-backdrop)",
+        backdropFilter: "var(--modal-blur)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl max-w-md w-full overflow-hidden"
+        style={{
+          background: "var(--modal-bg)",
+          border: "1px solid var(--modal-border)",
+          boxShadow: "var(--modal-shadow)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div
+          className="p-6 pb-4 flex items-center justify-between border-b"
+          style={{ borderColor: "var(--divider)" }}
+        >
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
             Complete Payment
           </h2>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            className="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              color: "var(--text-secondary)",
+            }}
           >
-            <X size={24} />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content lets make it work*/}
+        {/* Content */}
         <div className="p-6 space-y-6">
           {/* Plan Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              border: "1px solid var(--divider)",
+            }}
+          >
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Plan:</span>
-              <span className="font-semibold text-gray-900">{plan.name}</span>
+              <span style={{ color: "var(--text-secondary)" }}>Plan:</span>
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {plan.name}
+              </span>
             </div>
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Category:</span>
-              <span className="font-semibold text-gray-900">
+              <span style={{ color: "var(--text-secondary)" }}>Category:</span>
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {plan.category}
               </span>
             </div>
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Interval:</span>
-              <span className="font-semibold text-gray-900">
+              <span style={{ color: "var(--text-secondary)" }}>Interval:</span>
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {plan.interval}
               </span>
             </div>
-            <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between">
-              <span className="text-gray-900 font-semibold">Total Amount:</span>
-              <span className="text-2xl font-bold text-green-600">
+            <div
+              className="border-t mt-3 pt-3 flex justify-between"
+              style={{ borderColor: "var(--divider)" }}
+            >
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Total Amount:
+              </span>
+              <span
+                className="text-2xl font-bold"
+                style={{ color: "var(--success-text)" }}
+              >
                 {plan.price ? plan.price.toLocaleString() : "0"} XAF
               </span>
             </div>
           </div>
 
+          {/* Phone Input */}
+          <div>
+            <label
+              className="flex items-center gap-2 text-sm font-medium mb-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Phone className="w-4 h-4" />
+              Mobile Money Number
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError("");
+              }}
+              placeholder="e.g., 237679123456"
+              className="glass-input w-full px-4 py-3 text-sm"
+              disabled={isLoading}
+              style={{
+                background: "var(--input-bg)",
+                border: phoneError
+                  ? "1px solid var(--error-border)"
+                  : "1px solid var(--input-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+            {phoneError && (
+              <p
+                className="text-xs mt-1.5 flex items-center gap-1"
+                style={{ color: "var(--error-text)" }}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                {phoneError}
+              </p>
+            )}
+            <p
+              className="text-xs mt-1.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Format: 237XXXXXXXXX (country code + number, no spaces)
+            </p>
+          </div>
+
           {/* Error Message */}
           {paymentError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-700 text-sm">{paymentError}</p>
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--error-bg)",
+                border: "1px solid var(--error-border)",
+              }}
+            >
+              <AlertTriangle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--error-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--error-text)" }}>
+                {paymentError}
+              </p>
             </div>
           )}
 
           {/* Success Message */}
           {isSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-green-700 text-sm">
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--success-bg)",
+                border: "1px solid var(--success-border)",
+              }}
+            >
+              <CheckCircle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--success-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--success-text)" }}>
                 Payment successful! Your subscription has been activated.
               </p>
             </div>
           )}
 
-          {/* Status Messages */}
+          {/* Loading Status */}
           {isLoading && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
-              <Loader size={16} className="animate-spin" />
-              <p className="text-blue-700 text-sm">
+            <div
+              className="rounded-lg p-3 flex items-center gap-2"
+              style={{
+                background: "var(--info-bg)",
+                border: "1px solid var(--info-border)",
+              }}
+            >
+              <Loader2
+                className="w-4 h-4 animate-spin"
+                style={{ color: "var(--info-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--info-text)" }}>
                 {status === "pending"
                   ? "Initiating payment..."
                   : "Waiting for payment confirmation..."}
@@ -228,41 +381,58 @@ export default function SubscriptionPaymentModal({
             </div>
           )}
 
-          {/* Payment Method Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
-              <span className="text-blue-600">💡</span>{" "}
-              <strong>Payment Methods:</strong> MTN Mobile Money, Orange Money,
-              Card (via CamPay)
+          {/* Payment Info */}
+          <div
+            className="rounded-lg p-3"
+            style={{
+              background: "var(--info-bg)",
+              border: "1px solid var(--info-border)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--info-text)" }}>
+              💳 <strong>Supported:</strong> MTN Mobile Money, Orange Money
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button
+        <div
+          className="flex gap-3 p-6 border-t"
+          style={{
+            borderColor: "var(--divider)",
+            background: "var(--glass-bg-subtle)",
+          }}
+        >
+          <Button
+            variant="outline"
+            size="lg"
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="lg"
             onClick={handlePayment}
-            disabled={isLoading || isSuccess}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+            disabled={isLoading || isSuccess || !phone}
+            className="flex-1"
           >
             {isSuccess ? (
-              "Done"
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Done
+              </>
             ) : isLoading ? (
               <>
-                <Loader size={16} className="animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Processing...
               </>
             ) : (
-              "Pay Now"
+              `Pay ${plan.price.toLocaleString()} XAF`
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -124,12 +124,19 @@ export default function SubscriptionStatus({
           color: "var(--error-text)",
           bg: "var(--error-bg)",
         };
+      case "EXPIRED":
+        return {
+          icon: AlertCircle,
+          text: "Expired",
+          color: "var(--error-text)",
+          bg: "var(--error-bg)",
+        };
       case "TRIALING":
         return {
           icon: Sparkles,
-          text: "Trial",
-          color: "var(--purple)",
-          bg: "rgba(99,74,221,0.1)",
+          text: "Pending Payment",
+          color: "var(--yellow)",
+          bg: "var(--warning-bg)",
         };
       default:
         return {
