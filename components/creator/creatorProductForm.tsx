@@ -16,7 +16,6 @@ import {
   type CategoryGroup,
   type ProductCategory,
 } from "@/data/products";
-import SubscriptionPaymentModal from "@/components/payment/SubscriptionPaymentModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -694,21 +693,6 @@ export default function CreatorProductForm({
           </button>
         </div>
       </form>
-
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <SubscriptionPaymentModal
-          planCode="M1" // Default marketplace plan - adjust as needed
-          subscriptionId=""
-          paymentMethodId=""
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setPendingSubmit(false);
-          }}
-        />
-      )}
     </div>
   );
 }

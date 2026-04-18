@@ -1,8 +1,8 @@
 // app/(dashboard)/dashboard/creator/_components/MyStoreClient.tsx
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   Package,
@@ -253,14 +253,22 @@ export default function MyStoreClient({
   services,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const defaultTab: Tab = hasMarketplaceSub
-    ? "products"
-    : hasServiceSub
-      ? "services"
-      : "products";
+  // ── Derive initial tab from URL param ──────────────────────────────────────
+  const getTabFromParams = (): Tab => {
+    const param = searchParams.get("tab");
+    if (param === "services") return "services";
+    if (param === "products") return "products";
+    // No param — default to whichever plan they have
+    return hasMarketplaceSub
+      ? "products"
+      : hasServiceSub
+        ? "services"
+        : "products";
+  };
 
-  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+  const [activeTab, setActiveTab] = useState<Tab>(getTabFromParams);
   const [viewState, setViewState] = useState<ViewState>("list");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -268,15 +276,32 @@ export default function MyStoreClient({
     "MARKETPLACE" | "SERVICE" | null
   >(null);
 
-  // Switch tabs — always return to list
+  // Sync tab state if URL changes externally (browser back/forward)
+  useEffect(() => {
+    const param = searchParams.get("tab");
+    if (param === "services" || param === "products") {
+      setActiveTab(param);
+      setViewState("list");
+      setEditingProduct(null);
+      setEditingService(null);
+    }
+  }, [searchParams]);
+
+  // ── Switch tab + update URL ────────────────────────────────────────────────
   const switchTab = (tab: Tab) => {
     setActiveTab(tab);
     setViewState("list");
     setEditingProduct(null);
     setEditingService(null);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`/dashboard/creator?${params.toString()}`, {
+      scroll: false,
+    });
   };
 
-  // After form success — refresh server data and return to list
+  // ── Form callbacks ─────────────────────────────────────────────────────────
   const handleSuccess = () => {
     setViewState("list");
     setEditingProduct(null);
@@ -316,7 +341,7 @@ export default function MyStoreClient({
       />
 
       <div className="space-y-6">
-        {/* Header — hidden when form is open */}
+        {/* Header */}
         {!isFormView && (
           <div className="flex items-center justify-between">
             <div>
@@ -365,7 +390,7 @@ export default function MyStoreClient({
           </div>
         )}
 
-        {/* Tabs — hidden when form is open */}
+        {/* Tabs */}
         {!isFormView && (
           <div className="flex gap-1 p-1 bg-[var(--sidebar-item-hover)] rounded-xl w-fit">
             {tabs.map(({ id, label, icon: Icon, locked }) => (
@@ -450,7 +475,6 @@ export default function MyStoreClient({
             onCancel={handleCancel}
           />
         )}
-
         {viewState === "create" && activeTab === "services" && (
           <CreatorServiceForm
             onSuccess={handleSuccess}
@@ -466,7 +490,6 @@ export default function MyStoreClient({
             onCancel={handleCancel}
           />
         )}
-
         {viewState === "edit" && editingService && (
           <CreatorServiceForm
             service={editingService}

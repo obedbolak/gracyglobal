@@ -13,7 +13,6 @@ import {
   Package,
 } from "lucide-react";
 import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
-import SubscriptionPaymentModal from "@/components/payment/SubscriptionPaymentModal";
 
 const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
 const serviceGroups = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
@@ -889,21 +888,6 @@ export default function CreatorServiceForm({
           </button>
         </div>
       </form>
-
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <SubscriptionPaymentModal
-          planCode="S1" // Default service plan - adjust as needed
-          subscriptionId=""
-          paymentMethodId=""
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setPendingSubmit(false);
-          }}
-        />
-      )}
     </div>
   );
 }

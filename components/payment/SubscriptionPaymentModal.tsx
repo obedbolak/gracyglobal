@@ -1,3 +1,4 @@
+// components/payment/SubscriptionPaymentModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 
 interface SubscriptionPaymentModalProps {
   planCode: string;
-  subscriptionId?: string;
   paymentMethodId: string;
   phone?: string;
   onSuccess: (transactionId: string) => void;
@@ -27,7 +27,6 @@ interface Plan {
 
 export default function SubscriptionPaymentModal({
   planCode,
-  subscriptionId,
   paymentMethodId,
   phone: initialPhone,
   onSuccess,
@@ -48,11 +47,9 @@ export default function SubscriptionPaymentModal({
     try {
       const res = await fetch(`/api/plans?planCode=${planCode}`);
       const data = await res.json();
-
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to fetch plan details");
       }
-
       setPlan(data.data);
     } catch (err: any) {
       console.error("Failed to fetch plan:", err);
@@ -66,7 +63,6 @@ export default function SubscriptionPaymentModal({
   const handlePayment = async () => {
     if (!plan) return;
 
-    // Validate phone
     if (!phone || phone.trim().length === 0) {
       setPhoneError("Phone number is required");
       return;
@@ -75,64 +71,50 @@ export default function SubscriptionPaymentModal({
     setPhoneError("");
 
     try {
-      let subId = subscriptionId;
-
-      // If no existing subscription, create one
-      if (!subId) {
-        const subscriptionRes = await fetch("/api/plans", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planCode: plan.planCode,
-            paymentMethodId,
-          }),
-        });
-
-        const subscriptionData = await subscriptionRes.json();
-
-        if (!subscriptionRes.ok || !subscriptionData.success) {
-          throw new Error(
-            subscriptionData.error || "Failed to create subscription",
-          );
-        }
-
-        subId = subscriptionData.data.subscription.id;
-      }
-
-      // Process payment
+      // ✅ STEP 1: Pay first — nothing is written to DB until this succeeds
       await pay({
         amount: plan.price,
         phone: phone.trim(),
         description: `Payment for ${plan.name} - ${plan.category}`,
-        externalReference: subId,
+        externalReference: plan.planCode,
+
         onSuccess: async (transactionId: string) => {
           try {
-            // Confirm payment
-            const confirmRes = await fetch("/api/payments/confirm", {
+            // ✅ STEP 2: Payment confirmed — NOW create subscription + record payment
+            const subscriptionRes = await fetch("/api/plans", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                subscriptionId: subId,
-                paymentReference: transactionId,
+                planCode: plan.planCode,
+                paymentMethodId,
+                paymentReference: transactionId, // proof of payment
                 status: "SUCCESSFUL",
               }),
             });
 
-            if (!confirmRes.ok) {
-              throw new Error("Failed to confirm payment");
+            const subscriptionData = await subscriptionRes.json();
+
+            if (!subscriptionRes.ok || !subscriptionData.success) {
+              throw new Error(
+                subscriptionData.error || "Failed to activate subscription",
+              );
             }
 
+            // ✅ All done
             onSuccess(transactionId);
             reset();
             setPhone("");
           } catch (err) {
-            console.error("Error confirming payment:", err);
+            console.error("Subscription activation error:", err);
+            // Payment went through but activation failed — give user their txn ID
             onError(
-              "Payment received but failed to activate subscription. Please contact support.",
+              `Payment successful but activation failed. Please contact support with transaction ID: ${transactionId}`,
             );
           }
         },
+
         onFailure: () => {
+          // ✅ Payment failed — DB untouched, user can try again
           onError("Payment failed. Please try again.");
           reset();
         },
@@ -150,7 +132,7 @@ export default function SubscriptionPaymentModal({
   if (loading) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[2100] flex items-center justify-center p-4"
         style={{
           background: "var(--modal-backdrop)",
           backdropFilter: "var(--modal-blur)",
@@ -182,7 +164,7 @@ export default function SubscriptionPaymentModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[2100] flex items-center justify-center p-4"
       style={{
         background: "var(--modal-backdrop)",
         backdropFilter: "var(--modal-blur)",
@@ -310,8 +292,7 @@ export default function SubscriptionPaymentModal({
                 className="text-xs mt-1.5 flex items-center gap-1"
                 style={{ color: "var(--error-text)" }}
               >
-                <AlertTriangle className="w-3 h-3" />
-                {phoneError}
+                <AlertTriangle className="w-3 h-3" /> {phoneError}
               </p>
             )}
             <p
@@ -322,7 +303,7 @@ export default function SubscriptionPaymentModal({
             </p>
           </div>
 
-          {/* Error Message */}
+          {/* Payment Error */}
           {paymentError && (
             <div
               className="rounded-lg p-3 flex items-start gap-2"
@@ -341,7 +322,7 @@ export default function SubscriptionPaymentModal({
             </div>
           )}
 
-          {/* Success Message */}
+          {/* Success */}
           {isSuccess && (
             <div
               className="rounded-lg p-3 flex items-start gap-2"
@@ -360,7 +341,7 @@ export default function SubscriptionPaymentModal({
             </div>
           )}
 
-          {/* Loading Status */}
+          {/* Loading */}
           {isLoading && (
             <div
               className="rounded-lg p-3 flex items-center gap-2"
@@ -381,7 +362,7 @@ export default function SubscriptionPaymentModal({
             </div>
           )}
 
-          {/* Payment Info */}
+          {/* Info */}
           <div
             className="rounded-lg p-3"
             style={{
@@ -421,13 +402,11 @@ export default function SubscriptionPaymentModal({
           >
             {isSuccess ? (
               <>
-                <CheckCircle className="w-4 h-4" />
-                Done
+                <CheckCircle className="w-4 h-4" /> Done
               </>
             ) : isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing...
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing...
               </>
             ) : (
               `Pay ${plan.price.toLocaleString()} XAF`

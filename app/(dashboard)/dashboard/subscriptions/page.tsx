@@ -1,29 +1,28 @@
+// app/(dashboard)/dashboard/subscription/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Crown,
-  Calendar,
-  CreditCard,
-  Loader2,
+  Zap,
+  Clock,
+  XCircle,
   CheckCircle,
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  CreditCard,
   Package,
-  Zap,
-  Clock,
-  XCircle,
   BookOpen,
   Briefcase,
   ShoppingBag,
   Users,
+  Loader2,
 } from "lucide-react";
 import SubscriptionPaymentModal from "@/components/payment/SubscriptionPaymentModal";
 import { Button } from "@/components/ui/button";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Plan {
   id: string;
@@ -57,7 +56,95 @@ interface Subscription {
   payments: Payment[];
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case "ACTIVE":
+      return {
+        icon: CheckCircle,
+        text: "ACTIVE",
+        bg: "var(--success-bg)",
+        color: "var(--success-text)",
+      };
+    case "TRIALING":
+      return {
+        icon: Clock,
+        text: "PENDING PAYMENT",
+        bg: "var(--warning-bg)",
+        color: "var(--warning-text)",
+      };
+    case "PAST_DUE":
+      return {
+        icon: AlertTriangle,
+        text: "PAST DUE",
+        bg: "var(--error-bg)",
+        color: "var(--error-text)",
+      };
+    case "CANCELLED":
+    case "EXPIRED":
+      return {
+        icon: XCircle,
+        text: status,
+        bg: "var(--glass-bg)",
+        color: "var(--text-muted)",
+      };
+    default:
+      return {
+        icon: Clock,
+        text: status,
+        bg: "var(--glass-bg-subtle)",
+        color: "var(--text-secondary)",
+      };
+  }
+}
+
+function getPaymentStatusBadge(status: string) {
+  switch (status) {
+    case "PAID":
+      return { text: "Paid", color: "var(--success-text)" };
+    case "PENDING":
+      return { text: "Pending", color: "var(--warning-text)" };
+    case "FAILED":
+      return { text: "Failed", color: "var(--error-text)" };
+    default:
+      return { text: status, color: "var(--text-muted)" };
+  }
+}
+
+function getCategoryIcon(category: string) {
+  switch (category) {
+    case "COUNSELLOR":
+      return Users;
+    case "TEACHER":
+      return BookOpen;
+    case "MARKETPLACE":
+      return ShoppingBag;
+    case "SERVICE":
+      return Briefcase;
+    case "STUDENT":
+      return BookOpen;
+    default:
+      return Crown;
+  }
+}
+
+function getIntervalLabel(interval: string) {
+  switch (interval) {
+    case "MONTHLY":
+      return "per month";
+    case "YEARLY":
+      return "per year";
+    case "PER_LEAD":
+      return "per lead";
+    case "PER_USE":
+      return "per use";
+    default:
+      return "ongoing";
+  }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -67,10 +154,11 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Payment modal state
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPlanCode, setSelectedPlanCode] = useState("");
-  const [selectedSubId, setSelectedSubId] = useState("");
+  // Payment modal — tracks which plan/sub is being paid for
+  const [pendingPayment, setPendingPayment] = useState<{
+    planCode: string;
+    subId: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -81,25 +169,22 @@ export default function SubscriptionPage() {
       setError(null);
       setLoading(true);
 
-      // Fetch user's subscriptions
-      const subsRes = await fetch("/api/user/subscriptions");
-      const subsData = await subsRes.json();
+      const [subsRes, plansRes] = await Promise.all([
+        fetch("/api/user/subscriptions"),
+        fetch("/api/plans"),
+      ]);
 
+      const subsData = await subsRes.json();
       if (!subsRes.ok || !subsData.success) {
         throw new Error(subsData.error || "Failed to load subscriptions");
       }
-
       setSubscriptions(subsData.data.subscriptions || []);
 
-      // Fetch available plans
-      const plansRes = await fetch("/api/plans");
       const plansData = await plansRes.json();
-
       if (plansRes.ok && plansData.success) {
         setAvailablePlans(plansData.data.plans || []);
       }
     } catch (err: any) {
-      console.error("Failed to fetch data:", err);
       setError(err.message || "Failed to load subscription data");
     } finally {
       setLoading(false);
@@ -108,106 +193,23 @@ export default function SubscriptionPage() {
 
   const toggleExpand = (subId: string) => {
     setExpandedSubs((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(subId)) {
-        newSet.delete(subId);
-      } else {
-        newSet.add(subId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      next.has(subId) ? next.delete(subId) : next.add(subId);
+      return next;
     });
   };
 
-  const handlePaymentClick = (subscription: Subscription) => {
-    setSelectedPlanCode(subscription.plan.planCode);
-    setSelectedSubId(subscription.id);
-    setShowPaymentModal(true);
-  };
-
   const handlePaymentSuccess = async (transactionId: string) => {
-    setShowPaymentModal(false);
-    setSelectedPlanCode("");
-    setSelectedSubId("");
-    await fetchData(); // Refresh data
+    setPendingPayment(null);
+    await fetchData();
   };
 
-  const handlePaymentError = (error: string) => {
-    setError(error);
-    setShowPaymentModal(false);
+  const handlePaymentError = (err: string) => {
+    setError(err);
+    setPendingPayment(null);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return {
-          icon: CheckCircle,
-          text: "ACTIVE",
-          bg: "var(--success-bg)",
-          color: "var(--success-text)",
-        };
-      case "TRIALING":
-        return {
-          icon: Clock,
-          text: "PENDING PAYMENT",
-          bg: "var(--warning-bg)",
-          color: "var(--warning-text)",
-        };
-      case "PAST_DUE":
-        return {
-          icon: AlertTriangle,
-          text: "PAST DUE",
-          bg: "var(--error-bg)",
-          color: "var(--error-text)",
-        };
-      case "CANCELLED":
-      case "EXPIRED":
-        return {
-          icon: XCircle,
-          text: status,
-          bg: "var(--glass-bg)",
-          color: "var(--text-muted)",
-        };
-      default:
-        return {
-          icon: Clock,
-          text: status,
-          bg: "var(--glass-bg-subtle)",
-          color: "var(--text-secondary)",
-        };
-    }
-  };
-
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status) {
-      case "PAID":
-        return { text: "Paid", color: "var(--success-text)" };
-      case "PENDING":
-        return { text: "Pending", color: "var(--warning-text)" };
-      case "FAILED":
-        return { text: "Failed", color: "var(--error-text)" };
-      default:
-        return { text: status, color: "var(--text-muted)" };
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "COUNSELLOR":
-        return Users;
-      case "TEACHER":
-        return BookOpen;
-      case "MARKETPLACE":
-        return ShoppingBag;
-      case "SERVICE":
-        return Briefcase;
-      case "STUDENT":
-        return BookOpen;
-      default:
-        return Crown;
-    }
-  };
-
-  // Group subscriptions
+  // Grouped
   const activeSubscriptions = subscriptions.filter(
     (s) => s.status === "ACTIVE",
   );
@@ -255,9 +257,9 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* Active Subscriptions */}
+      {/* ── Active Subscriptions ──────────────────────────────────────────── */}
       {activeSubscriptions.length > 0 && (
-        <div>
+        <section>
           <h2
             className="text-xl font-semibold mb-4"
             style={{ color: "var(--text-primary)" }}
@@ -266,9 +268,9 @@ export default function SubscriptionPage() {
           </h2>
           <div className="space-y-3">
             {activeSubscriptions.map((sub) => {
+              const badge = getStatusBadge(sub.status);
+              const StatusIcon = badge.icon;
               const isExpanded = expandedSubs.has(sub.id);
-              const statusBadge = getStatusBadge(sub.status);
-              const StatusIcon = statusBadge.icon;
 
               return (
                 <div
@@ -279,7 +281,6 @@ export default function SubscriptionPage() {
                     border: "1px solid var(--glass-border)",
                   }}
                 >
-                  {/* Header - Always visible */}
                   <button
                     onClick={() => toggleExpand(sub.id)}
                     className="w-full p-4 flex items-center justify-between hover:opacity-80 transition-all"
@@ -310,36 +311,32 @@ export default function SubscriptionPage() {
                           className="font-semibold"
                           style={{ color: "var(--text-primary)" }}
                         >
-                          {sub.plan.name} - {sub.plan.category}
+                          {sub.plan.name} — {sub.plan.category}
                         </h3>
                         <p
                           className="text-sm"
                           style={{ color: "var(--text-muted)" }}
                         >
-                          {sub.plan.price.toLocaleString()} XAF/
-                          {sub.plan.interval}
+                          {sub.plan.price.toLocaleString()} XAF /{" "}
+                          {getIntervalLabel(sub.plan.interval)}
                         </p>
                       </div>
                     </div>
                     <span
                       className="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
-                      style={{
-                        background: statusBadge.bg,
-                        color: statusBadge.color,
-                      }}
+                      style={{ background: badge.bg, color: badge.color }}
                     >
                       <StatusIcon className="w-3 h-3" />
-                      {statusBadge.text}
+                      {badge.text}
                     </span>
                   </button>
 
-                  {/* Expanded Content */}
                   {isExpanded && (
                     <div
                       className="px-4 pb-4 space-y-4 border-t"
                       style={{ borderColor: "var(--divider)" }}
                     >
-                      {/* Billing Period */}
+                      {/* Billing period */}
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
                           <p
@@ -385,7 +382,7 @@ export default function SubscriptionPage() {
                             Features
                           </p>
                           <ul className="grid grid-cols-2 gap-2">
-                            {sub.plan.features.slice(0, 4).map((feature, i) => (
+                            {sub.plan.features.slice(0, 4).map((f, i) => (
                               <li
                                 key={i}
                                 className="flex items-center gap-2 text-xs"
@@ -395,14 +392,14 @@ export default function SubscriptionPage() {
                                   className="w-3 h-3"
                                   style={{ color: "var(--success-text)" }}
                                 />
-                                {feature}
+                                {f}
                               </li>
                             ))}
                           </ul>
                         </div>
                       )}
 
-                      {/* Payment History */}
+                      {/* Payment history */}
                       {sub.payments?.length > 0 && (
                         <div>
                           <p
@@ -413,9 +410,7 @@ export default function SubscriptionPage() {
                           </p>
                           <div className="space-y-2">
                             {sub.payments.slice(0, 3).map((payment) => {
-                              const paymentStatus = getPaymentStatusBadge(
-                                payment.status,
-                              );
+                              const ps = getPaymentStatusBadge(payment.status);
                               return (
                                 <div
                                   key={payment.id}
@@ -442,9 +437,9 @@ export default function SubscriptionPage() {
                                   </div>
                                   <span
                                     className="text-xs font-semibold"
-                                    style={{ color: paymentStatus.color }}
+                                    style={{ color: ps.color }}
                                   >
-                                    {paymentStatus.text}
+                                    {ps.text}
                                   </span>
                                 </div>
                               );
@@ -458,12 +453,12 @@ export default function SubscriptionPage() {
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Pending Payment Subscriptions */}
+      {/* ── Pending Payment ───────────────────────────────────────────────── */}
       {pendingSubscriptions.length > 0 && (
-        <div>
+        <section>
           <h2
             className="text-xl font-semibold mb-4"
             style={{ color: "var(--text-primary)" }}
@@ -472,9 +467,9 @@ export default function SubscriptionPage() {
           </h2>
           <div className="space-y-3">
             {pendingSubscriptions.map((sub) => {
+              const badge = getStatusBadge(sub.status);
+              const StatusIcon = badge.icon;
               const isExpanded = expandedSubs.has(sub.id);
-              const statusBadge = getStatusBadge(sub.status);
-              const StatusIcon = statusBadge.icon;
 
               return (
                 <div
@@ -485,7 +480,6 @@ export default function SubscriptionPage() {
                     border: "2px solid var(--warning-border)",
                   }}
                 >
-                  {/* Header */}
                   <button
                     onClick={() => toggleExpand(sub.id)}
                     className="w-full p-4 flex items-center justify-between hover:opacity-80 transition-all"
@@ -516,37 +510,33 @@ export default function SubscriptionPage() {
                           className="font-semibold"
                           style={{ color: "var(--text-primary)" }}
                         >
-                          {sub.plan.name} - {sub.plan.category}
+                          {sub.plan.name} — {sub.plan.category}
                         </h3>
                         <p
                           className="text-sm"
                           style={{ color: "var(--text-secondary)" }}
                         >
-                          {sub.plan.price.toLocaleString()} XAF/
-                          {sub.plan.interval}
+                          {sub.plan.price.toLocaleString()} XAF /{" "}
+                          {getIntervalLabel(sub.plan.interval)}
                         </p>
                       </div>
                     </div>
                     <span
                       className="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
-                      style={{
-                        background: statusBadge.bg,
-                        color: statusBadge.color,
-                      }}
+                      style={{ background: badge.bg, color: badge.color }}
                     >
                       <StatusIcon className="w-3 h-3" />
-                      {statusBadge.text}
+                      {badge.text}
                     </span>
                   </button>
 
-                  {/* Expanded Content */}
                   {isExpanded && (
                     <div
                       className="px-4 pb-4 space-y-4 border-t"
                       style={{ borderColor: "rgba(245,158,11,0.3)" }}
                     >
                       <div
-                        className="mt-4 p-3 rounded-lg flex items-start justify-between"
+                        className="mt-4 p-3 rounded-lg flex items-start justify-between gap-4"
                         style={{ background: "rgba(255,255,255,0.5)" }}
                       >
                         <div>
@@ -569,9 +559,13 @@ export default function SubscriptionPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePaymentClick(sub);
+                            setPendingPayment({
+                              planCode: sub.plan.planCode,
+                              subId: sub.id,
+                            });
                           }}
                         >
+                          <CreditCard className="w-4 h-4" />
                           Pay Now
                         </Button>
                       </div>
@@ -581,12 +575,12 @@ export default function SubscriptionPage() {
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Inactive Subscriptions */}
+      {/* ── Past Subscriptions ────────────────────────────────────────────── */}
       {inactiveSubscriptions.length > 0 && (
-        <div>
+        <section>
           <h2
             className="text-xl font-semibold mb-4"
             style={{ color: "var(--text-primary)" }}
@@ -595,9 +589,8 @@ export default function SubscriptionPage() {
           </h2>
           <div className="space-y-3">
             {inactiveSubscriptions.map((sub) => {
-              const statusBadge = getStatusBadge(sub.status);
-              const StatusIcon = statusBadge.icon;
-
+              const badge = getStatusBadge(sub.status);
+              const StatusIcon = badge.icon;
               return (
                 <div
                   key={sub.id}
@@ -634,22 +627,20 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
                   <span
-                    className="px-3 py-1 rounded-full text-xs font-semibold"
-                    style={{
-                      background: statusBadge.bg,
-                      color: statusBadge.color,
-                    }}
+                    className="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+                    style={{ background: badge.bg, color: badge.color }}
                   >
-                    {statusBadge.text}
+                    <StatusIcon className="w-3 h-3" />
+                    {badge.text}
                   </span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* No Subscriptions */}
+      {/* ── No Subscriptions ──────────────────────────────────────────────── */}
       {subscriptions.length === 0 && (
         <div
           className="p-8 rounded-2xl text-center"
@@ -674,9 +665,7 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* Available Plans Section with Full Details */}
-      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ── Available Plans ───────────────────────────────────────────────── */}
       <div
         className="rounded-2xl overflow-hidden"
         style={{
@@ -729,13 +718,8 @@ export default function SubscriptionPage() {
             className="px-5 pb-5 border-t"
             style={{ borderColor: "var(--divider)" }}
           >
-            {/* Group by category */}
-            {(() => {
-              const categories = [
-                ...new Set(availablePlans.map((p) => p.category)),
-              ];
-
-              return categories.map((category) => {
+            {[...new Set(availablePlans.map((p) => p.category))].map(
+              (category) => {
                 const categoryPlans = availablePlans.filter(
                   (p) => p.category === category,
                 );
@@ -743,7 +727,6 @@ export default function SubscriptionPage() {
 
                 return (
                   <div key={category} className="mt-6 first:mt-5">
-                    {/* Category Header */}
                     <div className="flex items-center gap-2 mb-4">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -762,16 +745,16 @@ export default function SubscriptionPage() {
                       </h3>
                     </div>
 
-                    {/* Plans Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {categoryPlans.map((plan) => {
-                        const hasSubscription = subscriptions.some(
-                          (s) => s.plan.id === plan.id,
-                        );
                         const isActive = subscriptions.some(
                           (s) => s.plan.id === plan.id && s.status === "ACTIVE",
                         );
                         const isPending = subscriptions.some(
+                          (s) =>
+                            s.plan.id === plan.id && s.status === "TRIALING",
+                        );
+                        const existingSub = subscriptions.find(
                           (s) =>
                             s.plan.id === plan.id && s.status === "TRIALING",
                         );
@@ -789,7 +772,7 @@ export default function SubscriptionPage() {
                                 : "1px solid var(--divider)",
                             }}
                           >
-                            {/* Plan Header */}
+                            {/* Icon + badges */}
                             <div className="flex items-start justify-between mb-3">
                               <div
                                 className="w-12 h-12 rounded-lg flex items-center justify-center"
@@ -808,8 +791,7 @@ export default function SubscriptionPage() {
                                     color: "var(--success-text)",
                                   }}
                                 >
-                                  <CheckCircle className="w-3 h-3" />
-                                  Active
+                                  <CheckCircle className="w-3 h-3" /> Active
                                 </span>
                               )}
                               {isPending && (
@@ -820,13 +802,12 @@ export default function SubscriptionPage() {
                                     color: "var(--warning-text)",
                                   }}
                                 >
-                                  <Clock className="w-3 h-3" />
-                                  Pending
+                                  <Clock className="w-3 h-3" /> Pending
                                 </span>
                               )}
                             </div>
 
-                            {/* Plan Name & Code */}
+                            {/* Name + code */}
                             <h4
                               className="font-bold text-lg mb-1"
                               style={{ color: "var(--text-primary)" }}
@@ -862,20 +843,14 @@ export default function SubscriptionPage() {
                                 className="text-xs mt-1"
                                 style={{ color: "var(--text-secondary)" }}
                               >
-                                {plan.interval === "MONTHLY"
-                                  ? "per month"
-                                  : plan.interval === "YEARLY"
-                                    ? "per year"
-                                    : plan.interval === "PER_LEAD"
-                                      ? "per lead"
-                                      : "ongoing"}
+                                {getIntervalLabel(plan.interval)}
                               </p>
                             </div>
 
-                            {/* Plan Limits */}
+                            {/* Limits */}
                             <div className="space-y-2 mb-4">
-                              {plan.commissionRate !== null && (
-                                <div className="flex items-center justify-between text-sm">
+                              {plan.commissionRate != null && (
+                                <div className="flex justify-between text-sm">
                                   <span
                                     style={{ color: "var(--text-secondary)" }}
                                   >
@@ -889,8 +864,8 @@ export default function SubscriptionPage() {
                                   </span>
                                 </div>
                               )}
-                              {plan.productLimit !== null && (
-                                <div className="flex items-center justify-between text-sm">
+                              {plan.productLimit != null && (
+                                <div className="flex justify-between text-sm">
                                   <span
                                     style={{ color: "var(--text-secondary)" }}
                                   >
@@ -906,8 +881,8 @@ export default function SubscriptionPage() {
                                   </span>
                                 </div>
                               )}
-                              {plan.leadLimit !== null && (
-                                <div className="flex items-center justify-between text-sm">
+                              {plan.leadLimit != null && (
+                                <div className="flex justify-between text-sm">
                                   <span
                                     style={{ color: "var(--text-secondary)" }}
                                   >
@@ -921,8 +896,8 @@ export default function SubscriptionPage() {
                                   </span>
                                 </div>
                               )}
-                              {plan.courseLimit !== null && (
-                                <div className="flex items-center justify-between text-sm">
+                              {plan.courseLimit != null && (
+                                <div className="flex justify-between text-sm">
                                   <span
                                     style={{ color: "var(--text-secondary)" }}
                                   >
@@ -941,49 +916,33 @@ export default function SubscriptionPage() {
                             </div>
 
                             {/* Features */}
-                            {plan.features && plan.features.length > 0 && (
-                              <div className="mb-4">
-                                <p
-                                  className="text-xs font-semibold mb-2"
-                                  style={{ color: "var(--text-muted)" }}
-                                >
-                                  Features:
-                                </p>
-                                <ul className="space-y-1.5">
-                                  {plan.features
-                                    .slice(0, 4)
-                                    .map((feature, i) => (
-                                      <li
-                                        key={i}
-                                        className="flex items-start gap-2 text-xs"
-                                        style={{
-                                          color: "var(--text-secondary)",
-                                        }}
-                                      >
-                                        <CheckCircle
-                                          className="w-3 h-3 flex-shrink-0 mt-0.5"
-                                          style={{
-                                            color: "var(--success-text)",
-                                          }}
-                                        />
-                                        <span className="leading-tight">
-                                          {feature}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  {plan.features.length > 4 && (
-                                    <li
-                                      className="text-xs"
-                                      style={{ color: "var(--text-muted)" }}
-                                    >
-                                      +{plan.features.length - 4} more features
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
+                            {plan.features?.length > 0 && (
+                              <ul className="space-y-1.5 mb-4">
+                                {plan.features.slice(0, 4).map((f, i) => (
+                                  <li
+                                    key={i}
+                                    className="flex items-start gap-2 text-xs"
+                                    style={{ color: "var(--text-secondary)" }}
+                                  >
+                                    <CheckCircle
+                                      className="w-3 h-3 flex-shrink-0 mt-0.5"
+                                      style={{ color: "var(--success-text)" }}
+                                    />
+                                    <span className="leading-tight">{f}</span>
+                                  </li>
+                                ))}
+                                {plan.features.length > 4 && (
+                                  <li
+                                    className="text-xs"
+                                    style={{ color: "var(--text-muted)" }}
+                                  >
+                                    +{plan.features.length - 4} more features
+                                  </li>
+                                )}
+                              </ul>
                             )}
 
-                            {/* Subscribe Button */}
+                            {/* CTA */}
                             {isActive ? (
                               <Button
                                 variant="outline"
@@ -991,36 +950,36 @@ export default function SubscriptionPage() {
                                 className="w-full"
                                 disabled
                               >
-                                <CheckCircle className="w-4 h-4" />
-                                Current Plan
+                                <CheckCircle className="w-4 h-4" /> Current Plan
                               </Button>
-                            ) : isPending ? (
+                            ) : isPending && existingSub ? (
                               <Button
                                 variant="default"
                                 size="lg"
                                 className="w-full"
-                                onClick={() => {
-                                  const sub = subscriptions.find(
-                                    (s) => s.plan.id === plan.id,
-                                  );
-                                  if (sub) handlePaymentClick(sub);
-                                }}
+                                onClick={() =>
+                                  setPendingPayment({
+                                    planCode: plan.planCode,
+                                    subId: existingSub.id,
+                                  })
+                                }
                               >
-                                <CreditCard className="w-4 h-4" />
-                                Complete Payment
+                                <CreditCard className="w-4 h-4" /> Complete
+                                Payment
                               </Button>
                             ) : (
                               <Button
                                 variant="default"
                                 size="lg"
                                 className="w-full"
-                                onClick={() => {
-                                  setSelectedPlanCode(plan.planCode);
-                                  setSelectedSubId("");
-                                  setShowPaymentModal(true);
-                                }}
+                                onClick={() =>
+                                  setPendingPayment({
+                                    planCode: plan.planCode,
+                                    subId: "",
+                                  })
+                                }
                               >
-                                Subscribe Now
+                                Subscribe Now{" "}
                                 <ChevronRight className="w-4 h-4" />
                               </Button>
                             )}
@@ -1030,25 +989,20 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
                 );
-              });
-            })()}
+              },
+            )}
           </div>
         )}
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && selectedPlanCode && (
+      {/* ── Payment Modal ─────────────────────────────────────────────────── */}
+      {pendingPayment && (
         <SubscriptionPaymentModal
-          planCode={selectedPlanCode}
-          subscriptionId={selectedSubId}
-          paymentMethodId=""
+          planCode={pendingPayment.planCode}
+          paymentMethodId="MOBILE_MONEY"
           onSuccess={handlePaymentSuccess}
           onError={handlePaymentError}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setSelectedPlanCode("");
-            setSelectedSubId("");
-          }}
+          onClose={() => setPendingPayment(null)}
         />
       )}
     </div>
