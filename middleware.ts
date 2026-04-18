@@ -1,49 +1,76 @@
 // middleware.ts
-
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { getRoleHome, hasRole, normalizeRoles } from "@/lib/roleHelpers";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+const PUBLIC_AUTH_PATHS = ["/login", "/register"];
+
+const ROLE_PROTECTED_PATHS = [
+  { prefix: "/admin", role: "ADMIN" },
+  { prefix: "/teacher", role: "TEACHER" },
+  { prefix: "/counselor", role: "COUNSELOR" },
+  { prefix: "/volunteer", role: "VOLUNTEER" },
+];
 
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    const roles = normalizeRoles(token?.role);
 
-    // Role-based redirects
+    // ── Logged-in user hits /login or /register ───────────────────────
+    if (token && PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
+      const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+      const destination =
+        callbackUrl && !callbackUrl.includes("/login")
+          ? callbackUrl
+          : getRoleHome(roles);
+      return NextResponse.redirect(new URL(destination, req.url));
+    }
+
+    // ── Role-based route protection ───────────────────────────────────
     if (token) {
-      const role = token.role as string | string[];
-      const roles = Array.isArray(role) ? role : [role];
-
-      // Non-admin trying to access admin pages
-      if (!roles.includes("ADMIN") && path.startsWith("/admin")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-
-      // Non-teacher trying to access teacher pages
-      if (!roles.includes("TEACHER") && path.startsWith("/teacher")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-
-      // Non-counselor trying to access counselor pages
-      if (!roles.includes("COUNSELOR") && path.startsWith("/counselor")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
+      for (const { prefix, role } of ROLE_PROTECTED_PATHS) {
+        if (path.startsWith(prefix) && !hasRole(roles, role)) {
+          return NextResponse.redirect(new URL(getRoleHome(roles), req.url));
+        }
       }
     }
 
     return NextResponse.next();
   },
   {
+    // FIX: must match the cookie name in auth.ts exactly —
+    // otherwise withAuth can't read the token and treats every
+    // user as unauthenticated → redirect loop back to /login
+    cookies: {
+      sessionToken: {
+        name: isProduction
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      },
+    },
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        if (PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) return true;
+        if (path.startsWith("/api/auth")) return true;
+        return !!token;
+      },
     },
   },
 );
 
-// Protect these routes
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
     "/counselor/:path*",
     "/teacher/:path*",
+    "/volunteer/:path*",
+    "/login",
+    "/register",
   ],
 };

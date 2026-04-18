@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
 
@@ -16,15 +18,21 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60, // Only update session once per day
   },
 
+  // FIX: cookie name must match what NextAuth expects per environment.
+  // In production with secure:true, the __Secure- prefix is required.
+  // Hardcoding "next-auth.session-token" in production means middleware
+  // looks for __Secure-next-auth.session-token but finds nothing → loop.
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: isProduction
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 30 * 24 * 60 * 60, // 30 days — matches session maxAge
+        secure: isProduction,
+        maxAge: 30 * 24 * 60 * 60, // 30 days
       },
     },
   },
@@ -76,7 +84,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           image: user.image,
-          role: user.role, // UserRole[] from Prisma
+          role: user.role,
         };
       },
     }),
@@ -90,7 +98,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          role: [UserRole.USER], // Default role for Google OAuth
+          role: [UserRole.USER],
         };
       },
     }),
@@ -98,14 +106,12 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Track whether this is a fresh sign-in to avoid double DB fetch
       const justSignedIn = !!user;
 
       // ── First sign-in: attach user data to token ──────────────────────
       if (justSignedIn) {
         token.id = user.id;
         token.name = user.name;
-        // FIX: removed `session.user.email = ...` — session is undefined here
         token.picture = user.image;
         token.role = (user as any).role?.length
           ? (user as any).role
@@ -114,14 +120,12 @@ export const authOptions: NextAuthOptions = {
       }
 
       // ── Manual session update (e.g. after role change) ────────────────
-      // Trigger with: update() from useSession()
       if (trigger === "update" && session?.role) {
         token.role = session.role;
         token.rolesFetchedAt = Date.now();
       }
 
       // ── Refresh roles from DB every 1 hour ────────────────────────────
-      // FIX: skip when justSignedIn — avoids double DB fetch on login
       const ONE_HOUR = 60 * 60 * 1000;
       const lastFetched = (token.rolesFetchedAt as number) ?? 0;
       const shouldRefresh = Date.now() - lastFetched > ONE_HOUR;
@@ -130,16 +134,10 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: {
-              role: true,
-              name: true,
-              image: true,
-              email: true,
-            },
+            select: { role: true, name: true, image: true, email: true },
           });
 
           if (dbUser) {
-            // FIX: fall back to [USER] if DB role array is empty (e.g. Google OAuth users)
             token.role = dbUser.role?.length ? dbUser.role : [UserRole.USER];
             token.name = dbUser.name;
             token.picture = dbUser.image;
@@ -147,7 +145,6 @@ export const authOptions: NextAuthOptions = {
             token.rolesFetchedAt = Date.now();
           }
         } catch (error) {
-          // Don't crash if DB is unreachable — use cached token data
           console.error("[JWT] Failed to refresh user from DB:", error);
         }
       }
@@ -176,5 +173,5 @@ export const authOptions: NextAuthOptions = {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === "development",
+  debug: !isProduction,
 };
