@@ -1,10 +1,15 @@
-// middleware.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+
+// ✅ No Prisma import — define values locally
+const UserRole = {
+  ADMIN: "ADMIN",
+  TEACHER: "TEACHER",
+  COUNSELOR: "COUNSELOR",
+} as const;
+type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 const PUBLIC_AUTH_PATHS = ["/login", "/register"];
-
 const ROLE_PROTECTED_PATHS: { prefix: string; role: UserRole }[] = [
   { prefix: "/admin", role: UserRole.ADMIN },
   { prefix: "/teacher", role: UserRole.TEACHER },
@@ -16,15 +21,12 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // ── Redirect authenticated users away from auth pages ────────────────
     if (token && PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    // ── Role-based route protection ──────────────────────────────────────
     if (token) {
       const roles = token.role as UserRole[];
-
       for (const { prefix, role } of ROLE_PROTECTED_PATHS) {
         if (path.startsWith(prefix) && !roles.includes(role)) {
           return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -38,13 +40,7 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
-
-        // Allow unauthenticated access to public auth pages
-        if (PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
-          return true;
-        }
-
-        // All other matched routes require a token
+        if (PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) return true;
         return !!token;
       },
     },

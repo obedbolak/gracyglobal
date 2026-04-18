@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Save, Loader2, Plus, Trash2 } from "lucide-react";
+import { UserRole } from "@prisma/client"; // ✅ Fine here — not edge runtime
 
 interface CourseForm {
   title: string;
@@ -45,7 +46,7 @@ export default function AdminCourseEditPage({
   const isNew = id === "new";
 
   useEffect(() => {
-    if (session?.user?.role && !session.user.role.includes("ADMIN")) {
+    if (!session?.user?.role?.includes(UserRole.ADMIN)) {
       router.push("/dashboard");
       return;
     }
