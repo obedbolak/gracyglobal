@@ -6,12 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Save, 
-  Loader2,
-  Plus,
-  Trash2
-} from "lucide-react";
+import { Save, Loader2, Plus, Trash2 } from "lucide-react";
 
 interface CourseForm {
   title: string;
@@ -25,7 +20,11 @@ interface CourseForm {
   featured: boolean;
 }
 
-export default function AdminCourseEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminCourseEditPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
@@ -46,7 +45,7 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
   const isNew = id === "new";
 
   useEffect(() => {
-    if (session?.user?.role !== "ADMIN") {
+    if (session?.user?.role && !session.user.role.includes("ADMIN")) {
       router.push("/dashboard");
       return;
     }
@@ -112,7 +111,9 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
             {isNew ? "Create Course" : "Edit Course"}
           </h1>
           <p className="text-gray-600 mt-1">
-            {isNew ? "Add a new course to the platform" : "Update course details"}
+            {isNew
+              ? "Add a new course to the platform"
+              : "Update course details"}
           </p>
         </div>
 
@@ -137,7 +138,9 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                 </label>
                 <textarea
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
                   placeholder="Course description..."
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -152,7 +155,9 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                   </label>
                   <Input
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
+                    }
                     placeholder="Technology"
                     required
                   />
@@ -164,7 +169,9 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                   </label>
                   <select
                     value={form.level}
-                    onChange={(e) => setForm({ ...form, level: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, level: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="BEGINNER">Beginner</option>
@@ -180,7 +187,9 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                 </label>
                 <Input
                   value={form.thumbnail}
-                  onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, thumbnail: e.target.value })
+                  }
                   placeholder="https://example.com/image.jpg"
                 />
               </div>
@@ -190,10 +199,18 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                   <input
                     type="checkbox"
                     checked={form.isFree}
-                    onChange={(e) => setForm({ ...form, isFree: e.target.checked, price: e.target.checked ? 0 : form.price })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        isFree: e.target.checked,
+                        price: e.target.checked ? 0 : form.price,
+                      })
+                    }
                     className="rounded"
                   />
-                  <span className="text-sm font-medium text-gray-700">Free Course</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Free Course
+                  </span>
                 </label>
 
                 {!form.isFree && (
@@ -201,7 +218,12 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                     <Input
                       type="number"
                       value={form.price}
-                      onChange={(e) => setForm({ ...form, price: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          price: parseInt(e.target.value) || 0,
+                        })
+                      }
                       placeholder="Price in CFA"
                       min="0"
                     />
@@ -214,20 +236,28 @@ export default function AdminCourseEditPage({ params }: { params: Promise<{ id: 
                   <input
                     type="checkbox"
                     checked={form.published}
-                    onChange={(e) => setForm({ ...form, published: e.target.checked })}
+                    onChange={(e) =>
+                      setForm({ ...form, published: e.target.checked })
+                    }
                     className="rounded"
                   />
-                  <span className="text-sm font-medium text-gray-700">Published</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Published
+                  </span>
                 </label>
 
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={form.featured}
-                    onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+                    onChange={(e) =>
+                      setForm({ ...form, featured: e.target.checked })
+                    }
                     className="rounded"
                   />
-                  <span className="text-sm font-medium text-gray-700">Featured</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Featured
+                  </span>
                 </label>
               </div>
             </div>
