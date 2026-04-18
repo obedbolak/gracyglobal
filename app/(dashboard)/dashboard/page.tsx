@@ -500,8 +500,9 @@ const FEATURES = [
     color: "var(--purple)",
     bg: "rgba(99,74,221,0.08)",
     href: "/teacher",
+    type: "role" as const, // ← needs role check → show plans modal if locked
     requiredRole: "TEACHER",
-    category: "TEACHER", // Maps to PlanCategory
+    category: "TEACHER",
   },
   {
     key: "COUNSELOR",
@@ -512,8 +513,9 @@ const FEATURES = [
     color: "var(--blue)",
     bg: "rgba(59,130,246,0.08)",
     href: "/counselor",
+    type: "role" as const, // ← needs role check → show plans modal if locked
     requiredRole: "COUNSELOR",
-    category: "COUNSELLOR", // Note: COUNSELLOR (with U) in schema
+    category: "COUNSELLOR",
   },
   {
     key: "SERVICE",
@@ -523,8 +525,9 @@ const FEATURES = [
     icon: Wrench,
     color: "var(--green)",
     bg: "rgba(34,197,94,0.08)",
-    href: "/dashboard/creator?tab=services", // ✅ CHANGED
-    requiredRole: "CREATOR",
+    href: "/dashboard/creator?tab=services",
+    type: "link" as const, // ← always navigates, My Store page handles the lock
+    requiredRole: null,
     category: "SERVICE",
   },
   {
@@ -535,8 +538,9 @@ const FEATURES = [
     icon: Package,
     color: "var(--yellow, #f59e0b)",
     bg: "rgba(245,158,11,0.08)",
-    href: "/dashboard/creator?tab=products", // ✅ CHANGED
-    requiredRole: "CREATOR",
+    href: "/dashboard/creator?tab=products",
+    type: "link" as const, // ← always navigates, My Store page handles the lock
+    requiredRole: null,
     category: "MARKETPLACE",
   },
 ];
@@ -545,20 +549,6 @@ function FeatureCards({ roles }: FeatureCardsProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
-
-  const handleCardClick = (
-    featureTitle: string,
-    category: string,
-    hasAccess: boolean,
-  ) => {
-    if (!hasAccess) {
-      // Show pricing modal if no access
-      setActiveFeature(featureTitle);
-      setActiveCategory(category);
-      setModalOpen(true);
-    }
-    // If has access, the Link will navigate naturally
-  };
 
   return (
     <>
@@ -594,10 +584,14 @@ function FeatureCards({ roles }: FeatureCardsProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
-            const hasAccess =
-              roles.includes(feature.requiredRole) || roles.includes("ADMIN");
 
-            // Wrapper component to handle both link and button behavior
+            // "link" type features are always accessible — My Store handles the subscription lock internally
+            const hasAccess =
+              feature.type === "link" ||
+              roles.includes("ADMIN") ||
+              (feature.requiredRole !== null &&
+                roles.includes(feature.requiredRole));
+
             const CardContent = () => (
               <div
                 className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
@@ -665,6 +659,16 @@ function FeatureCards({ roles }: FeatureCardsProps) {
               </div>
             );
 
+            // "link" type — always a Link, regardless of subscription
+            if (feature.type === "link") {
+              return (
+                <Link key={feature.key} href={feature.href}>
+                  <CardContent />
+                </Link>
+              );
+            }
+
+            // "role" type — Link if they have the role, button to show plans modal if not
             return hasAccess ? (
               <Link key={feature.key} href={feature.href}>
                 <CardContent />
@@ -672,9 +676,11 @@ function FeatureCards({ roles }: FeatureCardsProps) {
             ) : (
               <button
                 key={feature.key}
-                onClick={() =>
-                  handleCardClick(feature.title, feature.category, false)
-                }
+                onClick={() => {
+                  setActiveFeature(feature.title);
+                  setActiveCategory(feature.category);
+                  setModalOpen(true);
+                }}
                 className="text-left w-full"
               >
                 <CardContent />
