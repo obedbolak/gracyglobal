@@ -270,7 +270,7 @@ function CommunityCard({
         {/* CTAs */}
         <div className="mt-auto pt-2 flex gap-2">
           <Link
-            href={`/community/${community.slug}`}
+            href={`/community`}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-90"
             style={{
               background:
