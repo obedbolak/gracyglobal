@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import SectionsManager from "@/app/admin/courses/[id]/sections/_components/SectionsManager";
+import SectionsManager from "@/components/teacher/SectionsManager";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function TeacherCourseSectionsPage() {
@@ -98,7 +98,7 @@ export default function TeacherCourseSectionsPage() {
         </p>
       </div>
 
-      {/* Reuse the admin SectionsManager component */}
+      {/* Use the teacher SectionsManager component */}
       <SectionsManager
         courseId={courseId}
         initialSections={
@@ -106,9 +106,19 @@ export default function TeacherCourseSectionsPage() {
             id: s.id,
             title: s.title,
             order: s.order,
-            lessons: s.lessons || [],
+            lessons:
+              s.lessons?.map((l: any) => ({
+                id: l.id,
+                title: l.title,
+                type: l.type,
+                content: l.content || "",
+                videoUrl: l.videoUrl || "",
+                duration: l.duration || 0,
+                isFree: l.isFree,
+              })) || [],
           })) || []
         }
+        onSectionsChange={() => {}}
       />
     </div>
   );

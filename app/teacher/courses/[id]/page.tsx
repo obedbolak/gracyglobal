@@ -73,7 +73,6 @@ export default function EditCoursePage() {
   const [level, setLevel] = useState("");
   const [price, setPrice] = useState(0);
   const [isFree, setIsFree] = useState(true);
-  const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
 
   useEffect(() => {
@@ -95,7 +94,6 @@ export default function EditCoursePage() {
         setLevel(c.level);
         setPrice(c.price);
         setIsFree(c.isFree);
-        setPublished(c.published);
         setFeatured(c.featured);
       }
     } catch (err) {
@@ -121,7 +119,6 @@ export default function EditCoursePage() {
           level,
           price: isFree ? 0 : price,
           isFree,
-          published,
           featured,
         }),
       });
@@ -449,39 +446,6 @@ export default function EditCoursePage() {
 
         {/* Toggles */}
         <div className="space-y-4">
-          {/* Published */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Published
-              </p>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Visible to students on the platform
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setPublished(!published)}
-              className="w-12 h-7 rounded-full transition-all duration-300 relative"
-              style={{
-                background: published
-                  ? "linear-gradient(135deg, var(--success-text), #10b981)"
-                  : "var(--glass-bg-subtle)",
-                border: published ? "none" : "1px solid var(--glass-border)",
-              }}
-            >
-              <span
-                className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
-                style={{
-                  left: published ? "calc(100% - 1.625rem)" : "0.125rem",
-                }}
-              />
-            </button>
-          </div>
-
           {/* Featured */}
           <div className="flex items-center justify-between">
             <div>
