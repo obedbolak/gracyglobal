@@ -31,6 +31,7 @@ import {
   Zap,
   Check,
 } from "lucide-react";
+import PlansModal from "@/components/dashboard/PlansModal";
 
 // ─── UPDATED Types ─────────────────────────────────────────────────────────────
 
@@ -364,6 +365,14 @@ function FeatureCards({ roles }: FeatureCardsProps) {
           })}
         </div>
       </div>
+      <PlansModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        filterCategory={
+          activeCategory as "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER"
+        }
+        featureName={activeFeature}
+      />
     </>
   );
 }

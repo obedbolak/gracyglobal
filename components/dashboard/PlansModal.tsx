@@ -38,10 +38,12 @@ interface CurrentSubscription {
   plan: Plan;
 }
 
+// AFTER
 interface Props {
   open: boolean;
   onClose: () => void;
-  filterCategory: "MARKETPLACE" | "SERVICE";
+  filterCategory: "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER";
+  featureName?: string;
 }
 
 const planIcons: Record<string, React.ElementType> = {
@@ -71,7 +73,12 @@ function getIntervalLabel(interval: Plan["interval"]) {
   }
 }
 
-export default function PlansModal({ open, onClose, filterCategory }: Props) {
+export default function PlansModal({
+  open,
+  onClose,
+  filterCategory,
+  featureName,
+}: Props) {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<CurrentSubscription | null>(
