@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   X,
   Crown,
@@ -80,6 +81,7 @@ export default function PlansModal({
   featureName,
 }: Props) {
   const router = useRouter();
+  const { update } = useSession();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<CurrentSubscription | null>(
     null,
@@ -130,10 +132,40 @@ export default function PlansModal({
   };
 
   // ── Subscribe button clicked ──────────────────────────────────────────────
-  const handleSubscribe = (plan: Plan) => {
-    // Free plans — no payment needed
+  const handleSubscribe = async (plan: Plan) => {
+    // Free plans — subscribe directly
     if (plan.price === 0 || plan.name.toLowerCase() === "free") {
-      onClose();
+      try {
+        const res = await fetch("/api/plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planCode: plan.planCode }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          // Update local state immediately
+          await fetchPlans();
+          // Force session refresh from database
+          await update();
+          onClose();
+          // Force full page reload to ensure server-side session updates
+          window.location.href = "/dashboard";
+        } else if (
+          res.status === 400 &&
+          data.error === "You already have this subscription"
+        ) {
+          // Already subscribed - treat as success
+          await fetchPlans();
+          await update();
+          onClose();
+          window.location.href = "/dashboard";
+        } else {
+          setPaymentError(data.error || "Failed to subscribe");
+        }
+      } catch (e) {
+        setPaymentError("Network error");
+      }
       return;
     }
     // Open payment modal for paid plans

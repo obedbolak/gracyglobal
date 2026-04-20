@@ -55,7 +55,7 @@ const planIcons: Record<string, React.ElementType> = {
 const HIGHLIGHTED_PLANS = ["C2", "M2", "S2", "T2"];
 
 export default function PlansPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentSub, setCurrentSub] = useState<CurrentSubscription | null>(
@@ -91,10 +91,6 @@ export default function PlansPage() {
       router.push("/login?callbackUrl=/plans");
       return;
     }
-    if (planName.toLowerCase() === "free") {
-      router.push("/dashboard");
-      return;
-    }
 
     setSubscribing(planCode);
     try {
@@ -104,9 +100,24 @@ export default function PlansPage() {
         body: JSON.stringify({ planCode }),
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Failed to subscribe");
-      await fetchData();
-      router.push("/dashboard");
+
+      if (res.ok && data.success) {
+        await fetchData();
+        // Force session refresh from database
+        await update();
+        // Force full page reload to ensure server-side session updates
+        window.location.href = "/dashboard";
+      } else if (
+        res.status === 400 &&
+        data.error === "You already have this subscription"
+      ) {
+        // Already subscribed - treat as success
+        await fetchData();
+        await update();
+        window.location.href = "/dashboard";
+      } else {
+        throw new Error(data.error || "Failed to subscribe");
+      }
     } catch (e: any) {
       console.error(e);
       alert(e.message || "Failed to subscribe. Please try again.");

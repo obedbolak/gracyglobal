@@ -154,11 +154,22 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // For free plans, allow re-subscription if not active (maybe previous attempt failed)
+    // For paid plans, don't allow if already active
     if (existingSubscription && existingSubscription.status === "ACTIVE") {
-      return NextResponse.json(
-        { success: false, error: "You already have this subscription" },
-        { status: 400 },
-      );
+      if (plan.price === 0) {
+        // For free plans, return success if already active
+        return NextResponse.json({
+          success: true,
+          data: { subscription: existingSubscription, payment: null },
+          message: "Subscription is already active!",
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, error: "You already have this subscription" },
+          { status: 400 },
+        );
+      }
     }
 
     // Calculate period end based on interval
@@ -262,6 +273,27 @@ export async function POST(req: NextRequest) {
             },
           },
         });
+      }
+
+      // Create counselor profile if subscribing to counselor plan and doesn't exist
+      if (plan.category === "COUNSELLOR") {
+        const existingCounselor = await tx.counselor.findUnique({
+          where: { userId: user.id },
+        });
+        if (!existingCounselor) {
+          await tx.counselor.create({
+            data: {
+              userId: user.id,
+              bio: "",
+              specialty: "GENERAL", // Default specialty
+              pricePerHour: 3000, // Default price
+              rating: 0,
+              reviews: 0,
+              available: true,
+              verified: false,
+            },
+          });
+        }
       }
 
       return { subscription, payment };

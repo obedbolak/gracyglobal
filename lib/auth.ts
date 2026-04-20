@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // Only update session once per day
+    updateAge: 5 * 60, // Update session every 5 minutes instead of 24 hours
   },
 
   // FIX: cookie name must match what NextAuth expects per environment.
@@ -120,9 +120,34 @@ export const authOptions: NextAuthOptions = {
       }
 
       // ── Manual session update (e.g. after role change) ────────────────
-      if (trigger === "update" && session?.role) {
-        token.role = session.role;
-        token.rolesFetchedAt = Date.now();
+      if (trigger === "update") {
+        // Always refresh roles from DB on manual update
+        if (token.id) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { role: true, name: true, image: true, email: true },
+            });
+
+            if (dbUser) {
+              token.role = dbUser.role?.length ? dbUser.role : [UserRole.USER];
+              token.name = dbUser.name;
+              token.picture = dbUser.image;
+              token.email = dbUser.email;
+              token.rolesFetchedAt = Date.now();
+            }
+          } catch (error) {
+            console.error(
+              "[JWT] Failed to refresh user from DB on update:",
+              error,
+            );
+          }
+        }
+
+        // If session.role is provided, use it
+        if (session?.role) {
+          token.role = session.role;
+        }
       }
 
       // ── Refresh roles from DB every 1 hour ────────────────────────────

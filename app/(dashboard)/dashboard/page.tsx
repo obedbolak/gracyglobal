@@ -164,6 +164,7 @@ interface PlansModalProps {
 
 interface FeatureCardsProps {
   roles: string[];
+  sessionRoles?: string[];
 }
 
 const FEATURES = [
@@ -221,10 +222,13 @@ const FEATURES = [
   },
 ];
 
-function FeatureCards({ roles }: FeatureCardsProps) {
+function FeatureCards({ roles, sessionRoles }: FeatureCardsProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
+
+  // Use session roles immediately, profile roles as backup
+  const effectiveRoles = sessionRoles || roles;
 
   return (
     <>
@@ -264,9 +268,9 @@ function FeatureCards({ roles }: FeatureCardsProps) {
             // "link" type features are always accessible — My Store handles the subscription lock internally
             const hasAccess =
               feature.type === "link" ||
-              roles.includes("ADMIN") ||
+              effectiveRoles.includes("ADMIN") ||
               (feature.requiredRole !== null &&
-                roles.includes(feature.requiredRole));
+                effectiveRoles.includes(feature.requiredRole));
 
             const CardContent = () => (
               <div
@@ -346,9 +350,13 @@ function FeatureCards({ roles }: FeatureCardsProps) {
 
             // "role" type — Link if they have the role, button to show plans modal if not
             return hasAccess ? (
-              <Link key={feature.key} href={feature.href}>
+              <div
+                key={feature.key}
+                onClick={() => (window.location.href = feature.href)}
+                className="cursor-pointer"
+              >
                 <CardContent />
-              </Link>
+              </div>
             ) : (
               <button
                 key={feature.key}
@@ -658,7 +666,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Feature Cards ── */}
-      <FeatureCards roles={profile.role} />
+      <FeatureCards roles={profile.role} sessionRoles={session?.user?.role} />
 
       {/* ── Stats ── */}
       <div>
