@@ -32,14 +32,6 @@ interface Plan {
   sortOrder: number;
 }
 
-interface CurrentSubscription {
-  id: string;
-  planId: string;
-  status: "ACTIVE" | "PAST_DUE" | "CANCELLED" | "EXPIRED" | "TRIALING";
-  currentPeriodEnd: string;
-  plan: Plan;
-}
-
 const planIcons: Record<string, React.ElementType> = {
   free: Crown,
   starter: Zap,
@@ -50,7 +42,7 @@ const planIcons: Record<string, React.ElementType> = {
   yearly: Rocket,
 };
 
-export default function TeacherSubscriptionPage() {
+export default function CounselorSubscriptionPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { subscription: currentSub, getCurrentPlanCode } = useSubscription();
@@ -68,7 +60,7 @@ export default function TeacherSubscriptionPage() {
 
   const fetchPlans = async () => {
     try {
-      const res = await fetch("/api/plans?category=TEACHER");
+      const res = await fetch("/api/plans?category=COUNSELLOR");
       const data = await res.json();
 
       if (data.success) {
@@ -83,7 +75,7 @@ export default function TeacherSubscriptionPage() {
 
   const handleSelectPlan = async (planCode: string) => {
     if (!session) {
-      router.push("/login?callbackUrl=/teacher/subscription");
+      router.push("/login?callbackUrl=/counselor/subscription");
       return;
     }
 
@@ -107,7 +99,7 @@ export default function TeacherSubscriptionPage() {
         if (data.success) {
           router.refresh();
           alert("Free plan activated! Redirecting...");
-          setTimeout(() => router.push("/teacher"), 1000);
+          setTimeout(() => router.push("/counselor"), 1000);
         } else {
           alert(data.message || "Failed to activate plan");
         }
@@ -142,7 +134,7 @@ export default function TeacherSubscriptionPage() {
         setPendingPlanCode(null);
         router.refresh();
         alert("Subscription updated! Redirecting...");
-        setTimeout(() => router.push("/teacher"), 1000);
+        setTimeout(() => router.push("/counselor"), 1000);
       } else {
         alert(data.message || "Failed to update subscription");
       }
@@ -161,8 +153,8 @@ export default function TeacherSubscriptionPage() {
   }
 
   const currentPlanCode = getCurrentPlanCode() || "free";
-  const activeTeacherPlans = plans
-    .filter((p) => p.category === "TEACHER")
+  const activeCounselorPlans = plans
+    .filter((p) => p.category === "COUNSELLOR")
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
@@ -170,7 +162,7 @@ export default function TeacherSubscriptionPage() {
       {/* Header */}
       <div>
         <Link
-          href="/teacher"
+          href="/counselor"
           className="flex items-center gap-2 text-[var(--purple)] hover:opacity-80 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -178,13 +170,13 @@ export default function TeacherSubscriptionPage() {
         </Link>
         <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
         <p className="text-[var(--text-secondary)]">
-          Select a plan to unlock features and grow your teaching business
+          Select a plan to unlock features and grow your counseling business
         </p>
       </div>
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activeTeacherPlans.map((plan) => {
+        {activeCounselorPlans.map((plan) => {
           const Icon = planIcons[plan.planCode.toLowerCase()] || Crown;
           const isCurrentPlan = plan.planCode === currentPlanCode;
           const isFree = plan.price === 0;
@@ -263,11 +255,12 @@ export default function TeacherSubscriptionPage() {
               <div className="mb-6 space-y-2">
                 <div className="text-sm">
                   <span className="font-semibold text-[var(--text-primary)]">
-                    {plan.courseLimit === null || plan.courseLimit === undefined
+                    {plan.features &&
+                    plan.features.includes("Unlimited sessions")
                       ? "Unlimited"
-                      : plan.courseLimit}{" "}
+                      : "Standard"}{" "}
                   </span>
-                  <span className="text-[var(--text-secondary)]">Courses</span>
+                  <span className="text-[var(--text-secondary)]">Sessions</span>
                 </div>
                 {plan.features && plan.features.length > 0 && (
                   <div className="text-xs text-[var(--text-secondary)]">

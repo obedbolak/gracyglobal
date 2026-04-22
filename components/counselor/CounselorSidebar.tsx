@@ -29,18 +29,14 @@ const menuItems = [
 ];
 
 function SubscriptionItem({ onClick }: { onClick?: () => void }) {
-  const { subscription, loading, getCurrentPlanCode, isTrialing } =
+  const { getSubscriptionByCategory, loading, getCurrentPlanCode, isTrialing } =
     useSubscription();
   const pathname = usePathname();
 
   if (loading) return null;
 
-  const hasSubscription =
-    subscription?.plan?.category === "COUNSELLOR" ||
-    (subscription?.status === "TRIALING" &&
-      (subscription.plan.category as any) === "COUNSELLOR");
-
-  if (!hasSubscription) return null;
+  const subscription = getSubscriptionByCategory("COUNSELLOR");
+  if (!subscription) return null;
 
   const planName = subscription?.plan?.name || "Free";
   const planCode = getCurrentPlanCode() || "free";
@@ -144,13 +140,11 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function CollapsedNavItems() {
   const pathname = usePathname();
-  const { subscription, loading, getCurrentPlanCode } = useSubscription();
+  const { getSubscriptionByCategory, loading, getCurrentPlanCode } =
+    useSubscription();
 
-  const hasSubscription =
-    subscription?.plan?.category === "COUNSELLOR" ||
-    (subscription?.status === "TRIALING" &&
-      (subscription.plan.category as any) === "COUNSELLOR");
-
+  const subscription = getSubscriptionByCategory("COUNSELLOR");
+  const hasSubscription = !!subscription && !loading;
   const planCode = getCurrentPlanCode() || "free";
 
   const getPlanColor = (plan: string) => {
@@ -194,7 +188,7 @@ function CollapsedNavItems() {
         })}
       </nav>
 
-      {hasSubscription && !loading && (
+      {hasSubscription && (
         <div className="px-3 mt-2">
           <div className="w-full h-px bg-[var(--divider)] mb-1" />
           <button

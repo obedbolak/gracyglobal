@@ -68,13 +68,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Return all plans + active or pending subscription (for /plans page)
-    const [allPlans, activeSubscription] = await Promise.all([
+    // Return all plans + all active or pending subscriptions (for sidebars to filter by category)
+    const [allPlans, allSubscriptions] = await Promise.all([
       prisma.pricingPlan.findMany({
         where: { active: true },
         orderBy: { sortOrder: "asc" },
       }),
-      prisma.userSubscription.findFirst({
+      prisma.userSubscription.findMany({
         where: {
           userId: user.id,
           status: {
@@ -86,9 +86,16 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    // For backwards compatibility, also return the first subscription
+    const activeSubscription = allSubscriptions[0] || null;
+
     return NextResponse.json({
       success: true,
-      data: { plans: allPlans, subscription: activeSubscription },
+      data: {
+        plans: allPlans,
+        subscription: activeSubscription,
+        subscriptions: allSubscriptions,
+      },
     });
   } catch (error) {
     console.error("Get plans error:", error);

@@ -65,6 +65,7 @@ interface PlansApiResponse {
   data: {
     plans: Plan[];
     subscription: Subscription | null;
+    subscriptions?: Subscription[]; // All subscriptions for user
   };
 }
 
@@ -121,9 +122,26 @@ export function useSubscription() {
     },
   );
 
-  // Extract subscription from response shape: { success, data: { plans, subscription } }
+  // Extract subscription from response shape: { success, data: { plans, subscription, subscriptions } }
   const subscription = data?.data?.subscription ?? null;
+  const allSubscriptions: Subscription[] =
+    data?.data?.subscriptions ??
+    (data?.data?.subscription ? [data?.data?.subscription] : []);
   const allPlans = data?.data?.plans ?? [];
+
+  // ─── HELPERS ─────────────────────────────────────────────────────────
+
+  /**
+   * Find a subscription for a specific category (e.g., "TEACHER", "COUNSELLOR")
+   * Used by sidebars to get the relevant subscription for their dashboard
+   */
+  const getSubscriptionByCategory = (
+    category: PlanCategory,
+  ): Subscription | null => {
+    return (
+      allSubscriptions.find((sub) => sub?.plan?.category === category) ?? null
+    );
+  };
 
   // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
@@ -290,6 +308,7 @@ export function useSubscription() {
 
   return {
     subscription,
+    allSubscriptions, // ✅ All subscriptions for filtering by category
     allPlans, // ✅ bonus — all active plans available from same request
     loading: isLoading,
     error: error?.message ?? null,
@@ -300,6 +319,7 @@ export function useSubscription() {
     // Plan info
     getCurrentPlanCode,
     getCurrentPlanCategory,
+    getSubscriptionByCategory, // ✅ NEW: Get subscription for specific category
 
     // Feature access
     canAccessFeature,

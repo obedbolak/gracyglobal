@@ -40,6 +40,7 @@ interface Subscription {
 
 interface SubscriptionContextType {
   subscription: Subscription | null;
+  allSubscriptions: Subscription[];
   allPlans: Plan[];
   loading: boolean;
   error: any;
@@ -66,6 +67,9 @@ interface SubscriptionContextType {
   // ✅ Plan info helpers
   getCurrentPlanCode: () => string | null;
   getCurrentPlanCategory: () => string | null;
+  getSubscriptionByCategory: (
+    category: "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER" | "STUDENT",
+  ) => Subscription | null;
 
   // ✅ Feature access
   canAccessFeature: (feature: string) => boolean;
