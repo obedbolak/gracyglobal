@@ -44,7 +44,7 @@ interface UserProfile {
 
 export default function DashboardSettingsPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -140,6 +140,13 @@ export default function DashboardSettingsPage() {
       setTimeout(() => setSaved(false), 3000);
       setProfile(data.data);
       setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+      
+      // Refresh the session to update profile image and other changes
+      await updateSession({
+        name: data.data.name,
+        image: data.data.image,
+        email: data.data.email,
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {

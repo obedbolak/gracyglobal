@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import DashboardSwitcher from "@/components/shared/DashboardSwitcher";
+import { useSubscription } from "@/hooks/useSubscription";
+import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -14,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   PanelLeft,
+  Crown,
 } from "lucide-react";
 
 const menuItems = [
@@ -25,66 +28,187 @@ const menuItems = [
   { label: "Clients", href: "/counselor/clients", icon: Users },
 ];
 
+function SubscriptionItem({ onClick }: { onClick?: () => void }) {
+  const { subscription, loading, getCurrentPlanCode, isTrialing } =
+    useSubscription();
+  const pathname = usePathname();
+
+  if (loading) return null;
+
+  const hasSubscription =
+    subscription?.plan?.category === "COUNSELLOR" ||
+    (subscription?.status === "TRIALING" &&
+      (subscription.plan.category as any) === "COUNSELLOR");
+
+  if (!hasSubscription) return null;
+
+  const planName = subscription?.plan?.name || "Free";
+  const planCode = getCurrentPlanCode() || "free";
+  const isTrial = isTrialing();
+  const isActive = pathname.startsWith("/counselor/subscription");
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case "starter":
+        return "var(--blue)";
+      case "growth":
+        return "var(--purple)";
+      case "elite":
+        return "var(--scarlet)";
+      default:
+        return "var(--text-secondary)";
+    }
+  };
+
+  // Extract some key limits from plan
+  const getSessionLimit = () => {
+    if (subscription?.plan?.features?.includes("Unlimited sessions")) {
+      return "Unlimited";
+    }
+    // Default limits based on plan
+    return "Custom";
+  };
+
+  return (
+    <Link href="/counselor/subscription" onClick={onClick}>
+      <div className="px-3 mt-2">
+        <div className="flex items-center gap-2 px-4 py-2">
+          <div className="flex-1 h-px bg-[var(--divider)]" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)] opacity-60">
+            Subscription
+          </span>
+          <div className="flex-1 h-px bg-[var(--divider)]" />
+        </div>
+
+        <div
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+            isActive
+              ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+          }`}
+        >
+          <Crown
+            className="w-5 h-5 flex-shrink-0"
+            style={{ color: getPlanColor(planCode) }}
+          />
+          <div className="flex-1 text-left">
+            <div className="font-medium truncate">{planName}</div>
+            <div className="text-xs opacity-70">
+              {getSessionLimit()} sessions
+            </div>
+            {isTrial && (
+              <div className="text-xs text-yellow-600">Pending Payment</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="px-3 space-y-1">
-      {menuItems.map((item) => {
-        const Icon = item.icon;
-        const isActive =
-          pathname === item.href ||
-          (item.href !== "/counselor" && pathname.startsWith(item.href));
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={`
-              flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-              ${
-                isActive
-                  ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
-              }
-            `}
-          >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium truncate">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav className="px-3 space-y-1">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/counselor" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={`
+                flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+                ${
+                  isActive
+                    ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+                }
+              `}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <SubscriptionItem onClick={onNavigate} />
+    </>
   );
 }
 
 function CollapsedNavItems() {
   const pathname = usePathname();
+  const { subscription, loading, getCurrentPlanCode } = useSubscription();
+
+  const hasSubscription =
+    subscription?.plan?.category === "COUNSELLOR" ||
+    (subscription?.status === "TRIALING" &&
+      (subscription.plan.category as any) === "COUNSELLOR");
+
+  const planCode = getCurrentPlanCode() || "free";
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case "starter":
+        return "var(--blue)";
+      case "growth":
+        return "var(--purple)";
+      case "elite":
+        return "var(--scarlet)";
+      default:
+        return "var(--text-secondary)";
+    }
+  };
+
   return (
-    <nav className="px-3 space-y-1">
-      {menuItems.map((item) => {
-        const Icon = item.icon;
-        const isActive =
-          pathname === item.href ||
-          (item.href !== "/counselor" && pathname.startsWith(item.href));
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={item.label}
-            className={`
-              flex items-center justify-center px-4 py-3 rounded-lg transition-all
-              ${
-                isActive
-                  ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
-              }
-            `}
+    <>
+      <nav className="px-3 space-y-1">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/counselor" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className={`
+                flex items-center justify-center px-4 py-3 rounded-lg transition-all
+                ${
+                  isActive
+                    ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+                }
+              `}
+            >
+              <Icon className="w-5 h-5" />
+            </Link>
+          );
+        })}
+      </nav>
+
+      {hasSubscription && !loading && (
+        <div className="px-3 mt-2">
+          <div className="w-full h-px bg-[var(--divider)] mb-1" />
+          <button
+            title={`${subscription?.plan?.name || "Plan"}`}
+            className="w-full flex items-center justify-center px-4 py-3 rounded-lg transition-all text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
           >
-            <Icon className="w-5 h-5" />
-          </Link>
-        );
-      })}
-    </nav>
+            <Crown
+              className="w-5 h-5"
+              style={{ color: getPlanColor(planCode) }}
+            />
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
