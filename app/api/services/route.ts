@@ -101,9 +101,11 @@ export async function POST(req: NextRequest) {
     const categoryId =
       data.categoryId ||
       (data.category
-        ? (await prisma.serviceCategory.findUnique({
-            where: { name: data.category },
-          }))?.id
+        ? (
+            await prisma.serviceCategory.findUnique({
+              where: { name: data.category },
+            })
+          )?.id
         : null);
 
     if (!data.name || !data.description || !categoryId || !data.group) {

@@ -76,9 +76,11 @@ export async function PUT(
     const categoryId =
       data.categoryId ||
       (data.category
-        ? (await prisma.serviceCategory.findUnique({
-            where: { name: data.category },
-          }))?.id
+        ? (
+            await prisma.serviceCategory.findUnique({
+              where: { name: data.category },
+            })
+          )?.id
         : undefined);
 
     const service = await prisma.service.update({
