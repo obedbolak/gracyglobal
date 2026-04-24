@@ -1,14 +1,15 @@
-// hooks/useProducts.ts
+// hooks/UseProducts.tsx
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import type { PaginatedResponse, ApiResponse } from "@/lib/api";
-import type { Product, ProductCategory, CategoryGroup } from "@/data/products";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+// NOTE: category and group are now plain strings — they come from the DB
+// via ProductCategory model, not hardcoded enums from /data/products.
 export interface ProductFilters {
-  category?: ProductCategory | "All";
-  group?: CategoryGroup | "All";
+  category?: string; // category name e.g. "Skincare" (from ProductCategory.name)
+  group?: string; // optional group tag (free text field on Product)
   featured?: boolean;
   search?: string;
   minPrice?: number;
@@ -18,8 +19,36 @@ export interface ProductFilters {
   limit?: number;
 }
 
+// Shape of a product returned by the API
+// Using a flexible type since products now include a category relation
+export interface ProductItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
+  categoryId: string;
+  category?: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+  };
+  group: string;
+  stock: number;
+  featured: boolean;
+  active: boolean;
+  rating: number;
+  reviews: number;
+  badge: string | null;
+  benefits: string[];
+  ingredients: string[];
+  sellerId: string | null;
+  createdAt: string;
+}
+
 // Shape returned by GET /api/products
-type ProductsPage = PaginatedResponse<Product>;
+type ProductsPage = PaginatedResponse<ProductItem>;
 
 // ─── Fetcher ──────────────────────────────────────────────────────────────────
 
@@ -41,10 +70,8 @@ async function fetcher<T>(url: string): Promise<T> {
 function buildProductsUrl(filters: ProductFilters): string {
   const params = new URLSearchParams();
 
-  if (filters.category && filters.category !== "All")
-    params.set("category", filters.category);
-  if (filters.group && filters.group !== "All")
-    params.set("group", filters.group);
+  if (filters.category?.trim()) params.set("category", filters.category.trim());
+  if (filters.group?.trim()) params.set("group", filters.group.trim());
   if (filters.featured !== undefined)
     params.set("featured", String(filters.featured));
   if (filters.search?.trim()) params.set("search", filters.search.trim());
@@ -62,10 +89,6 @@ function buildProductsUrl(filters: ProductFilters): string {
 }
 
 // ─── useProducts — paginated list with caching ────────────────────────────────
-//
-// Usage:
-//   const { products, total, totalPages, isLoading, error, mutate } =
-//     useProducts({ category: "Skincare", sort: "rating", page: 1 });
 
 export function useProducts(filters: ProductFilters = {}) {
   const url = buildProductsUrl(filters);
@@ -74,11 +97,8 @@ export function useProducts(filters: ProductFilters = {}) {
     url,
     fetcher,
     {
-      // Keep stale data visible while revalidating (no content flash)
       keepPreviousData: true,
-      // Revalidate when window is refocused
       revalidateOnFocus: false,
-      // Dedupe rapid identical requests within 5 s
       dedupingInterval: 5_000,
     },
   );
@@ -97,17 +117,14 @@ export function useProducts(filters: ProductFilters = {}) {
 }
 
 // ─── useProduct — single product ──────────────────────────────────────────────
-//
-// Usage:
-//   const { product, isLoading, error } = useProduct("some-id");
 
 export function useProduct(id: string | null | undefined) {
-  const { data, error, isLoading, mutate } = useSWR<{ product: Product }>(
-    id ? `/api/products/${id}` : null, // null = don't fetch
+  const { data, error, isLoading, mutate } = useSWR<{ product: ProductItem }>(
+    id ? `/api/products/${id}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 30_000, // single product changes rarely
+      dedupingInterval: 30_000,
     },
   );
 
@@ -120,17 +137,12 @@ export function useProduct(id: string | null | undefined) {
 }
 
 // ─── useInfiniteProducts — infinite scroll list ───────────────────────────────
-//
-// Usage:
-//   const { products, loadMore, hasMore, isLoading } =
-//     useInfiniteProducts({ search: "shea" }, 12);
 
 export function useInfiniteProducts(
   filters: Omit<ProductFilters, "page"> = {},
   limit = 12,
 ) {
   const getKey = (pageIndex: number, previousData: ProductsPage | null) => {
-    // Stop fetching when we've reached the last page
     if (previousData && pageIndex + 1 > previousData.totalPages) return null;
     return buildProductsUrl({ ...filters, page: pageIndex + 1, limit });
   };
@@ -160,20 +172,15 @@ export function useInfiniteProducts(
   };
 }
 
-// ─── useFeaturedProducts — shorthand for featured only ───────────────────────
-//
-// Usage:
-//   const { products, isLoading } = useFeaturedProducts(6);
+// ─── useFeaturedProducts ──────────────────────────────────────────────────────
 
 export function useFeaturedProducts(limit = 6) {
   return useProducts({ featured: true, limit });
 }
 
-// ─── useProductsByGroup — shorthand filtered by group ────────────────────────
-//
-// Usage:
-//   const { products } = useProductsByGroup("Beauty & Personal Care");
+// ─── useProductsByCategory ────────────────────────────────────────────────────
+// Replaces the old useProductsByGroup — now uses category name from DB
 
-export function useProductsByGroup(group: CategoryGroup, limit = 12) {
-  return useProducts({ group, limit });
+export function useProductsByCategory(categoryName: string, limit = 12) {
+  return useProducts({ category: categoryName, limit });
 }

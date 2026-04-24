@@ -1,17 +1,13 @@
-//app/admin/products/create/page.tsx
-
 "use client";
+
+// app/admin/products/create/page.tsx
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Plus, X } from "lucide-react";
 import Link from "next/link";
-import {
-  CATEGORY_GROUPS,
-  type CategoryGroup,
-  type ProductCategory,
-} from "@/data/products";
+import { useCategories } from "@/hooks/useCategories";
 
 export default function CreateProductPage() {
   const router = useRouter();
@@ -20,25 +16,22 @@ export default function CreateProductPage() {
     Array<{ url: string; publicId: string }>
   >([]);
 
+  // ── Fetch categories from DB ──────────────────────────────────────────────
+  const { categories, loading: categoriesLoading } = useCategories("product");
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     stock: "",
-    group: "" as CategoryGroup | "",
-    category: "" as ProductCategory | "",
+    categoryId: "",
+    group: "",
     badge: "",
     featured: false,
     active: true,
     benefits: [""],
     ingredients: [""],
   });
-
-  // Derive sub-categories from selected group
-  const subCategories = formData.group
-    ? (CATEGORY_GROUPS.find((g) => g.group === formData.group)?.categories ??
-      [])
-    : [];
 
   // ── Field helpers ─────────────────────────────────────────────────────────
   function set<K extends keyof typeof formData>(
@@ -49,7 +42,7 @@ export default function CreateProductPage() {
   }
 
   function addListItem(field: "benefits" | "ingredients") {
-    set(field, [...formData[field], ""]);
+    set(field, [...formData[field], ""] as any);
   }
 
   function updateListItem(
@@ -59,29 +52,26 @@ export default function CreateProductPage() {
   ) {
     const updated = [...formData[field]];
     updated[index] = value;
-    set(field, updated);
+    set(field, updated as any);
   }
 
   function removeListItem(field: "benefits" | "ingredients", index: number) {
     set(
       field,
-      formData[field].filter((_, i) => i !== index),
+      (formData[field] as string[]).filter((_, i) => i !== index) as any,
     );
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (images.length === 0) {
       alert("Please upload at least one image.");
       return;
     }
-    if (!formData.group) {
-      alert("Please select a department.");
-      return;
-    }
-    if (!formData.category) {
-      alert("Please select a sub-category.");
+    if (!formData.categoryId) {
+      alert("Please select a category.");
       return;
     }
 
@@ -91,11 +81,16 @@ export default function CreateProductPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
           price: parseInt(formData.price),
           stock: parseInt(formData.stock),
-          images: images.map((img) => img.url),
+          categoryId: formData.categoryId,
+          group: formData.group,
           badge: formData.badge.trim() || null,
+          featured: formData.featured,
+          active: formData.active,
+          images: images.map((img) => img.url),
           benefits: formData.benefits.filter((b) => b.trim()),
           ingredients: formData.ingredients.filter((i) => i.trim()),
         }),
@@ -114,7 +109,7 @@ export default function CreateProductPage() {
     }
   };
 
-  // ── Shared input styles ───────────────────────────────────────────────────
+  // ── Shared styles ─────────────────────────────────────────────────────────
   const inputCls = "glass-input w-full px-4 py-3 rounded-lg";
   const labelCls =
     "block text-sm font-medium mb-2 text-[var(--text-secondary)]";
@@ -152,7 +147,7 @@ export default function CreateProductPage() {
             onUploadComplete={setImages}
           />
           {images.length === 0 && (
-            <p className="text-xs text-[var(--warning-text)]">
+            <p className="text-xs" style={{ color: "var(--warning-text)" }}>
               At least one image is required.
             </p>
           )}
@@ -190,50 +185,79 @@ export default function CreateProductPage() {
             />
           </div>
 
-          {/* Department → Sub-category (two-level, mirrors marketplace filters) */}
+          {/* Category — from DB */}
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Department *</label>
-              <select
-                required
-                value={formData.group}
-                onChange={(e) => {
-                  set("group", e.target.value as CategoryGroup);
-                  set("category", "");
-                }}
-                className={inputCls}
+              <label className={labelCls}>Category *</label>
+              {categoriesLoading ? (
+                <div className="skeleton h-12 rounded-lg" />
+              ) : categories.length === 0 ? (
+                <div
+                  className="px-4 py-3 rounded-lg text-sm"
+                  style={{
+                    background: "var(--warning-bg)",
+                    color: "var(--warning-text)",
+                    border: "1px solid var(--warning-border)",
+                  }}
+                >
+                  No categories yet.{" "}
+                  <Link
+                    href="/admin/products/categories"
+                    className="underline font-semibold"
+                  >
+                    Create one first →
+                  </Link>
+                </div>
+              ) : (
+                <select
+                  required
+                  value={formData.categoryId}
+                  onChange={(e) => set("categoryId", e.target.value)}
+                  className={inputCls}
+                  style={{
+                    color: "var(--text-primary)",
+                    background: "var(--input-bg)",
+                  }}
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon ? `${cat.icon} ` : ""}
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
               >
-                <option value="">Select department</option>
-                {CATEGORY_GROUPS.map((g) => (
-                  <option key={g.group} value={g.group}>
-                    {g.icon} {g.group}
-                  </option>
-                ))}
-              </select>
+                Manage in{" "}
+                <Link
+                  href="/admin/products/categories"
+                  className="underline"
+                  style={{ color: "var(--purple-light)" }}
+                >
+                  Admin → Products → Categories
+                </Link>
+              </p>
             </div>
 
+            {/* Group — free text, optional */}
             <div>
-              <label className={labelCls}>Sub-category *</label>
-              <select
-                required
-                value={formData.category}
-                disabled={!formData.group}
-                onChange={(e) =>
-                  set("category", e.target.value as ProductCategory)
-                }
-                className={`${inputCls} disabled:opacity-50`}
-              >
-                <option value="">
-                  {formData.group
-                    ? "Select sub-category"
-                    : "Select a department first"}
-                </option>
-                {subCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+              <label className={labelCls}>
+                Group{" "}
+                <span style={{ color: "var(--text-disabled)" }}>
+                  (optional)
+                </span>
+              </label>
+              <input
+                type="text"
+                value={formData.group}
+                placeholder="e.g. Herbal, Organic…"
+                onChange={(e) => set("group", e.target.value)}
+                className={inputCls}
+              />
             </div>
           </div>
 
@@ -269,7 +293,7 @@ export default function CreateProductPage() {
           <div>
             <label className={labelCls}>
               Badge{" "}
-              <span className="text-[var(--text-disabled)]">(optional)</span>
+              <span style={{ color: "var(--text-disabled)" }}>(optional)</span>
             </label>
             <input
               type="text"
@@ -278,7 +302,10 @@ export default function CreateProductPage() {
               onChange={(e) => set("badge", e.target.value)}
               className={inputCls}
             />
-            <p className="text-xs mt-1 text-[var(--text-disabled)]">
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-disabled)" }}
+            >
               Shown as a pill on the product card. Leave blank for no badge.
             </p>
           </div>
@@ -305,7 +332,11 @@ export default function CreateProductPage() {
                   type="button"
                   onClick={() => removeListItem("benefits", i)}
                   disabled={formData.benefits.length === 1}
-                  className="p-3 rounded-lg bg-[var(--error-bg)] text-[var(--error-text)] hover:bg-[var(--error-border)] transition-colors disabled:opacity-30"
+                  className="p-3 rounded-lg transition-colors disabled:opacity-30"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                  }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -325,7 +356,10 @@ export default function CreateProductPage() {
         <div className={sectionCls}>
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             Ingredients{" "}
-            <span className="text-sm font-normal text-[var(--text-disabled)]">
+            <span
+              className="text-sm font-normal"
+              style={{ color: "var(--text-disabled)" }}
+            >
               (optional)
             </span>
           </h2>
@@ -345,7 +379,11 @@ export default function CreateProductPage() {
                   type="button"
                   onClick={() => removeListItem("ingredients", i)}
                   disabled={formData.ingredients.length === 1}
-                  className="p-3 rounded-lg bg-[var(--error-bg)] text-[var(--error-text)] hover:bg-[var(--error-border)] transition-colors disabled:opacity-30"
+                  className="p-3 rounded-lg transition-colors disabled:opacity-30"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                  }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -372,13 +410,13 @@ export default function CreateProductPage() {
               type="checkbox"
               checked={formData.featured}
               onChange={(e) => set("featured", e.target.checked)}
-              className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+              className="w-5 h-5 rounded"
             />
             <div>
               <span className="text-sm font-medium text-[var(--text-secondary)]">
                 Featured Product
               </span>
-              <p className="text-xs text-[var(--text-disabled)]">
+              <p className="text-xs" style={{ color: "var(--text-disabled)" }}>
                 Pinned to the top of the marketplace listing
               </p>
             </div>
@@ -389,13 +427,13 @@ export default function CreateProductPage() {
               type="checkbox"
               checked={formData.active}
               onChange={(e) => set("active", e.target.checked)}
-              className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+              className="w-5 h-5 rounded"
             />
             <div>
               <span className="text-sm font-medium text-[var(--text-secondary)]">
                 Active
               </span>
-              <p className="text-xs text-[var(--text-disabled)]">
+              <p className="text-xs" style={{ color: "var(--text-disabled)" }}>
                 Inactive products are hidden from the marketplace
               </p>
             </div>
@@ -406,7 +444,7 @@ export default function CreateProductPage() {
         <div className="flex gap-4 pb-8">
           <button
             type="submit"
-            disabled={loading || images.length === 0}
+            disabled={loading || images.length === 0 || !formData.categoryId}
             className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50"
           >
             <Save className="w-5 h-5" />

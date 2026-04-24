@@ -1,19 +1,22 @@
-// components/admin/EditProductForm.tsx
-
 "use client";
+
+// components/admin/EditProductForm.tsx
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useCategories } from "@/hooks/useCategories";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  category: string;
+  categoryId: string;
   group: string;
   stock: number;
   images: string[];
@@ -27,16 +30,21 @@ interface EditProductFormProps {
   product: Product;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function EditProductForm({ product }: EditProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Fetch categories via hook ─────────────────────────────────────────────
+  const { categories, loading: categoriesLoading } = useCategories("product");
+
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description,
     price: product.price.toString(),
-    category: product.category,
+    categoryId: product.categoryId,
     group: product.group,
     stock: product.stock.toString(),
     featured: product.featured,
@@ -54,21 +62,13 @@ export default function EditProductForm({ product }: EditProductFormProps) {
     })),
   );
 
-  const categories = [
-    "Herbal Teas",
-    "Supplements",
-    "Skincare",
-    "Aromatherapy",
-    "Books",
-    "Accessories",
-  ];
-
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${product.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,8 +81,7 @@ export default function EditProductForm({ product }: EditProductFormProps) {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update product");
-
+      if (!res.ok) throw new Error("Failed to update product");
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
@@ -93,18 +92,16 @@ export default function EditProductForm({ product }: EditProductFormProps) {
     }
   };
 
+  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-
     setDeleting(true);
 
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${product.id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) throw new Error("Failed to delete product");
-
+      if (!res.ok) throw new Error("Failed to delete product");
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
@@ -114,11 +111,9 @@ export default function EditProductForm({ product }: EditProductFormProps) {
     }
   };
 
+  // ── Array field helpers ───────────────────────────────────────────────────
   const addField = (field: "benefits" | "ingredients") => {
-    setFormData({
-      ...formData,
-      [field]: [...formData[field], ""],
-    });
+    setFormData({ ...formData, [field]: [...formData[field], ""] });
   };
 
   const updateField = (
@@ -138,8 +133,10 @@ export default function EditProductForm({ product }: EditProductFormProps) {
     });
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link
@@ -161,7 +158,8 @@ export default function EditProductForm({ product }: EditProductFormProps) {
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--error-bg)] text-[var(--error-text)] hover:bg-[var(--error-border)]"
+          className="btn-secondary flex items-center gap-2 px-4 py-2 rounded-lg"
+          style={{ background: "var(--error-bg)", color: "var(--error-text)" }}
         >
           <Trash2 className="w-4 h-4" />
           {deleting ? "Deleting..." : "Delete"}
@@ -221,25 +219,48 @@ export default function EditProductForm({ product }: EditProductFormProps) {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
+            {/* Category dropdown — from DB via hook */}
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Category *
               </label>
-              <select
-                required
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
+              {categoriesLoading ? (
+                <div className="skeleton h-12 rounded-lg" />
+              ) : (
+                <select
+                  required
+                  value={formData.categoryId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
+                  className="glass-input w-full px-4 py-3"
+                  style={{
+                    color: "var(--text-primary)",
+                    background: "var(--input-bg)",
+                  }}
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon ? `${cat.icon} ` : ""}
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
               >
-                <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                Manage categories in{" "}
+                <Link
+                  href="/admin/products/categories"
+                  className="underline"
+                  style={{ color: "var(--purple-light)" }}
+                >
+                  Admin → Products → Categories
+                </Link>
+              </p>
             </div>
 
             <div>
@@ -313,7 +334,11 @@ export default function EditProductForm({ product }: EditProductFormProps) {
                 <button
                   type="button"
                   onClick={() => removeField("benefits", index)}
-                  className="px-4 py-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
+                  className="px-4 py-3 rounded-lg transition-colors"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                  }}
                 >
                   Remove
                 </button>
@@ -325,7 +350,7 @@ export default function EditProductForm({ product }: EditProductFormProps) {
             onClick={() => addField("benefits")}
             className="btn-secondary px-4 py-2 rounded-lg"
           >
-            Add Benefit
+            + Add Benefit
           </button>
         </div>
 
@@ -349,7 +374,11 @@ export default function EditProductForm({ product }: EditProductFormProps) {
                 <button
                   type="button"
                   onClick={() => removeField("ingredients", index)}
-                  className="px-4 py-3 bg-[var(--error-bg)] text-[var(--error-text)] rounded-lg hover:bg-[var(--error-border)] transition-colors"
+                  className="px-4 py-3 rounded-lg transition-colors"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                  }}
                 >
                   Remove
                 </button>
@@ -361,7 +390,7 @@ export default function EditProductForm({ product }: EditProductFormProps) {
             onClick={() => addField("ingredients")}
             className="btn-secondary px-4 py-2 rounded-lg"
           >
-            Add Ingredient
+            + Add Ingredient
           </button>
         </div>
 
@@ -371,28 +400,28 @@ export default function EditProductForm({ product }: EditProductFormProps) {
             Settings
           </h2>
 
-          <label className="flex items-center gap-3">
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.featured}
               onChange={(e) =>
                 setFormData({ ...formData, featured: e.target.checked })
               }
-              className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+              className="w-5 h-5 rounded"
             />
             <span className="text-[var(--text-secondary)]">
               Featured Product
             </span>
           </label>
 
-          <label className="flex items-center gap-3">
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.active}
               onChange={(e) =>
                 setFormData({ ...formData, active: e.target.checked })
               }
-              className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+              className="w-5 h-5 rounded"
             />
             <span className="text-[var(--text-secondary)]">Active</span>
           </label>

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { X, Loader2, Phone, CheckCircle, AlertTriangle } from "lucide-react";
 import { useCamPay } from "@/hooks/useCamPay";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 
 interface SubscriptionPaymentModalProps {
   planCode: string;
@@ -38,6 +39,7 @@ export default function SubscriptionPaymentModal({
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(true);
   const { status, error: paymentError, pay, reset } = useCamPay();
+  const { update } = useSession();
 
   useEffect(() => {
     fetchPlanDetails();
@@ -99,7 +101,7 @@ export default function SubscriptionPaymentModal({
                 subscriptionData.error || "Failed to activate subscription",
               );
             }
-
+            await update(); // from useSession()
             // ✅ All done
             onSuccess(transactionId);
             reset();

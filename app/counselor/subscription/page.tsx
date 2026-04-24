@@ -14,8 +14,8 @@ import {
   Zap,
   Star,
   Rocket,
+  AlertTriangle,
 } from "lucide-react";
-
 interface Plan {
   id: string;
   planCode: string;
@@ -43,16 +43,18 @@ const planIcons: Record<string, React.ElementType> = {
 };
 
 export default function CounselorSubscriptionPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const router = useRouter();
   const { subscription: currentSub, getCurrentPlanCode } = useSubscription();
+
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Payment modal state
   const [pendingPlanCode, setPendingPlanCode] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -62,31 +64,30 @@ export default function CounselorSubscriptionPage() {
     try {
       const res = await fetch("/api/plans?category=COUNSELLOR");
       const data = await res.json();
-
-      if (data.success) {
-        setPlans(data.data.plans || []);
-      }
+      if (data.success) setPlans(data.data.plans || []);
     } catch (e) {
       console.error(e);
+      setErrorMsg("Failed to load plans. Please refresh.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSelectPlan = async (planCode: string) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
     if (!session) {
       router.push("/login?callbackUrl=/counselor/subscription");
       return;
     }
 
-    // Don't allow subscribing to the same plan
     const currentPlanCode = getCurrentPlanCode();
-    if (planCode === currentPlanCode) {
-      return;
-    }
+    if (planCode === currentPlanCode) return;
 
-    // Check if it's a free plan — skip payment entirely
     const selectedPlan = plans.find((p) => p.planCode === planCode);
+
+    // Free plan — activate directly, no payment modal needed
     if (selectedPlan && selectedPlan.price === 0) {
       setActivating(true);
       try {
@@ -96,52 +97,44 @@ export default function CounselorSubscriptionPage() {
           body: JSON.stringify({ planCode }),
         });
         const data = await res.json();
+
         if (data.success) {
+          setSuccessMsg("Free plan activated! Redirecting...");
           router.refresh();
-          alert("Free plan activated! Redirecting...");
-          setTimeout(() => router.push("/counselor"), 1000);
+          setTimeout(() => router.push("/counselor"), 1500);
+        } else if (data.error === "You already have this subscription") {
+          router.push("/counselor");
         } else {
-          alert(data.message || "Failed to activate plan");
+          setErrorMsg(data.error || "Failed to activate plan");
         }
       } catch (e) {
         console.error(e);
-        alert("Error activating plan");
+        setErrorMsg("Network error. Please try again.");
       } finally {
         setActivating(false);
       }
       return;
     }
 
-    // Paid plan — show payment modal
+    // Paid plan — open payment modal
+    // NOTE: SubscriptionPaymentModal handles the POST /api/plans internally
+    // after payment is confirmed. Do NOT call it again in handlePaymentSuccess.
     setPendingPlanCode(planCode);
-    setShowPaymentModal(true);
   };
 
-  const handlePaymentSuccess = async () => {
-    if (!pendingPlanCode) return;
+  // ✅ Called AFTER SubscriptionPaymentModal has already activated the subscription.
+  // Just close the modal and redirect — do NOT post to /api/plans again.
+  const handlePaymentSuccess = async (transactionId: string) => {
+    setPendingPlanCode(null);
+    await update(); // Refresh session to get new subscription
+    setSuccessMsg("Subscription activated! Redirecting...");
+    router.refresh();
+    setTimeout(() => router.push("/counselor"), 1500);
+  };
 
-    try {
-      const res = await fetch("/api/plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planCode: pendingPlanCode }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setShowPaymentModal(false);
-        setPendingPlanCode(null);
-        router.refresh();
-        alert("Subscription updated! Redirecting...");
-        setTimeout(() => router.push("/counselor"), 1000);
-      } else {
-        alert(data.message || "Failed to update subscription");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Error updating subscription");
-    }
+  const handlePaymentError = (error: string) => {
+    setPendingPlanCode(null);
+    setErrorMsg(error);
   };
 
   if (loading) {
@@ -174,12 +167,33 @@ export default function CounselorSubscriptionPage() {
         </p>
       </div>
 
+      {/* Error / success banners */}
+      {errorMsg && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--error-text)] text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{errorMsg}</span>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="ml-auto opacity-60 hover:opacity-100"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {successMsg && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--success-bg)] border border-[var(--success-border)] text-[var(--success-text)] text-sm">
+          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {activeCounselorPlans.map((plan) => {
-          const Icon = planIcons[plan.planCode.toLowerCase()] || Crown;
+          const Icon = planIcons[plan.name.toLowerCase()] ?? Crown;
           const isCurrentPlan = plan.planCode === currentPlanCode;
           const isFree = plan.price === 0;
+          const isPending = pendingPlanCode === plan.planCode;
 
           return (
             <div
@@ -192,7 +206,8 @@ export default function CounselorSubscriptionPage() {
               <div
                 className="absolute top-0 left-0 right-0 h-1"
                 style={{
-                  background: `linear-gradient(135deg, var(--purple), var(--scarlet))`,
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--scarlet))",
                 }}
               />
 
@@ -251,48 +266,44 @@ export default function CounselorSubscriptionPage() {
                 </div>
               </div>
 
-              {/* Limits */}
-              <div className="mb-6 space-y-2">
-                <div className="text-sm">
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {plan.features &&
-                    plan.features.includes("Unlimited sessions")
-                      ? "Unlimited"
-                      : "Standard"}{" "}
-                  </span>
-                  <span className="text-[var(--text-secondary)]">Sessions</span>
+              {/* Features */}
+              {plan.features && plan.features.length > 0 && (
+                <div className="mb-6 space-y-2">
+                  {plan.features.slice(0, 3).map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <CheckCircle className="w-3 h-3 text-[var(--purple)] flex-shrink-0" />
+                      <span className="text-[var(--text-secondary)]">
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
+                  {plan.features.length > 3 && (
+                    <p className="text-xs text-[var(--text-muted)] pl-5">
+                      +{plan.features.length - 3} more features
+                    </p>
+                  )}
                 </div>
-                {plan.features && plan.features.length > 0 && (
-                  <div className="text-xs text-[var(--text-secondary)]">
-                    {plan.features.slice(0, 3).map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <CheckCircle className="w-3 h-3 text-[var(--purple)]" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                    {plan.features.length > 3 && (
-                      <div className="text-xs text-[var(--text-muted)]">
-                        +{plan.features.length - 3} more features
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* CTA Button */}
+              {/* CTA */}
               <button
                 onClick={() => handleSelectPlan(plan.planCode)}
-                disabled={isCurrentPlan || activating}
-                className={`w-full py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                disabled={isCurrentPlan || activating || isPending}
+                className={`w-full py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
                   isCurrentPlan
                     ? "bg-[var(--sidebar-item-hover)] text-[var(--text-secondary)] cursor-default"
                     : "bg-[var(--purple)] text-white hover:opacity-90"
                 }`}
               >
-                {activating ? (
+                {activating && !isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Activating...
+                  </>
+                ) : isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Opening payment...
                   </>
                 ) : isCurrentPlan ? (
                   "Current Plan"
@@ -308,20 +319,13 @@ export default function CounselorSubscriptionPage() {
       </div>
 
       {/* Payment Modal */}
-      {showPaymentModal && pendingPlanCode && (
+      {pendingPlanCode && (
         <SubscriptionPaymentModal
           planCode={pendingPlanCode}
           paymentMethodId="MOBILE_MONEY_MTN"
           onSuccess={handlePaymentSuccess}
-          onError={(err) => {
-            alert(`Payment error: ${err}`);
-            setShowPaymentModal(false);
-            setPendingPlanCode(null);
-          }}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setPendingPlanCode(null);
-          }}
+          onError={handlePaymentError}
+          onClose={() => setPendingPlanCode(null)}
         />
       )}
     </div>

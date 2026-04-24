@@ -460,7 +460,9 @@ function LearnPageContent() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filtered.map((course) => {
-                  const cat = CATEGORIES.find((c) => c.id === course.category);
+                  const cat = CATEGORIES.find(
+                    (c) => c.id === course.categoryId,
+                  );
                   const lessonCount = getLessonCount(course);
                   const duration = getCourseDuration(course);
 

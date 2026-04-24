@@ -1,17 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
-import {
-  Save,
-  Plus,
-  X,
-  Wrench,
-  ArrowLeft,
-  AlertTriangle,
-  Lock,
-  Package,
-} from "lucide-react";
+import { Save, Plus, X, Wrench, ArrowLeft } from "lucide-react";
 import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
 
 const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
@@ -47,23 +38,9 @@ interface ExistingService {
 }
 
 interface Props {
-  /** If provided, form is in edit mode */
   service?: ExistingService;
   onSuccess: () => void;
   onCancel: () => void;
-}
-
-interface UserSubscription {
-  id: string;
-  status: "ACTIVE" | "PAST_DUE" | "CANCELLED" | "EXPIRED" | "TRIALING";
-  leadsUsed: number;
-  plan: {
-    id: string;
-    planCode: string;
-    name: string;
-    category: string;
-    leadLimit: number | null;
-  };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -74,14 +51,8 @@ export default function CreatorServiceForm({
   onCancel,
 }: Props) {
   const isEdit = !!service;
-
   const [loading, setLoading] = useState(false);
-  const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const [subscription, setSubscription] = useState<UserSubscription | null>(
-    null,
-  );
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [images, setImages] = useState<
     Array<{ url: string; publicId: string }>
@@ -120,85 +91,21 @@ export default function CreatorServiceForm({
         ],
   );
 
-  // Fetch user's SERVICE subscription
-  useEffect(() => {
-    if (isEdit) {
-      // Skip subscription check for edits
-      setCheckingSubscription(false);
-      return;
-    }
-
-    fetchSubscription();
-  }, [isEdit]);
-
-  const fetchSubscription = async () => {
-    try {
-      const res = await fetch("/api/user/subscriptions");
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        const serviceSub = data.data.subscriptions?.find(
-          (sub: UserSubscription) =>
-            sub.plan.category === "SERVICE" && sub.status === "ACTIVE",
-        );
-        setSubscription(serviceSub || null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch subscription:", error);
-    } finally {
-      setCheckingSubscription(false);
-    }
-  };
-
-  const canAddService = () => {
-    if (isEdit) return true; // Always allow edits
-    if (!subscription) return false; // No subscription = no access
-
-    const limit = subscription.plan.leadLimit;
-    if (limit === null || limit === 0) return true; // Unlimited
-
-    return subscription.leadsUsed < limit; // Check limit
-  };
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    // Validation
     if (images.length === 0) {
-      alert("Please upload at least one image");
+      setError("Please upload at least one image");
       return;
     }
     if (!options[0]?.name) {
-      alert("Please add at least one pricing option");
+      setError("Please add at least one pricing option");
       return;
     }
 
-    // Check if user can add service
-    if (!isEdit && !canAddService()) {
-      if (!subscription) {
-        alert("You need an active Service subscription to list services.");
-        return;
-      }
-
-      const limit = subscription.plan.leadLimit;
-      alert(
-        `You've reached your lead limit (${limit}). Please upgrade your plan.`,
-      );
-      return;
-    }
-
-    // If no subscription, show payment modal
-    if (!isEdit && !subscription) {
-      setPendingSubmit(true);
-      setShowPaymentModal(true);
-      return;
-    }
-
-    // Proceed with submission
-    await submitService();
-  };
-
-  const submitService = async () => {
     setLoading(true);
     try {
       const servicePayload = {
@@ -231,7 +138,6 @@ export default function CreatorServiceForm({
       const result = await serviceRes.json();
       const serviceId = isEdit ? service.id : result.service.id;
 
-      // Save options sequentially
       for (const option of options) {
         if (!option.name || !option.amount) continue;
         const optionPayload = {
@@ -248,14 +154,12 @@ export default function CreatorServiceForm({
         };
 
         if (isEdit && option.id) {
-          // Update existing option
           await fetch(`/api/services/${serviceId}/options/${option.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(optionPayload),
           });
         } else {
-          // Create new option
           await fetch(`/api/services/${serviceId}/options`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -265,26 +169,11 @@ export default function CreatorServiceForm({
       }
 
       onSuccess();
-    } catch (error: any) {
-      alert(error.message || "Failed to save service");
+    } catch (err: any) {
+      setError(err.message || "Failed to save service");
     } finally {
       setLoading(false);
-      setPendingSubmit(false);
     }
-  };
-
-  const handlePaymentSuccess = async (transactionId: string) => {
-    setShowPaymentModal(false);
-    await fetchSubscription(); // Refresh subscription
-    if (pendingSubmit) {
-      await submitService(); // Submit the pending service
-    }
-  };
-
-  const handlePaymentError = (error: string) => {
-    alert(error);
-    setShowPaymentModal(false);
-    setPendingSubmit(false);
   };
 
   // ── List helpers ──────────────────────────────────────────────────────────
@@ -328,27 +217,7 @@ export default function CreatorServiceForm({
   const removeOption = (i: number) =>
     setOptions(options.filter((_, idx) => idx !== i));
 
-  // Show loading state while checking subscription
-  if (checkingSubscription) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--purple)] mx-auto mb-4" />
-          <p style={{ color: "var(--text-secondary)" }}>
-            Checking your subscription...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show subscription warning for new services
-  const showSubscriptionWarning = !isEdit && !subscription;
-  const showLimitWarning =
-    !isEdit &&
-    subscription &&
-    subscription.plan.leadLimit &&
-    subscription.leadsUsed >= subscription.plan.leadLimit;
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -391,36 +260,8 @@ export default function CreatorServiceForm({
         </div>
       </div>
 
-      {/* Subscription Warning */}
-      {showSubscriptionWarning && (
-        <div
-          className="p-4 rounded-xl flex items-start gap-3"
-          style={{
-            background: "var(--warning-bg)",
-            border: "1px solid var(--warning-border)",
-          }}
-        >
-          <Lock
-            className="w-5 h-5 flex-shrink-0 mt-0.5"
-            style={{ color: "var(--warning-text)" }}
-          />
-          <div>
-            <p
-              className="font-semibold mb-1"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Service Subscription Required
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              You need an active Service subscription to list services. Complete
-              the form and you'll be prompted to subscribe before publishing.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Limit Warning */}
-      {showLimitWarning && (
+      {/* Error banner */}
+      {error && (
         <div
           className="p-4 rounded-xl flex items-start gap-3"
           style={{
@@ -428,55 +269,19 @@ export default function CreatorServiceForm({
             border: "1px solid var(--error-border)",
           }}
         >
-          <AlertTriangle
+          <X
             className="w-5 h-5 flex-shrink-0 mt-0.5"
             style={{ color: "var(--error-text)" }}
           />
-          <div>
-            <p
-              className="font-semibold mb-1"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Lead Limit Reached
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              You've used {subscription.leadsUsed} of{" "}
-              {subscription.plan.leadLimit} leads on your{" "}
-              {subscription.plan.name} plan. Please upgrade to list more
-              services.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Subscription Info (if active) */}
-      {!isEdit && subscription && !showLimitWarning && (
-        <div
-          className="p-4 rounded-xl flex items-center justify-between"
-          style={{
-            background: "var(--success-bg)",
-            border: "1px solid var(--success-border)",
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <Package
-              className="w-5 h-5"
-              style={{ color: "var(--success-text)" }}
-            />
-            <div>
-              <p
-                className="font-semibold text-sm"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {subscription.plan.name} Plan Active
-              </p>
-              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                {subscription.plan.leadLimit
-                  ? `${subscription.leadsUsed} / ${subscription.plan.leadLimit} leads used`
-                  : "Unlimited leads"}
-              </p>
-            </div>
-          </div>
+          <p className="text-sm" style={{ color: "var(--error-text)" }}>
+            {error}
+          </p>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto opacity-60 hover:opacity-100"
+          >
+            <X className="w-4 h-4" style={{ color: "var(--error-text)" }} />
+          </button>
         </div>
       )}
 
@@ -866,18 +671,11 @@ export default function CreatorServiceForm({
         <div className="flex gap-4 pb-8">
           <button
             type="submit"
-            disabled={loading || images.length === 0 || !!showLimitWarning}
+            disabled={loading || images.length === 0}
             className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {showSubscriptionWarning && <Lock className="w-5 h-5" />}
             <Save className="w-5 h-5" />
-            {loading
-              ? "Saving…"
-              : showSubscriptionWarning
-                ? "Subscribe & Create Service"
-                : isEdit
-                  ? "Save Changes"
-                  : "Create Service"}
+            {loading ? "Saving…" : isEdit ? "Save Changes" : "Create Service"}
           </button>
           <button
             type="button"

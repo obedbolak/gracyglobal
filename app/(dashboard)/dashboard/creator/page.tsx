@@ -33,16 +33,27 @@ export default async function CreatorPage() {
 
   // Fetch their products if subscribed to marketplace
   const products = hasMarketplaceSub
-    ? await prisma.product.findMany({
+    ? (await prisma.product.findMany({
         where: { sellerId: session.user.id },
         orderBy: { createdAt: "desc" },
-      })
+        include: { category: true },
+      }))?.map((product) => ({
+        ...product,
+        category: product.category.name,
+      }))
     : [];
 
   // Fetch their services if subscribed to service plan
-  // Note: Service model doesn't have sellerId yet — you may need to add it
-  // For now we pass empty array — update when sellerId is added to Service model
-  const services: any[] = [];
+  const services = hasServiceSub
+    ? (await prisma.service.findMany({
+        where: { sellerId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        include: { category: true },
+      }))?.map((service) => ({
+        ...service,
+        category: service.category.name,
+      }))
+    : [];
 
   return (
     <MyStoreClient

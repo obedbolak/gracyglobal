@@ -53,7 +53,11 @@ const planIcons: Record<string, React.ElementType> = {
 export default function TeacherSubscriptionPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { subscription: currentSub, getCurrentPlanCode } = useSubscription();
+  const {
+    subscription: currentSub,
+    getCurrentPlanCode,
+    refetch,
+  } = useSubscription();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);

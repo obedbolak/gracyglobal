@@ -1,4 +1,7 @@
 "use client";
+
+// hooks/useServices.ts
+
 import useSWR from "swr";
 
 export interface ServiceOption {
@@ -19,7 +22,14 @@ export interface Service {
   name: string;
   description: string;
   images: string[];
-  category: string;
+  categoryId: string;
+  // Relation — populated when API does include: { category: true }
+  category?: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+  };
   group: string;
   featured: boolean;
   active: boolean;
@@ -29,28 +39,26 @@ export interface Service {
   includes: string[];
   availability: string | null;
   options: ServiceOption[];
-  _count?: {
-    bookings: number;
-  };
+  _count?: { bookings: number };
 }
 
 interface UseServicesOptions {
-  category?: string;
+  categoryId?: string; // filter by category ID
+  category?: string; // filter by category name (legacy / convenience)
   group?: string;
   featured?: boolean;
   search?: string;
 }
 
-// Shared fetcher
 const fetcher = (url: string) =>
   fetch(url).then((res) => {
     if (!res.ok) throw new Error("Failed to fetch");
     return res.json();
   });
 
-// Hook for multiple services
 export function useServices(options: UseServicesOptions = {}) {
   const params = new URLSearchParams();
+  if (options.categoryId) params.append("categoryId", options.categoryId);
   if (options.category) params.append("category", options.category);
   if (options.group) params.append("group", options.group);
   if (options.featured !== undefined)
@@ -59,32 +67,28 @@ export function useServices(options: UseServicesOptions = {}) {
 
   const key = `/api/services?${params.toString()}`;
 
-  const { data, error, isLoading, mutate } = useSWR<{ services: Service[] }>(
-    key,
-    fetcher,
-    {
-      revalidateOnFocus: false, // don't refetch when tab regains focus
-      dedupingInterval: 60_000, // cache for 60 seconds
-    },
-  );
+  const { data, error, isLoading, mutate } = useSWR<{
+    services: Service[];
+    count: number;
+  }>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
 
   return {
     services: data?.services ?? [],
+    total: data?.count ?? 0,
     loading: isLoading,
     error: error?.message ?? null,
-    mutate, // call mutate() to manually refresh
+    mutate,
   };
 }
 
-// Hook for single service
 export function useService(id: string) {
   const { data, error, isLoading, mutate } = useSWR<{ service: Service }>(
-    id ? `/api/services/${id}` : null, // null key = don't fetch
+    id ? `/api/services/${id}` : null,
     fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60_000,
-    },
+    { revalidateOnFocus: false, dedupingInterval: 60_000 },
   );
 
   return {

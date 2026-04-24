@@ -140,7 +140,7 @@ export default function DashboardSettingsPage() {
       setTimeout(() => setSaved(false), 3000);
       setProfile(data.data);
       setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
-      
+
       // Refresh the session to update profile image and other changes
       await updateSession({
         name: data.data.name,

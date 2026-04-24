@@ -15,7 +15,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: {
+          select: { id: true, name: true, icon: true, color: true },
+        },
+      },
+    });
 
     if (!product) return err("Product not found", 404);
 
@@ -41,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (
       !data.name ||
       !data.description ||
-      !data.category ||
+      !data.categoryId ||
       data.price === undefined ||
       data.stock === undefined
     ) {
@@ -55,7 +62,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         description: data.description,
         price: parseInt(data.price),
         images: data.images ?? [],
-        category: data.category,
+        categoryId: data.categoryId,
         group: data.group ?? "",
         stock: parseInt(data.stock),
         featured: data.featured ?? false,

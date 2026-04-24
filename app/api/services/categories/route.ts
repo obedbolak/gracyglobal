@@ -7,7 +7,7 @@ export async function GET() {
   try {
     // Get unique categories with service counts
     const services = await prisma.service.groupBy({
-      by: ["category", "group"],
+      by: ["categoryId", "group"],
       where: { active: true },
       _count: {
         id: true,
@@ -21,7 +21,7 @@ export async function GET() {
           acc[item.group] = [];
         }
         acc[item.group].push({
-          category: item.category,
+          category: item.categoryId,
           count: item._count.id,
         });
         return acc;

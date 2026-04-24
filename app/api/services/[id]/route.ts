@@ -73,13 +73,21 @@ export async function PUT(
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
+    const categoryId =
+      data.categoryId ||
+      (data.category
+        ? (await prisma.serviceCategory.findUnique({
+            where: { name: data.category },
+          }))?.id
+        : undefined);
+
     const service = await prisma.service.update({
       where: { id },
       data: {
         name: data.name ?? existing.name,
         description: data.description ?? existing.description,
         images: data.images ?? existing.images,
-        category: data.category ?? existing.category,
+        categoryId: categoryId ?? existing.categoryId,
         group: data.group ?? existing.group,
         featured: data.featured ?? existing.featured,
         active: data.active ?? existing.active,
@@ -99,6 +107,13 @@ export async function PUT(
     console.error("PUT /api/services/[id] error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return PUT(req, { params });
 }
 
 // DELETE /api/services/:id - Delete service (admin only)

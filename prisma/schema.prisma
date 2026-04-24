@@ -46,6 +46,7 @@ model User {
 
   teacherCourses Course[]  @relation("TeacherCourses") // ← ADD THIS LINE
   sellerProducts Product[] @relation("SellerProducts") // ← ADD THIS
+  sellerServices Service[] @relation("SellerServices")
 
   @@map("users")
 }
@@ -440,6 +441,9 @@ model ProductCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+   products  Product[] 
+  @@index([slug])
+  @@index([active, sortOrder])
   @@map("product_categories")
 }
 
@@ -452,8 +456,7 @@ model Product {
   description String   @db.Text
   price       Int
   images      String[]
-  category    String
-  group       String   @default("")
+  categoryId  String   // Changed from category String  group       String   @default("")
   stock       Int      @default(0)
   featured    Boolean  @default(false)
   active      Boolean  @default(true)
@@ -462,11 +465,18 @@ model Product {
   badge       String?
   benefits    String[]
   ingredients String[]
+  group       String   @default("")
   createdAt   DateTime @default(now())
 
   orderItems OrderItem[]
+  category   ProductCategory @relation(fields: [categoryId], references: [id])
   seller     User?       @relation("SellerProducts", fields: [sellerId], references: [id]) // ← ADD THIS
 
+
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([active, featured])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -705,6 +715,24 @@ enum PayoutStatus {
   FAILED
 }
 
+model CourseCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  color     String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+
+  @@index([slug])
+  @@index([active, sortOrder])
+  @@map("course_categories")
+}
+
 // ─── E-LEARNING ──────────────────────────────────────────────────────────────
 
 model Course {
@@ -712,7 +740,7 @@ model Course {
   title       String
   description String      @db.Text
   thumbnail   String?
-  category    String
+  categoryId  String
   level       CourseLevel @default(BEGINNER)
   price       Int         @default(0) // 0 = free, CFA
   isFree      Boolean     @default(false)
@@ -723,11 +751,16 @@ model Course {
 
   teacherId String? // ← ADD THIS
   teacher   User?   @relation("TeacherCourses", fields: [teacherId], references: [id]) // ← ADD THIS
+  category  CourseCategory @relation(fields: [categoryId], references: [id])
 
   sections    CourseSection[]
   enrollments Enrollment[]
   liveSession LiveSession?
 
+   @@index([categoryId])
+  @@index([teacherId])
+  @@index([published, featured])
+  @@index([createdAt])
   @@map("courses")
 }
 
@@ -897,14 +930,34 @@ model LessonProgress {
   @@map("lesson_progress")
 }
 
+
+model ServiceCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  color     String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services Service[]
+
+ @@index([slug])
+  @@index([active, sortOrder])
+  @@map("service_categories")
+}
+
 // ─── SERVICES ────────────────────────────────────────────────────────────────
 
 model Service {
   id           String   @id @default(cuid())
   name         String
+  sellerId     String?  // service creator or seller
   description  String   @db.Text
   images       String[]
-  category     String
+  categoryId   String
   group        String
   featured     Boolean  @default(false)
   rating       Float    @default(0)
@@ -918,7 +971,13 @@ model Service {
 
   options  ServiceOption[]
   bookings ServiceBooking[]
+  seller   User?           @relation("SellerServices", fields: [sellerId], references: [id])
+  category ServiceCategory @relation(fields: [categoryId], references: [id])
 
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([active, featured])
+  @@index([createdAt])
   @@map("services")
 }
 

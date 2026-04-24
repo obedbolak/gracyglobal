@@ -1,6 +1,8 @@
-// prisma/seed-plans.ts
+import { Service } from "./../data/services";
+// prisma/seed-categories.ts
+// Run with: npx ts-node prisma/seed-categories.ts
 
-import { PrismaClient, PlanCategory, PlanInterval } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import * as dotenv from "dotenv";
@@ -14,328 +16,350 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool as any);
 const prisma = new PrismaClient({ adapter });
 
-// ─── 15 PRICING PLANS ────────────────────────────────────────────────────────
+async function main() {
+  console.log("🌱 Seeding product and service categories...\n");
 
-const PRICING_PLANS = [
-  // ═══ 1️⃣ COUNSELLOR PLANS ═══
-  {
-    planCode: "C1",
-    category: PlanCategory.COUNSELLOR,
-    name: "Monthly",
-    price: 3000,
-    interval: PlanInterval.MONTHLY,
-    commissionRate: 10,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["basic_profile", "bookings", "10% commission per session"],
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    planCode: "C2",
-    category: PlanCategory.COUNSELLOR,
-    name: "Yearly",
-    price: 30000,
-    interval: PlanInterval.YEARLY,
-    commissionRate: 7,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "better_visibility",
-      "bookings",
-      "7% commission per session",
-      "priority_support",
-    ],
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    planCode: "C3",
-    category: PlanCategory.COUNSELLOR,
-    name: "Free",
-    price: 0,
-    interval: PlanInterval.ONGOING,
-    commissionRate: 15,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["basic_access", "15% commission per session"],
-    active: true,
-    sortOrder: 3,
-  },
+  // ─── 1. PRODUCT CATEGORIES ──────────────────────────────────────────────────
+  console.log("📦 Creating Product Categories...");
 
-  // ═══ 2️⃣ MARKETPLACE PLANS ═══
-  {
-    planCode: "M1",
-    category: PlanCategory.MARKETPLACE,
-    name: "Monthly Store",
-    price: 3000,
-    interval: PlanInterval.MONTHLY,
-    commissionRate: 10,
-    productLimit: 20,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "up_to_20_products",
-      "10% commission per sale",
-      "basic_analytics",
-    ],
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    planCode: "M2",
-    category: PlanCategory.MARKETPLACE,
-    name: "Yearly Store",
-    price: 30000,
-    interval: PlanInterval.YEARLY,
-    commissionRate: 7,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "unlimited_products",
-      "7% commission per sale",
-      "advanced_analytics",
-      "priority_support",
-    ],
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    planCode: "M3",
-    category: PlanCategory.MARKETPLACE,
-    name: "Free Store",
-    price: 0,
-    interval: PlanInterval.ONGOING,
-    commissionRate: 15,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "unlimited_products",
-      "15% commission per sale",
-      "mass_adoption",
-    ],
-    active: true,
-    sortOrder: 3,
-  },
+  const productCategories = [
+    {
+      name: "Electronics",
+      slug: "electronics",
+      icon: "📱",
+      color: "#007AFF",
+      sortOrder: 1,
+    },
+    {
+      name: "Fashion",
+      slug: "fashion",
+      icon: "👔",
+      color: "#FF1493",
+      sortOrder: 2,
+    },
+    {
+      name: "Home & Garden",
+      slug: "home-garden",
+      icon: "🏠",
+      color: "#228B22",
+      sortOrder: 3,
+    },
+    {
+      name: "Beauty & Personal Care",
+      slug: "beauty-personal-care",
+      icon: "💄",
+      color: "#FFB6C1",
+      sortOrder: 4,
+    },
+    {
+      name: "Health & Wellness",
+      slug: "health-wellness",
+      icon: "💊",
+      color: "#FF6B6B",
+      sortOrder: 5,
+    },
+    {
+      name: "Sports & Outdoors",
+      slug: "sports-outdoors",
+      icon: "⚽",
+      color: "#4CAF50",
+      sortOrder: 6,
+    },
+    {
+      name: "Books & Media",
+      slug: "books-media",
+      icon: "📚",
+      color: "#8B4513",
+      sortOrder: 7,
+    },
+    {
+      name: "Toys & Games",
+      slug: "toys-games",
+      icon: "🎮",
+      color: "#FF69B4",
+      sortOrder: 8,
+    },
+    {
+      name: "Food & Beverages",
+      slug: "food-beverages",
+      icon: "🍔",
+      color: "#FFA500",
+      sortOrder: 9,
+    },
+    {
+      name: "Handmade & Crafts",
+      slug: "handmade-crafts",
+      icon: "🎨",
+      color: "#9C27B0",
+      sortOrder: 10,
+    },
+  ];
 
-  // ═══ 3️⃣ SERVICE PLANS ═══
-  {
-    planCode: "S1",
-    category: PlanCategory.SERVICE,
-    name: "Monthly",
-    price: 2000,
-    interval: PlanInterval.MONTHLY,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: 10,
-    courseLimit: null,
-    features: ["10_leads_per_month", "basic_profile"],
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    planCode: "S2",
-    category: PlanCategory.SERVICE,
-    name: "Yearly",
-    price: 20000,
-    interval: PlanInterval.YEARLY,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: 50,
-    courseLimit: null,
-    features: [
-      "50_leads_per_month",
-      "better_ranking",
-      "priority_support",
-      "featured_listing",
-    ],
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    planCode: "S3",
-    category: PlanCategory.SERVICE,
-    name: "Pay-Per-Lead",
-    price: 200,
-    interval: PlanInterval.PER_LEAD,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["no_subscription", "no_risk", "pay_only_for_results"],
-    active: true,
-    sortOrder: 3,
-  },
-
-  // ═══ 4️⃣ TEACHER PLANS ═══
-  {
-    planCode: "T1",
-    category: PlanCategory.TEACHER,
-    name: "Monthly",
-    price: 3000,
-    interval: PlanInterval.MONTHLY,
-    commissionRate: 20,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: 2,
-    features: [
-      "upload_2_courses",
-      "20% commission per sale",
-      "basic_analytics",
-    ],
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    planCode: "T2",
-    category: PlanCategory.TEACHER,
-    name: "Yearly",
-    price: 30000,
-    interval: PlanInterval.YEARLY,
-    commissionRate: 15,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "unlimited_courses",
-      "15% commission per sale",
-      "advanced_analytics",
-      "priority_support",
-    ],
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    planCode: "T3",
-    category: PlanCategory.TEACHER,
-    name: "Free",
-    price: 0,
-    interval: PlanInterval.ONGOING,
-    commissionRate: 30,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["unlimited_courses", "30% commission per sale", "mass_adoption"],
-    active: true,
-    sortOrder: 3,
-  },
-
-  // ═══ 5️⃣ STUDENT PLANS ═══
-  {
-    planCode: "U1",
-    category: PlanCategory.STUDENT,
-    name: "Free Account",
-    price: 0,
-    interval: PlanInterval.ONGOING,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["pay_per_use", "access_free_courses", "basic_features"],
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    planCode: "U2",
-    category: PlanCategory.STUDENT,
-    name: "Monthly Premium",
-    price: 1500,
-    interval: PlanInterval.MONTHLY,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: ["discounts", "priority_support", "early_access"],
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    planCode: "U3",
-    category: PlanCategory.STUDENT,
-    name: "Yearly Premium",
-    price: 15000,
-    interval: PlanInterval.YEARLY,
-    commissionRate: null,
-    productLimit: null,
-    leadLimit: null,
-    courseLimit: null,
-    features: [
-      "bigger_discounts",
-      "free_courses",
-      "priority_support",
-      "exclusive_content",
-    ],
-    active: true,
-    sortOrder: 3,
-  },
-];
-
-// ─── Main seed function ───────────────────────────────────────────────────────
-
-async function seedPricingPlans() {
-  console.log("🌱 Starting pricing plans seed...\n");
-
-  try {
-    console.log("💰 Upserting pricing plans...");
-
-    for (const planData of PRICING_PLANS) {
-      const plan = await prisma.pricingPlan.upsert({
-        where: { planCode: planData.planCode },
-        update: {
-          category: planData.category,
-          name: planData.name,
-          price: planData.price,
-          interval: planData.interval,
-          commissionRate: planData.commissionRate,
-          productLimit: planData.productLimit,
-          leadLimit: planData.leadLimit,
-          courseLimit: planData.courseLimit,
-          features: planData.features,
-          active: planData.active,
-          sortOrder: planData.sortOrder,
-        },
-        create: {
-          planCode: planData.planCode,
-          category: planData.category,
-          name: planData.name,
-          price: planData.price,
-          interval: planData.interval,
-          commissionRate: planData.commissionRate,
-          productLimit: planData.productLimit,
-          leadLimit: planData.leadLimit,
-          courseLimit: planData.courseLimit,
-          features: planData.features,
-          active: planData.active,
-          sortOrder: planData.sortOrder,
-        },
-      });
-
-      console.log(
-        `  ✓ [${plan.planCode}] ${plan.category} - ${plan.name} (${plan.price} FCFA)`,
-      );
-    }
-
-    // ── Summary ───────────────────────────────────────────────────────────────
-    console.log("\n✅ Pricing plans seed complete!");
-    console.log(`   Total plans: ${PRICING_PLANS.length}`);
-    console.log("\n📊 Breakdown:");
-    console.log(`   Counsellor plans : 3`);
-    console.log(`   Marketplace plans: 3`);
-    console.log(`   Service plans    : 3`);
-    console.log(`   Teacher plans    : 3`);
-    console.log(`   Student plans    : 3`);
-  } catch (error) {
-    console.error("\n❌ Seeding error:", error);
-    throw error;
-  } finally {
-    await pool.end();
-    await prisma.$disconnect();
+  for (const category of productCategories) {
+    await prisma.productCategory.upsert({
+      where: { slug: category.slug },
+      update: {
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+      create: {
+        name: category.name,
+        slug: category.slug,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+    });
+    console.log(`  ✅ ${category.icon} ${category.name}`);
   }
+
+  // ─── 2. SERVICE CATEGORIES ───────────────────────────────────────────────────
+  console.log("\n🔧 Creating Service Categories...");
+
+  const serviceCategories = [
+    {
+      name: "Cleaning",
+      slug: "cleaning",
+      icon: "🧹",
+      color: "#00BCD4",
+      sortOrder: 1,
+    },
+    {
+      name: "Plumbing",
+      slug: "plumbing",
+      icon: "🔧",
+      color: "#FF9800",
+      sortOrder: 2,
+    },
+    {
+      name: "Electrical",
+      slug: "electrical",
+      icon: "⚡",
+      color: "#FFEB3B",
+      sortOrder: 3,
+    },
+    {
+      name: "Carpentry",
+      slug: "carpentry",
+      icon: "🪵",
+      color: "#8D6E63",
+      sortOrder: 4,
+    },
+    {
+      name: "Painting",
+      slug: "painting",
+      icon: "🎨",
+      color: "#E91E63",
+      sortOrder: 5,
+    },
+    {
+      name: "Landscaping",
+      slug: "landscaping",
+      icon: "🌳",
+      color: "#4CAF50",
+      sortOrder: 6,
+    },
+    {
+      name: "Tutoring",
+      slug: "tutoring",
+      icon: "📖",
+      color: "#3F51B5",
+      sortOrder: 7,
+    },
+    {
+      name: "Photography",
+      slug: "photography",
+      icon: "📷",
+      color: "#F44336",
+      sortOrder: 8,
+    },
+    {
+      name: "Fitness Training",
+      slug: "fitness-training",
+      icon: "💪",
+      color: "#FF5722",
+      sortOrder: 9,
+    },
+    {
+      name: "Event Planning",
+      slug: "event-planning",
+      icon: "🎉",
+      color: "#9C27B0",
+      sortOrder: 10,
+    },
+    {
+      name: "Pet Care",
+      slug: "pet-care",
+      icon: "🐕",
+      color: "#D4A574",
+      sortOrder: 11,
+    },
+    {
+      name: "Automotive",
+      slug: "automotive",
+      icon: "🚗",
+      color: "#607D8B",
+      sortOrder: 12,
+    },
+    {
+      name: "Haircare & Styling",
+      slug: "haircare-styling",
+      icon: "💇",
+      color: "#E1BEE7",
+      sortOrder: 13,
+    },
+    {
+      name: "Massage & Spa",
+      slug: "massage-spa",
+      icon: "💆",
+      color: "#F8BBD0",
+      sortOrder: 14,
+    },
+    {
+      name: "Consulting",
+      slug: "consulting",
+      icon: "💼",
+      color: "#455A64",
+      sortOrder: 15,
+    },
+  ];
+
+  for (const category of serviceCategories) {
+    await prisma.serviceCategory.upsert({
+      where: { slug: category.slug },
+      update: {
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+      create: {
+        name: category.name,
+        slug: category.slug,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+    });
+    console.log(`  ✅ ${category.icon} ${category.name}`);
+  }
+
+  // ─── 3. COURSE CATEGORIES ───────────────────────────────────────────────────
+  console.log("\n🎓 Creating Course Categories...");
+
+  const courseCategories = [
+    {
+      name: "Programming",
+      slug: "programming",
+      icon: "💻",
+      color: "#2196F3",
+      sortOrder: 1,
+    },
+    {
+      name: "Business",
+      slug: "business",
+      icon: "💼",
+      color: "#FFC107",
+      sortOrder: 2,
+    },
+    {
+      name: "Design",
+      slug: "design",
+      icon: "🎨",
+      color: "#FF5722",
+      sortOrder: 3,
+    },
+    {
+      name: "Marketing",
+      slug: "marketing",
+      icon: "📢",
+      color: "#E91E63",
+      sortOrder: 4,
+    },
+    {
+      name: "Personal Development",
+      slug: "personal-development",
+      icon: "🌟",
+      color: "#9C27B0",
+      sortOrder: 5,
+    },
+    {
+      name: "Finance",
+      slug: "finance",
+      icon: "💰",
+      color: "#4CAF50",
+      sortOrder: 6,
+    },
+    {
+      name: "Health & Fitness",
+      slug: "health-fitness",
+      icon: "🏃",
+      color: "#FF6B6B",
+      sortOrder: 7,
+    },
+    {
+      name: "Language Learning",
+      slug: "language-learning",
+      icon: "🗣️",
+      color: "#00BCD4",
+      sortOrder: 8,
+    },
+    {
+      name: "Music & Arts",
+      slug: "music-arts",
+      icon: "🎵",
+      color: "#FF1493",
+      sortOrder: 9,
+    },
+    {
+      name: "Technology",
+      slug: "technology",
+      icon: "⚙️",
+      color: "#607D8B",
+      sortOrder: 10,
+    },
+  ];
+
+  for (const category of courseCategories) {
+    await prisma.courseCategory.upsert({
+      where: { slug: category.slug },
+      update: {
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+      create: {
+        name: category.name,
+        slug: category.slug,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        active: true,
+      },
+    });
+    console.log(`  ✅ ${category.icon} ${category.name}`);
+  }
+
+  console.log("\n🎉 Done! All categories seeded successfully.");
+  console.log(`   ✅ ${productCategories.length} Product Categories`);
+  console.log(`   ✅ ${serviceCategories.length} Service Categories`);
+  console.log(`   ✅ ${courseCategories.length} Course Categories`);
 }
 
-seedPricingPlans();
+main()
+  .catch((e) => {
+    console.error("❌ Seed failed:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await pool.end();
+    await prisma.$disconnect();
+  });

@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
     // ── Where clause ──────────────────────────────────────────────────────────
     const where: any = { active: true, stock: { gt: 0 } };
 
-    if (category) where.category = { equals: category, mode: "insensitive" };
+    if (category)
+      where.category = {
+        is: { name: { equals: category, mode: "insensitive" } },
+      };
     if (group) where.group = { equals: group, mode: "insensitive" };
     if (featured === "true") where.featured = true;
 
@@ -65,7 +68,17 @@ export async function GET(req: NextRequest) {
 
     // ── Query ─────────────────────────────────────────────────────────────────
     const [products, total] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: limit, orderBy }),
+      prisma.product.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          category: {
+            select: { id: true, name: true, icon: true, color: true },
+          },
+        },
+      }),
       prisma.product.count({ where }),
     ]);
 
@@ -99,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (
       !data.name ||
       !data.description ||
-      !data.category ||
+      !data.categoryId ||
       data.price === undefined ||
       data.stock === undefined
     ) {
@@ -115,7 +128,7 @@ export async function POST(req: NextRequest) {
         description: data.description,
         price: parseInt(data.price),
         images: data.images ?? [],
-        category: data.category,
+        categoryId: data.categoryId,
         group: data.group ?? "",
         stock: parseInt(data.stock),
         featured: data.featured ?? false,

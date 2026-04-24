@@ -45,23 +45,38 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
-    const data = await req.json();
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
 
-    // Verify service exists
+    if (!userRoles.some((r) => ["ADMIN", "CREATOR"].includes(r))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
     const service = await prisma.service.findUnique({
       where: { id },
+      select: { sellerId: true },
     });
 
     if (!service) {
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
-    // Validate required fields
+    const isAdmin =
+      userRoles.includes("ADMIN") || userRoles.includes("CREATOR");
+    if (!isAdmin && service.sellerId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const data = await req.json();
+
     if (
       !data.name ||
       !data.description ||

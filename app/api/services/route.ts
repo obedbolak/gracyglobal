@@ -4,39 +4,67 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hasRole } from "@/lib/roleHelpers";
 
 // GET /api/services - List all services with filters
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
+    const category = searchParams.get("category"); // filter by category name
+    const categoryId = searchParams.get("categoryId"); // filter by category id
     const group = searchParams.get("group");
     const featured = searchParams.get("featured");
     const search = searchParams.get("search");
+    const mine = searchParams.get("mine");
 
+    // ── ?mine=true — logged-in user's own services (creator dashboard) ────────
+    if (mine === "true") {
+      const session = await getServerSession(authOptions);
+      if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const services = await prisma.service.findMany({
+        where: { sellerId: session.user.id },
+        include: {
+          category: true,
+          options: { orderBy: { amount: "asc" } },
+          _count: { select: { bookings: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return NextResponse.json({ services, count: services.length });
+    }
+
+    // ── Public listing — active services only ─────────────────────────────────
     const services = await prisma.service.findMany({
       where: {
         active: true,
-        ...(category && { category }),
+        // Filter by categoryId directly
+        ...(categoryId && { categoryId }),
+        // Filter by category name via relation
+        ...(category && {
+          category: { name: { equals: category, mode: "insensitive" } },
+        }),
         ...(group && { group }),
         ...(featured === "true" && { featured: true }),
         ...(search && {
           OR: [
             { name: { contains: search, mode: "insensitive" } },
             { description: { contains: search, mode: "insensitive" } },
-            { category: { contains: search, mode: "insensitive" } },
+            {
+              category: {
+                is: { name: { contains: search, mode: "insensitive" } },
+              },
+            },
           ],
         }),
       },
       include: {
-        options: {
-          where: { active: true },
-          orderBy: { amount: "asc" },
-        },
-        _count: {
-          select: { bookings: true },
-        },
+        // ✅ Include full category relation so frontend gets name + icon + color
+        category: true,
+        options: { where: { active: true }, orderBy: { amount: "asc" } },
+        _count: { select: { bookings: true } },
       },
       orderBy: [
         { featured: "desc" },
@@ -52,20 +80,49 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/services - Create new service (admin only)
+// POST /api/services - Create new service (admin or creator only)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    if (!userRoles.some((r) => ["ADMIN", "CREATOR"].includes(r))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const data = await req.json();
 
-    // Validate required fields
-    if (!data.name || !data.description || !data.category || !data.group) {
+    const categoryId =
+      data.categoryId ||
+      (data.category
+        ? (await prisma.serviceCategory.findUnique({
+            where: { name: data.category },
+          }))?.id
+        : null);
+
+    if (!data.name || !data.description || !categoryId || !data.group) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        {
+          error:
+            "Missing required fields: name, description, categoryId, group",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Verify the category exists
+    const categoryExists = await prisma.serviceCategory.findUnique({
+      where: { id: categoryId },
+    });
+    if (!categoryExists) {
+      return NextResponse.json(
+        { error: "Invalid categoryId" },
         { status: 400 },
       );
     }
@@ -75,7 +132,7 @@ export async function POST(req: NextRequest) {
         name: data.name,
         description: data.description,
         images: data.images || [],
-        category: data.category,
+        categoryId,
         group: data.group,
         featured: data.featured || false,
         rating: 0,
@@ -84,8 +141,10 @@ export async function POST(req: NextRequest) {
         includes: data.includes || [],
         availability: data.availability || null,
         active: data.active ?? true,
+        sellerId: session.user.id,
       },
       include: {
+        category: true,
         options: true,
       },
     });
