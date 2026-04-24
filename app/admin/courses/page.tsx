@@ -175,7 +175,7 @@ export default async function CoursesPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[var(--text-muted)]">Category</span>
                     <span className="font-medium text-[var(--text-secondary)]">
-                      {course.category}
+                      {course.categoryId ? course.categoryId : "Uncategorized"}
                     </span>
                   </div>
 
