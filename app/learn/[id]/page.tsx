@@ -18,10 +18,15 @@ import {
   Radio,
   Loader2,
   AlertCircle,
+  Phone,
+  X,
+  CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import { useCourse, useEnrollment, useEnroll } from "@/hooks/useCourses";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useCategories } from "@/hooks/useCategories";
+import { useCamPay } from "@/hooks/useCamPay";
 import { LessonType, CourseLevel } from "@prisma/client";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -32,7 +37,6 @@ const LEVEL_LABELS: Record<CourseLevel, string> = {
   ADVANCED: "Advanced",
 };
 
-// Default category emoji mapping (fallback)
 const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
   Business: "💼",
   Technology: "💻",
@@ -76,6 +80,309 @@ function getTotalDuration(
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+const normalizePhone = (p: string) =>
+  p.trim().startsWith("237") ? p.trim().slice(3) : p.trim();
+
+// ─── Payment Modal ────────────────────────────────────────────────────────────
+
+interface PaymentModalProps {
+  courseTitle: string;
+  price: number;
+  courseId: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}
+
+function CoursePaymentModal({
+  courseTitle,
+  price,
+  courseId,
+  onSuccess,
+  onClose,
+}: PaymentModalProps) {
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const { status, error: paymentError, pay, reset } = useCamPay();
+  const { convert } = useCurrency();
+
+  const isLoading = status === "pending" || status === "polling";
+  const isSuccess = status === "success";
+
+  const handlePay = async () => {
+    if (!phone.trim()) {
+      setPhoneError("Phone number is required");
+      return;
+    }
+    setPhoneError("");
+
+    await pay({
+      amount: price,
+      phone: normalizePhone(phone),
+      description: `Enrollment: ${courseTitle}`,
+      externalReference: `course-${courseId}-${Date.now()}`,
+      onSuccess: async (transactionId: string) => {
+        // Payment confirmed — now enroll
+        onSuccess();
+        reset();
+      },
+      onFailure: () => {
+        // useCamPay sets its own error state
+        reset();
+      },
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[2100] flex items-center justify-center p-4"
+      style={{
+        background: "var(--modal-backdrop)",
+        backdropFilter: "var(--modal-blur)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl max-w-md w-full overflow-hidden"
+        style={{
+          background: "var(--modal-bg)",
+          border: "1px solid var(--modal-border)",
+          boxShadow: "var(--modal-shadow)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="p-6 pb-4 flex items-center justify-between border-b"
+          style={{ borderColor: "var(--divider)" }}
+        >
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Complete Enrollment
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {/* Course summary */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              border: "1px solid var(--divider)",
+            }}
+          >
+            <div className="flex justify-between mb-2">
+              <span style={{ color: "var(--text-secondary)" }}>Course:</span>
+              <span
+                className="font-semibold text-right max-w-[60%]"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {courseTitle}
+              </span>
+            </div>
+            <div
+              className="border-t mt-3 pt-3 flex justify-between items-center"
+              style={{ borderColor: "var(--divider)" }}
+            >
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Amount:
+              </span>
+              <span
+                className="text-2xl font-bold"
+                style={{ color: "var(--success-text)" }}
+              >
+                {convert(price)}
+                <span
+                  className="text-sm font-normal ml-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  ({price.toLocaleString()} XAF)
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Phone input */}
+          <div>
+            <label
+              className="flex items-center gap-2 text-sm font-medium mb-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Phone className="w-4 h-4" />
+              Mobile Money Number
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError("");
+              }}
+              placeholder="e.g., 681529488"
+              className="glass-input w-full px-4 py-3 text-sm rounded-xl"
+              disabled={isLoading}
+              style={{
+                background: "var(--input-bg)",
+                border: phoneError
+                  ? "1px solid var(--error-border)"
+                  : "1px solid var(--input-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+            {phoneError && (
+              <p
+                className="text-xs mt-1.5 flex items-center gap-1"
+                style={{ color: "var(--error-text)" }}
+              >
+                <AlertTriangle className="w-3 h-3" /> {phoneError}
+              </p>
+            )}
+            <p
+              className="text-xs mt-1.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Format: 6XXXXXXXX — no country code, no spaces
+            </p>
+          </div>
+
+          {/* Payment error */}
+          {paymentError && (
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--error-bg)",
+                border: "1px solid var(--error-border)",
+              }}
+            >
+              <AlertTriangle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--error-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--error-text)" }}>
+                {paymentError}
+              </p>
+            </div>
+          )}
+
+          {/* Success */}
+          {isSuccess && (
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--success-bg)",
+                border: "1px solid var(--success-border)",
+              }}
+            >
+              <CheckCircle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--success-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--success-text)" }}>
+                Payment confirmed! Activating your enrollment…
+              </p>
+            </div>
+          )}
+
+          {/* Loading */}
+          {isLoading && (
+            <div
+              className="rounded-lg p-3 flex items-center gap-2"
+              style={{
+                background: "var(--info-bg)",
+                border: "1px solid var(--info-border)",
+              }}
+            >
+              <Loader2
+                className="w-4 h-4 animate-spin"
+                style={{ color: "var(--info-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--info-text)" }}>
+                {status === "pending"
+                  ? "Initiating payment…"
+                  : "Check your phone and enter your PIN…"}
+              </p>
+            </div>
+          )}
+
+          {/* Info */}
+          <div
+            className="rounded-lg p-3"
+            style={{
+              background: "var(--info-bg)",
+              border: "1px solid var(--info-border)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--info-text)" }}>
+              💳 <strong>Supported:</strong> MTN Mobile Money, Orange Money
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="flex gap-3 p-6 border-t"
+          style={{
+            borderColor: "var(--divider)",
+            background: "var(--glass-bg-subtle)",
+          }}
+        >
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--divider)",
+              color: "var(--text-primary)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePay}
+            disabled={isLoading || isSuccess || !phone}
+            className="flex-1 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{
+              background: "linear-gradient(135deg, var(--blue), var(--purple))",
+            }}
+          >
+            {isSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4" /> Done
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing…
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4" /> Pay {price.toLocaleString()}{" "}
+                XAF
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CourseDetailPage({
@@ -94,6 +401,7 @@ export default function CourseDetailPage({
   const { categories: courseCategories } = useCategories("course");
 
   const [enrollFeedback, setEnrollFeedback] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // ── Loading ──────────────────────────────────────────────────────────────
 
@@ -136,8 +444,7 @@ export default function CourseDetailPage({
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold"
             style={{ background: "var(--blue)", color: "white" }}
           >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Courses
+            <ChevronLeft className="w-4 h-4" /> Back to Courses
           </Link>
         </div>
       </div>
@@ -146,7 +453,6 @@ export default function CourseDetailPage({
 
   // ── Derived values ───────────────────────────────────────────────────────
 
-  // Get category data from fetched categories
   const courseCategory = course.categoryId
     ? courseCategories.find((cat) => cat.id === course.categoryId)
     : undefined;
@@ -175,12 +481,35 @@ export default function CourseDetailPage({
       router.push("/login");
       return;
     }
+
+    // Paid course → show payment modal first
+    if (!course.isFree && course.price > 0) {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    // Free course → enroll directly
     try {
       await enroll();
       await mutateEnrollment();
       setEnrollFeedback("You're enrolled! Start learning below.");
     } catch (e: any) {
       setEnrollFeedback(e.message ?? "Enrollment failed");
+    }
+  };
+
+  // Called by modal after payment is confirmed by CamPay
+  const handlePaymentSuccess = async () => {
+    try {
+      await enroll();
+      await mutateEnrollment();
+      setShowPaymentModal(false);
+      setEnrollFeedback("Payment confirmed! You're enrolled.");
+    } catch (e: any) {
+      setEnrollFeedback(
+        "Payment successful but enrollment failed. Please contact support.",
+      );
+      setShowPaymentModal(false);
     }
   };
 
@@ -202,8 +531,7 @@ export default function CourseDetailPage({
             color: "var(--text-primary)",
           }}
         >
-          <ChevronLeft className="w-4 h-4" />
-          Back to Courses
+          <ChevronLeft className="w-4 h-4" /> Back to Courses
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -371,14 +699,13 @@ export default function CourseDetailPage({
                         {section.lessons.length !== 1 ? "s" : ""}
                       </span>
                     </div>
-
                     <div className="space-y-2">
                       {section.lessons.map((lesson) => {
                         const canAccess = enrolled || lesson.isFree;
                         return (
                           <div
                             key={lesson.id}
-                            className="flex items-center justify-between p-3 rounded-lg transition-all"
+                            className="flex items-center justify-between p-3 rounded-lg"
                             style={{
                               background: "var(--glass-bg-subtle)",
                               border: "1px solid var(--divider)",
@@ -498,8 +825,7 @@ export default function CourseDetailPage({
                   className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold mb-4 transition-all hover:scale-105"
                   style={{ background: "var(--green)", color: "white" }}
                 >
-                  <PlayCircle className="w-5 h-5" />
-                  Continue Learning
+                  <PlayCircle className="w-5 h-5" /> Continue Learning
                 </Link>
               ) : (
                 <button
@@ -514,13 +840,15 @@ export default function CourseDetailPage({
                 >
                   {isEnrolling ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Enrolling…
+                      <Loader2 className="w-5 h-5 animate-spin" /> Enrolling…
                     </>
                   ) : course.isFree ? (
                     "Enroll for Free"
                   ) : (
-                    "Enroll Now"
+                    <>
+                      <CreditCard className="w-5 h-5" /> Enroll —{" "}
+                      {convert(course.price)}
+                    </>
                   )}
                 </button>
               )}
@@ -617,6 +945,17 @@ export default function CourseDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Payment Modal — only shown for paid courses */}
+      {showPaymentModal && course && (
+        <CoursePaymentModal
+          courseTitle={course.title}
+          price={course.price}
+          courseId={id}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
     </div>
   );
 }

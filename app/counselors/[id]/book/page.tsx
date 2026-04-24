@@ -19,9 +19,13 @@ import {
   ArrowRight,
   Check,
   Loader2,
+  Phone,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import { useCounselor } from "@/hooks/useCounselors";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCamPay } from "@/hooks/useCamPay";
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 const TIME_SLOTS = [
@@ -82,7 +86,309 @@ function formatDate(d: Date) {
   });
 }
 
-// ─── Step components (keep existing) ──────────────────────────────────────────
+const normalizePhone = (p: string) =>
+  p.trim().startsWith("237") ? p.trim().slice(3) : p.trim();
+
+// ─── Payment Modal ────────────────────────────────────────────────────────────
+
+interface BookingPaymentModalProps {
+  counselorName: string;
+  price: number;
+  counselorId: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}
+
+function BookingPaymentModal({
+  counselorName,
+  price,
+  counselorId,
+  onSuccess,
+  onClose,
+}: BookingPaymentModalProps) {
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const { status, error: paymentError, pay, reset } = useCamPay();
+  const { convert } = useCurrency();
+
+  const isLoading = status === "pending" || status === "polling";
+  const isSuccess = status === "success";
+
+  const handlePay = async () => {
+    if (!phone.trim()) {
+      setPhoneError("Phone number is required");
+      return;
+    }
+    setPhoneError("");
+
+    await pay({
+      amount: price,
+      phone: normalizePhone(phone),
+      description: `Counseling session: ${counselorName}`,
+      externalReference: `booking-${counselorId}-${Date.now()}`,
+      onSuccess: async (_transactionId: string) => {
+        onSuccess();
+        reset();
+      },
+      onFailure: () => {
+        reset();
+      },
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[2100] flex items-center justify-center p-4"
+      style={{
+        background: "var(--modal-backdrop)",
+        backdropFilter: "var(--modal-blur)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl max-w-md w-full overflow-hidden"
+        style={{
+          background: "var(--modal-bg)",
+          border: "1px solid var(--modal-border)",
+          boxShadow: "var(--modal-shadow)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="p-6 pb-4 flex items-center justify-between border-b"
+          style={{ borderColor: "var(--divider)" }}
+        >
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Complete Booking
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {/* Session summary */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--glass-bg-subtle)",
+              border: "1px solid var(--divider)",
+            }}
+          >
+            <div className="flex justify-between mb-2">
+              <span style={{ color: "var(--text-secondary)" }}>Counselor:</span>
+              <span
+                className="font-semibold text-right max-w-[60%]"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {counselorName}
+              </span>
+            </div>
+            <div
+              className="border-t mt-3 pt-3 flex justify-between items-center"
+              style={{ borderColor: "var(--divider)" }}
+            >
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Amount:
+              </span>
+              <span
+                className="text-2xl font-bold"
+                style={{ color: "var(--success-text)" }}
+              >
+                {convert(price)}
+                <span
+                  className="text-sm font-normal ml-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  ({price.toLocaleString()} XAF)
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Phone input */}
+          <div>
+            <label
+              className="flex items-center gap-2 text-sm font-medium mb-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Phone className="w-4 h-4" />
+              Mobile Money Number
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError("");
+              }}
+              placeholder="e.g., 681529488"
+              className="glass-input w-full px-4 py-3 text-sm rounded-xl"
+              disabled={isLoading}
+              style={{
+                background: "var(--input-bg)",
+                border: phoneError
+                  ? "1px solid var(--error-border)"
+                  : "1px solid var(--input-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+            {phoneError && (
+              <p
+                className="text-xs mt-1.5 flex items-center gap-1"
+                style={{ color: "var(--error-text)" }}
+              >
+                <AlertTriangle className="w-3 h-3" /> {phoneError}
+              </p>
+            )}
+            <p
+              className="text-xs mt-1.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Format: 6XXXXXXXX — no country code, no spaces
+            </p>
+          </div>
+
+          {/* Payment error */}
+          {paymentError && (
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--error-bg)",
+                border: "1px solid var(--error-border)",
+              }}
+            >
+              <AlertTriangle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--error-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--error-text)" }}>
+                {paymentError}
+              </p>
+            </div>
+          )}
+
+          {/* Success */}
+          {isSuccess && (
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{
+                background: "var(--success-bg)",
+                border: "1px solid var(--success-border)",
+              }}
+            >
+              <CheckCircle
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--success-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--success-text)" }}>
+                Payment confirmed! Confirming your booking…
+              </p>
+            </div>
+          )}
+
+          {/* Loading */}
+          {isLoading && (
+            <div
+              className="rounded-lg p-3 flex items-center gap-2"
+              style={{
+                background: "var(--info-bg)",
+                border: "1px solid var(--info-border)",
+              }}
+            >
+              <Loader2
+                className="w-4 h-4 animate-spin"
+                style={{ color: "var(--info-text)" }}
+              />
+              <p className="text-sm" style={{ color: "var(--info-text)" }}>
+                {status === "pending"
+                  ? "Initiating payment…"
+                  : "Check your phone and enter your PIN…"}
+              </p>
+            </div>
+          )}
+
+          {/* Info */}
+          <div
+            className="rounded-lg p-3"
+            style={{
+              background: "var(--info-bg)",
+              border: "1px solid var(--info-border)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--info-text)" }}>
+              💳 <strong>Supported:</strong> MTN Mobile Money, Orange Money
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="flex gap-3 p-6 border-t"
+          style={{
+            borderColor: "var(--divider)",
+            background: "var(--glass-bg-subtle)",
+          }}
+        >
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--divider)",
+              color: "var(--text-primary)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePay}
+            disabled={isLoading || isSuccess || !phone}
+            className="flex-1 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{
+              background: "linear-gradient(135deg, var(--blue), var(--purple))",
+            }}
+          >
+            {isSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4" /> Done
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing…
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4" /> Pay {price.toLocaleString()}{" "}
+                XAF
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step components ──────────────────────────────────────────────────────────
+
 function StepSessionType({
   value,
   onChange,
@@ -355,10 +661,7 @@ function StepConfirm({
   date: Date | null;
   time: string;
   notes: string;
-  counselor: {
-    user: { name: string | null };
-    pricePerHour: number;
-  };
+  counselor: { user: { name: string | null }; pricePerHour: number };
 }) {
   const { convert, loading } = useCurrency();
 
@@ -541,14 +844,13 @@ function SuccessScreen({
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
   const { convert, loading: currencyLoading } = useCurrency();
 
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
-
-  // Use the hook instead of local data
   const { counselor, loading: counselorLoading, error } = useCounselor(id);
 
   const [step, setStep] = useState(1);
@@ -557,7 +859,10 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [booking, setBooking] = useState(false);
+
+  // ── Payment modal state ──────────────────────────────────────────────────
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [bookingError, setBookingError] = useState("");
 
   const canNext =
     (step === 1 && !!sessionType) ||
@@ -565,11 +870,15 @@ export default function BookingPage() {
     step === 3 ||
     step === 4;
 
-  async function handleConfirm() {
-    setBooking(true);
+  // Called by "Confirm Booking" button on step 4 — opens payment modal
+  const handleConfirmClick = () => {
+    setBookingError("");
+    setShowPaymentModal(true);
+  };
 
+  // Called by modal after CamPay confirms payment
+  const handlePaymentSuccess = async () => {
     try {
-      // TODO: Create booking via API
       const response = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -585,21 +894,20 @@ export default function BookingPage() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create booking");
-      }
+      if (!response.ok) throw new Error("Failed to create booking");
 
-      await new Promise((r) => setTimeout(r, 1000)); // Simulate processing
+      setShowPaymentModal(false);
       setSubmitted(true);
-    } catch (error) {
-      console.error("Booking error:", error);
-      alert("Failed to create booking. Please try again.");
-    } finally {
-      setBooking(false);
+    } catch (err: any) {
+      setBookingError(
+        "Payment successful but booking creation failed. Please contact support.",
+      );
+      setShowPaymentModal(false);
     }
-  }
+  };
 
-  // Loading state
+  // ── Loading / error states ───────────────────────────────────────────────
+
   if (counselorLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -608,7 +916,6 @@ export default function BookingPage() {
     );
   }
 
-  // Error or not found
   if (error || !counselor) {
     return (
       <main className="min-h-screen">
@@ -631,6 +938,8 @@ export default function BookingPage() {
       </main>
     );
   }
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen">
@@ -902,6 +1211,28 @@ export default function BookingPage() {
                   </div>
                 </div>
 
+                {/* Booking error (post-payment) */}
+                {bookingError && (
+                  <div
+                    className="mb-4 rounded-lg p-3 flex items-start gap-2"
+                    style={{
+                      background: "var(--error-bg)",
+                      border: "1px solid var(--error-border)",
+                    }}
+                  >
+                    <AlertTriangle
+                      className="w-4 h-4 flex-shrink-0 mt-0.5"
+                      style={{ color: "var(--error-text)" }}
+                    />
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--error-text)" }}
+                    >
+                      {bookingError}
+                    </p>
+                  </div>
+                )}
+
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={step}
@@ -971,25 +1302,15 @@ export default function BookingPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={handleConfirm}
-                      disabled={booking}
-                      className="flex items-center gap-2 px-7 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-105 disabled:opacity-70"
+                      onClick={handleConfirmClick}
+                      className="flex items-center gap-2 px-7 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-105"
                       style={{
                         background:
                           "linear-gradient(135deg, var(--scarlet), var(--purple))",
                         boxShadow: "0 4px 16px rgba(220,20,60,0.4)",
                       }}
                     >
-                      {booking ? (
-                        <>
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          Confirm Booking <Check size={15} />
-                        </>
-                      )}
+                      <CreditCard size={15} /> Confirm &amp; Pay
                     </button>
                   )}
                 </div>
@@ -998,6 +1319,17 @@ export default function BookingPage() {
           </div>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && counselor && (
+        <BookingPaymentModal
+          counselorName={counselor.user.name || "Counselor"}
+          price={counselor.pricePerHour}
+          counselorId={id}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
     </main>
   );
 }
