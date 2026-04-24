@@ -62,6 +62,9 @@ export default function SubscriptionPaymentModal({
     }
   };
 
+  const normalizePhone = (p: string) =>
+    p.trim().startsWith("237") ? p.trim().slice(3) : p.trim();
+
   const handlePayment = async () => {
     if (!plan) return;
 
@@ -73,54 +76,59 @@ export default function SubscriptionPaymentModal({
     setPhoneError("");
 
     try {
-      // ✅ STEP 1: Pay first — nothing is written to DB until this succeeds
-      await pay({
-        amount: plan.price,
-        phone: phone.trim(),
-        description: `Payment for ${plan.name} - ${plan.category}`,
-        externalReference: plan.planCode,
+      (console.log(
+        plan.price,
+        phone.trim(),
+        `Payment for ${plan.name} - ${plan.category}`,
+        plan.planCode,
+      ),
+        // ✅ STEP 1: Pay first — nothing is written to DB until this succeeds
+        await pay({
+          amount: plan.price,
+          phone: normalizePhone(phone),
+          description: `Payment for ${plan.name} - ${plan.category}`,
+          externalReference: `${plan.planCode}-${Date.now()}`,
+          onSuccess: async (transactionId: string) => {
+            try {
+              // ✅ STEP 2: Payment confirmed — NOW create subscription + record payment
+              const subscriptionRes = await fetch("/api/plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  planCode: plan.planCode,
+                  paymentMethodId,
+                  paymentReference: transactionId, // proof of payment
+                  status: "SUCCESSFUL",
+                }),
+              });
 
-        onSuccess: async (transactionId: string) => {
-          try {
-            // ✅ STEP 2: Payment confirmed — NOW create subscription + record payment
-            const subscriptionRes = await fetch("/api/plans", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                planCode: plan.planCode,
-                paymentMethodId,
-                paymentReference: transactionId, // proof of payment
-                status: "SUCCESSFUL",
-              }),
-            });
+              const subscriptionData = await subscriptionRes.json();
 
-            const subscriptionData = await subscriptionRes.json();
-
-            if (!subscriptionRes.ok || !subscriptionData.success) {
-              throw new Error(
-                subscriptionData.error || "Failed to activate subscription",
+              if (!subscriptionRes.ok || !subscriptionData.success) {
+                throw new Error(
+                  subscriptionData.error || "Failed to activate subscription",
+                );
+              }
+              await update(); // from useSession()
+              // ✅ All done
+              onSuccess(transactionId);
+              reset();
+              setPhone("");
+            } catch (err) {
+              console.error("Subscription activation error:", err);
+              // Payment went through but activation failed — give user their txn ID
+              onError(
+                `Payment successful but activation failed. Please contact support with transaction ID: ${transactionId}`,
               );
             }
-            await update(); // from useSession()
-            // ✅ All done
-            onSuccess(transactionId);
-            reset();
-            setPhone("");
-          } catch (err) {
-            console.error("Subscription activation error:", err);
-            // Payment went through but activation failed — give user their txn ID
-            onError(
-              `Payment successful but activation failed. Please contact support with transaction ID: ${transactionId}`,
-            );
-          }
-        },
+          },
 
-        onFailure: () => {
-          // ✅ Payment failed — DB untouched, user can try again
-          onError("Payment failed. Please try again.");
-          reset();
-        },
-      });
+          onFailure: () => {
+            // ✅ Payment failed — DB untouched, user can try again
+            onError("Payment failed. Please try again.");
+            reset();
+          },
+        }));
     } catch (err: any) {
       console.error("Payment error:", err);
       onError(err.message || "Failed to process payment");
