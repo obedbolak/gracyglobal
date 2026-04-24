@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
-import { Save, Plus, X, Wrench, ArrowLeft } from "lucide-react";
-import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
-
-const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
-const serviceGroups = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
+import { Save, Plus, X, Wrench, ArrowLeft, Loader2 } from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,13 +17,14 @@ interface ServiceOption {
   label: string;
   duration: string;
   popular: boolean;
+  active: boolean;
 }
 
 interface ExistingService {
   id: string;
   name: string;
   description: string;
-  category: string;
+  categoryId: string;
   group: string;
   badge: string | null;
   availability: string | null;
@@ -34,7 +32,9 @@ interface ExistingService {
   active: boolean;
   includes: string[];
   images: string[];
-  options?: ServiceOption[];
+  rating?: number;
+  reviews?: number;
+  createdAt?: Date | string;
 }
 
 interface Props {
@@ -52,16 +52,35 @@ export default function CreatorServiceForm({
 }: Props) {
   const isEdit = !!service;
   const [loading, setLoading] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ Fetch real categories from DB
+  const { categories, loading: categoriesLoading } = useCategories("service");
+
+  // ✅ Service groups (predefined or from your DB)
+  const SERVICE_GROUPS = [
+    "Digital Services",
+    "Creative Services",
+    "Professional Services",
+    "Technical Services",
+    "Lifestyle Services",
+    "Education Services",
+  ];
 
   const [images, setImages] = useState<
     Array<{ url: string; publicId: string }>
-  >(service?.images.map((url) => ({ url, publicId: "" })) ?? []);
+  >(
+    service?.images.map((url) => ({
+      url,
+      publicId: url.split("/").pop()?.split(".")[0] || "",
+    })) ?? [],
+  );
 
   const [formData, setFormData] = useState({
     name: service?.name ?? "",
     description: service?.description ?? "",
-    category: service?.category ?? "",
+    categoryId: service?.categoryId ?? "",
     group: service?.group ?? "",
     badge: service?.badge ?? "",
     availability: service?.availability ?? "",
@@ -70,26 +89,56 @@ export default function CreatorServiceForm({
     includes: service?.includes.length ? service.includes : [""],
   });
 
-  const [options, setOptions] = useState<ServiceOption[]>(
-    service?.options?.length
-      ? service.options.map((o) => ({
-          ...o,
-          amount: o.amount?.toString() ?? "",
-          yearlyAmount: o.yearlyAmount?.toString() ?? "",
-        }))
-      : [
-          {
-            name: "",
-            description: "",
-            pricingType: "PER_SESSION",
-            amount: "",
-            yearlyAmount: "",
-            label: "",
-            duration: "",
-            popular: false,
-          },
-        ],
-  );
+  const [options, setOptions] = useState<ServiceOption[]>([
+    {
+      name: "",
+      description: "",
+      pricingType: "PER_SESSION",
+      amount: "",
+      yearlyAmount: "",
+      label: "",
+      duration: "",
+      popular: false,
+      active: true,
+    },
+  ]);
+
+  // ── Fetch existing options when editing ────────────────────────────────────
+  useEffect(() => {
+    if (!isEdit || !service?.id) return;
+
+    const fetchOptions = async () => {
+      try {
+        const res = await fetch(`/api/services/${service.id}/options`);
+        if (!res.ok) throw new Error("Failed to fetch options");
+        const data = await res.json();
+
+        if (data.options && data.options.length > 0) {
+          setOptions(
+            data.options.map((o: any) => ({
+              id: o.id,
+              name: o.name,
+              description: o.description,
+              pricingType: o.pricingType,
+              amount: o.amount?.toString() ?? "",
+              yearlyAmount: o.yearlyAmount?.toString() ?? "",
+              label: o.label ?? "",
+              duration: o.duration ?? "",
+              popular: o.popular ?? false,
+              active: o.active ?? true,
+            })),
+          );
+        }
+      } catch (err: any) {
+        console.error("Error fetching options:", err);
+        setError("Failed to load pricing options");
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, [isEdit, service?.id]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
@@ -101,8 +150,8 @@ export default function CreatorServiceForm({
       setError("Please upload at least one image");
       return;
     }
-    if (!options[0]?.name) {
-      setError("Please add at least one pricing option");
+    if (!options[0]?.name || !options[0]?.amount) {
+      setError("Please add at least one pricing option with name and price");
       return;
     }
 
@@ -112,7 +161,7 @@ export default function CreatorServiceForm({
         name: formData.name,
         description: formData.description,
         images: images.map((img) => img.url),
-        category: formData.category,
+        categoryId: formData.categoryId,
         group: formData.group,
         featured: formData.featured,
         active: formData.active,
@@ -121,6 +170,7 @@ export default function CreatorServiceForm({
         availability: formData.availability || null,
       };
 
+      // Create or update service
       const serviceRes = await fetch(
         isEdit ? `/api/services/${service.id}` : "/api/services",
         {
@@ -138,8 +188,34 @@ export default function CreatorServiceForm({
       const result = await serviceRes.json();
       const serviceId = isEdit ? service.id : result.service.id;
 
+      // Handle options (create, update, or delete)
+      if (isEdit) {
+        // Get existing option IDs
+        const existingOptionIds = options.filter((o) => o.id).map((o) => o.id!);
+
+        // Fetch current options from server to find deleted ones
+        const currentRes = await fetch(`/api/services/${serviceId}/options`);
+        if (currentRes.ok) {
+          const currentData = await currentRes.json();
+          const currentIds = currentData.options.map((o: any) => o.id);
+
+          // Delete removed options
+          const deletedIds = currentIds.filter(
+            (id: string) => !existingOptionIds.includes(id),
+          );
+
+          for (const id of deletedIds) {
+            await fetch(`/api/services/${serviceId}/options/${id}`, {
+              method: "DELETE",
+            });
+          }
+        }
+      }
+
+      // Create or update options
       for (const option of options) {
         if (!option.name || !option.amount) continue;
+
         const optionPayload = {
           name: option.name,
           description: option.description,
@@ -151,15 +227,18 @@ export default function CreatorServiceForm({
           label: option.label || null,
           duration: option.duration || null,
           popular: option.popular,
+          active: option.active,
         };
 
         if (isEdit && option.id) {
+          // Update existing option
           await fetch(`/api/services/${serviceId}/options/${option.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(optionPayload),
           });
         } else {
+          // Create new option
           await fetch(`/api/services/${serviceId}/options`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -205,6 +284,7 @@ export default function CreatorServiceForm({
         label: "",
         duration: "",
         popular: false,
+        active: true,
       },
     ]);
 
@@ -214,10 +294,23 @@ export default function CreatorServiceForm({
     setOptions(u);
   };
 
-  const removeOption = (i: number) =>
+  const removeOption = (i: number) => {
+    if (options.length === 1) {
+      setError("You must have at least one pricing option");
+      return;
+    }
     setOptions(options.filter((_, idx) => idx !== i));
+  };
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loadingOptions) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--purple)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -294,6 +387,7 @@ export default function CreatorServiceForm({
           <MultiImageUpload
             folder="services"
             maxImages={4}
+            currentImages={images} // ✅ Pass existing images in edit mode
             onUploadComplete={setImages}
           />
         </div>
@@ -350,7 +444,7 @@ export default function CreatorServiceForm({
                 className="glass-input w-full px-4 py-3"
               >
                 <option value="">Select group</option>
-                {serviceGroups.map((group) => (
+                {SERVICE_GROUPS.map((group) => (
                   <option key={group} value={group}>
                     {group}
                   </option>
@@ -362,21 +456,27 @@ export default function CreatorServiceForm({
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Category *
               </label>
-              <select
-                required
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                className="glass-input w-full px-4 py-3"
-              >
-                <option value="">Select category</option>
-                {serviceCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+              {categoriesLoading ? (
+                <div className="glass-input w-full px-4 py-3 text-[var(--text-muted)]">
+                  Loading categories...
+                </div>
+              ) : (
+                <select
+                  required
+                  value={formData.categoryId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
+                  className="glass-input w-full px-4 py-3"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
@@ -469,12 +569,17 @@ export default function CreatorServiceForm({
 
           {options.map((option, index) => (
             <div
-              key={index}
+              key={option.id || index}
               className="p-4 border-2 border-[var(--divider)] rounded-lg space-y-4"
             >
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-[var(--text-primary)]">
-                  Option {index + 1}
+                  {option.name || `Option ${index + 1}`}
+                  {option.id && (
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                      (existing)
+                    </span>
+                  )}
                 </h4>
                 {options.length > 1 && (
                   <button
@@ -605,19 +710,35 @@ export default function CreatorServiceForm({
                 </div>
               </div>
 
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={option.popular}
-                  onChange={(e) =>
-                    updateOption(index, "popular", e.target.checked)
-                  }
-                  className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
-                />
-                <span className="text-sm text-[var(--text-secondary)]">
-                  Mark as popular option
-                </span>
-              </label>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={option.popular}
+                    onChange={(e) =>
+                      updateOption(index, "popular", e.target.checked)
+                    }
+                    className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+                  />
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    Mark as popular
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={option.active}
+                    onChange={(e) =>
+                      updateOption(index, "active", e.target.checked)
+                    }
+                    className="w-5 h-5 rounded border-[var(--input-border)] text-[var(--purple)] focus:ring-[var(--purple)]"
+                  />
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    Active
+                  </span>
+                </label>
+              </div>
             </div>
           ))}
         </div>
@@ -671,16 +792,21 @@ export default function CreatorServiceForm({
         <div className="flex gap-4 pb-8">
           <button
             type="submit"
-            disabled={loading || images.length === 0}
+            disabled={loading || images.length === 0 || categoriesLoading}
             className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-5 h-5" />
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Save className="w-5 h-5" />
+            )}
             {loading ? "Saving…" : isEdit ? "Save Changes" : "Create Service"}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary px-6 py-3 rounded-lg"
+            disabled={loading}
+            className="btn-secondary px-6 py-3 rounded-lg disabled:opacity-50"
           >
             Cancel
           </button>

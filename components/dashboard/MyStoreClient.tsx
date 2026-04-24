@@ -45,7 +45,7 @@ interface Service {
   id: string;
   name: string;
   description: string;
-  category: string;
+  categoryId: string; // ✅ was: category: string
   group: string;
   active: boolean;
   featured: boolean;
@@ -167,7 +167,7 @@ function ProductCard({
       </div>
       <div className="p-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-          {categories.find((c) => c.id === product.category)?.name ||
+          {categories.find((c) => c.id === product.category)?.name || // ✅ fixed
             "Uncategorized"}
         </p>
         <h3 className="font-semibold text-[var(--text-primary)] truncate mb-1">
@@ -223,7 +223,7 @@ function ServiceCard({
         </span>
       </div>
       <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-        {categories.find((c) => c.id === service.category)?.name ||
+        {categories.find((c) => c.id === service.categoryId)?.name || // ✅ fixed
           "Uncategorized"}
       </p>
       <h3 className="font-semibold text-[var(--text-primary)] truncate mb-1">

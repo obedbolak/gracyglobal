@@ -17,6 +17,7 @@ export async function GET(
     const service = await prisma.service.findUnique({
       where: { id },
       include: {
+        category: true, // ✅ Include category
         options: {
           where: { active: true },
           orderBy: { amount: "asc" },
@@ -51,14 +52,14 @@ export async function GET(
   }
 }
 
-// PUT /api/services/:id - Update service (admin only)
+// PUT /api/services/:id - Update service (admin or service owner)
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -71,6 +72,23 @@ export async function PUT(
 
     if (!existing) {
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    // ✅ Check if user is ADMIN or the service owner (CREATOR)
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    const isAdmin = userRoles.includes("ADMIN");
+    const isOwner = existing.sellerId === session.user.id;
+    const isCreator = userRoles.includes("CREATOR");
+
+    // Allow if: (1) Admin can edit any, OR (2) Creator can edit their own
+    if (!isAdmin && !(isCreator && isOwner)) {
+      return NextResponse.json(
+        { error: "You can only edit your own services" },
+        { status: 403 },
+      );
     }
 
     const categoryId =
@@ -100,6 +118,7 @@ export async function PUT(
         reviews: data.reviews ?? existing.reviews,
       },
       include: {
+        category: true, // ✅ Include category
         options: true,
       },
     });
@@ -118,14 +137,14 @@ export async function PATCH(
   return PUT(req, { params });
 }
 
-// DELETE /api/services/:id - Delete service (admin only)
+// DELETE /api/services/:id - Delete service (admin or service owner)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -138,6 +157,23 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    // ✅ Check if user is ADMIN or the service owner (CREATOR)
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    const isAdmin = userRoles.includes("ADMIN");
+    const isOwner = existing.sellerId === session.user.id;
+    const isCreator = userRoles.includes("CREATOR");
+
+    // Allow if: (1) Admin can delete any, OR (2) Creator can delete their own
+    if (!isAdmin && !(isCreator && isOwner)) {
+      return NextResponse.json(
+        { error: "You can only delete your own services" },
+        { status: 403 },
+      );
     }
 
     // Check if service has active bookings
