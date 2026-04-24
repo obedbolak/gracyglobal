@@ -28,7 +28,7 @@ interface Product {
   description: string;
   price: number;
   images: string[];
-  category: string;
+  categoryId: string;
   group: string;
   stock: number;
   active: boolean;
@@ -167,7 +167,7 @@ function ProductCard({
       </div>
       <div className="p-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-          {categories.find((c) => c.id === product.category)?.name || // ✅ fixed
+          {categories.find((c) => c.id === product.categoryId)?.name || // ✅ fixed
             "Uncategorized"}
         </p>
         <h3 className="font-semibold text-[var(--text-primary)] truncate mb-1">

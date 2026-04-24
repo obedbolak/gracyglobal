@@ -10,12 +10,9 @@ import {
   ArrowLeft,
   AlertTriangle,
   Lock,
+  Loader2,
 } from "lucide-react";
-import {
-  CATEGORY_GROUPS,
-  type CategoryGroup,
-  type ProductCategory,
-} from "@/data/products";
+import { useCategories } from "@/hooks/useCategories";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +23,7 @@ interface ExistingProduct {
   price: number;
   stock: number;
   group: string;
-  category: string;
+  categoryId: string; // ✅ Fixed: was category
   badge: string | null;
   featured: boolean;
   active: boolean;
@@ -65,24 +62,44 @@ export default function CreatorProductForm({
   const isEdit = !!product;
 
   const [loading, setLoading] = useState(false);
-  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [checkingSubscription, setCheckingSubscription] = useState(!isEdit);
   const [subscription, setSubscription] = useState<UserSubscription | null>(
     null,
   );
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
 
+  // ✅ Fetch real categories from DB
+  const { categories, loading: categoriesLoading } = useCategories("product");
+
+  // ✅ Product groups (either from static data or derive from categories)
+  const PRODUCT_GROUPS = [
+    "Health & Wellness",
+    "Beauty & Personal Care",
+    "Food & Beverages",
+    "Fashion & Accessories",
+    "Home & Garden",
+    "Electronics",
+    "Sports & Fitness",
+    "Books & Education",
+  ];
+
   const [images, setImages] = useState<
     Array<{ url: string; publicId: string }>
-  >(product?.images.map((url) => ({ url, publicId: "" })) ?? []);
+  >(
+    product?.images.map((url) => ({
+      url,
+      publicId: url.split("/").pop()?.split(".")[0] || "",
+    })) ?? [],
+  );
 
   const [formData, setFormData] = useState({
     name: product?.name ?? "",
     description: product?.description ?? "",
     price: product?.price?.toString() ?? "",
     stock: product?.stock?.toString() ?? "",
-    group: (product?.group ?? "") as CategoryGroup | "",
-    category: (product?.category ?? "") as ProductCategory | "",
+    group: product?.group ?? "",
+    categoryId: product?.categoryId ?? "", // ✅ Fixed: was category
     badge: product?.badge ?? "",
     featured: product?.featured ?? false,
     active: product?.active ?? true,
@@ -97,7 +114,6 @@ export default function CreatorProductForm({
       setCheckingSubscription(false);
       return;
     }
-
     fetchSubscription();
   }, [isEdit]);
 
@@ -119,11 +135,6 @@ export default function CreatorProductForm({
       setCheckingSubscription(false);
     }
   };
-
-  const subCategories = formData.group
-    ? (CATEGORY_GROUPS.find((g) => g.group === formData.group)?.categories ??
-      [])
-    : [];
 
   function set<K extends keyof typeof formData>(
     key: K,
@@ -175,8 +186,8 @@ export default function CreatorProductForm({
       alert("Please select a department.");
       return;
     }
-    if (!formData.category) {
-      alert("Please select a sub-category.");
+    if (!formData.categoryId) {
+      alert("Please select a category.");
       return;
     }
 
@@ -209,11 +220,16 @@ export default function CreatorProductForm({
     setLoading(true);
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         price: parseInt(formData.price),
         stock: parseInt(formData.stock),
         images: images.map((img) => img.url),
+        categoryId: formData.categoryId, // ✅ Fixed: send categoryId
+        group: formData.group,
         badge: formData.badge.trim() || null,
+        featured: formData.featured,
+        active: formData.active,
         benefits: formData.benefits.filter((b) => b.trim()),
         ingredients: formData.ingredients.filter((i) => i.trim()),
       };
@@ -259,13 +275,15 @@ export default function CreatorProductForm({
   const sectionCls = "glass p-6 rounded-xl space-y-4";
 
   // Show loading state while checking subscription
-  if (checkingSubscription) {
+  if (checkingSubscription || categoriesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--purple)] mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--purple)] mx-auto mb-4" />
           <p style={{ color: "var(--text-secondary)" }}>
-            Checking your subscription...
+            {checkingSubscription
+              ? "Checking subscription..."
+              : "Loading categories..."}
           </p>
         </div>
       </div>
@@ -321,7 +339,7 @@ export default function CreatorProductForm({
         </div>
       </div>
 
-      {/* Subscription Warning */}
+      {/* Subscription warnings and info - same as before */}
       {showSubscriptionWarning && (
         <div
           className="p-4 rounded-xl flex items-start gap-3"
@@ -350,7 +368,6 @@ export default function CreatorProductForm({
         </div>
       )}
 
-      {/* Limit Warning */}
       {showLimitWarning && (
         <div
           className="p-4 rounded-xl flex items-start gap-3"
@@ -380,7 +397,6 @@ export default function CreatorProductForm({
         </div>
       )}
 
-      {/* Subscription Info (if active) */}
       {!isEdit && subscription && !showLimitWarning && (
         <div
           className="p-4 rounded-xl flex items-center justify-between"
@@ -420,6 +436,7 @@ export default function CreatorProductForm({
           <MultiImageUpload
             folder="products"
             maxImages={6}
+            currentImages={images} // ✅ Pass existing images for edit mode
             onUploadComplete={setImages}
           />
           {images.length === 0 && (
@@ -466,39 +483,32 @@ export default function CreatorProductForm({
                 required
                 value={formData.group}
                 onChange={(e) => {
-                  set("group", e.target.value as CategoryGroup);
-                  set("category", "");
+                  set("group", e.target.value);
+                  set("categoryId", ""); // Reset category when group changes
                 }}
                 className={inputCls}
               >
                 <option value="">Select department</option>
-                {CATEGORY_GROUPS.map((g) => (
-                  <option key={g.group} value={g.group}>
-                    {g.icon} {g.group}
+                {PRODUCT_GROUPS.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className={labelCls}>Sub-category *</label>
+              <label className={labelCls}>Category *</label>
               <select
                 required
-                value={formData.category}
-                disabled={!formData.group}
-                onChange={(e) =>
-                  set("category", e.target.value as ProductCategory)
-                }
-                className={`${inputCls} disabled:opacity-50`}
+                value={formData.categoryId}
+                onChange={(e) => set("categoryId", e.target.value)}
+                className={inputCls}
               >
-                <option value="">
-                  {formData.group
-                    ? "Select sub-category"
-                    : "Select a department first"}
-                </option>
-                {subCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                <option value="">Select category</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -670,12 +680,20 @@ export default function CreatorProductForm({
           <button
             type="submit"
             disabled={
-              loading || images.length === 0 || Boolean(showLimitWarning)
+              loading ||
+              images.length === 0 ||
+              Boolean(showLimitWarning) ||
+              categoriesLoading
             }
             className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg disabled:opacity-50"
           >
-            {showSubscriptionWarning && <Lock className="w-5 h-5" />}
-            <Save className="w-5 h-5" />
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : showSubscriptionWarning ? (
+              <Lock className="w-5 h-5" />
+            ) : (
+              <Save className="w-5 h-5" />
+            )}
             {loading
               ? "Saving…"
               : showSubscriptionWarning
@@ -687,7 +705,8 @@ export default function CreatorProductForm({
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary px-6 py-3 rounded-lg"
+            disabled={loading}
+            className="btn-secondary px-6 py-3 rounded-lg disabled:opacity-50"
           >
             Cancel
           </button>

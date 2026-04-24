@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, err } from "@/lib/api";
-import { hasRole } from "@/lib/roleHelpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,7 +25,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     if (!product) return err("Product not found", 404);
 
-    // Wrap in { success: true, data: { product } } — matches useProduct() fetcher
     return ok({ product });
   } catch (error: any) {
     console.error("[GET /api/products/[id]]", error);
@@ -34,15 +32,34 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// ── PUT /api/products/[id] — update (ADMIN ONLY) ──────────────────────────────
+// ── PUT /api/products/[id] — update (ADMIN or OWNER) ─────────────────────────
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return err("Unauthorized", 401);
-    if (!hasRole(session.user.role, "ADMIN"))
-      return err("Forbidden - Admin required", 403);
 
     const { id } = await params;
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      select: { sellerId: true },
+    });
+
+    if (!existing) return err("Product not found", 404);
+
+    // ✅ Check permissions: Admin or product owner
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    const isAdmin = userRoles.includes("ADMIN");
+    const isOwner = existing.sellerId === session.user.id;
+    const isCreator = userRoles.includes("MARKETPLACE");
+
+    if (!isAdmin && !(isCreator && isOwner)) {
+      return err("You can only edit your own products", 403);
+    }
+
     const data = await req.json();
 
     if (
@@ -71,6 +88,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         benefits: data.benefits ?? [],
         ingredients: data.ingredients ?? [],
       },
+      include: {
+        category: true,
+      },
     });
 
     return ok({ product });
@@ -80,15 +100,38 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// ── DELETE /api/products/[id] — delete (ADMIN ONLY) ───────────────────────────
+// ✅ Add PATCH method
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
+  return PUT(req, { params });
+}
+
+// ── DELETE /api/products/[id] — delete (ADMIN or OWNER) ──────────────────────
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return err("Unauthorized", 401);
-    if (!hasRole(session.user.role, "ADMIN"))
-      return err("Forbidden - Admin required", 403);
 
     const { id } = await params;
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      select: { sellerId: true },
+    });
+
+    if (!existing) return err("Product not found", 404);
+
+    // ✅ Check permissions: Admin or product owner
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    const isAdmin = userRoles.includes("ADMIN");
+    const isOwner = existing.sellerId === session.user.id;
+    const isCreator = userRoles.includes("MARKETPLACE");
+
+    if (!isAdmin && !(isCreator && isOwner)) {
+      return err("You can only delete your own products", 403);
+    }
 
     await prisma.product.delete({ where: { id } });
 

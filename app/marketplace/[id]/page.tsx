@@ -106,6 +106,8 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { convert, loading: currencyLoading } = useCurrency();
 
+  const { categories } = useCategories("product");
+
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
 
   // ── Fetch product from DB ──────────────────────────────────────────────────
@@ -158,8 +160,6 @@ export default function ProductDetailPage() {
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
-
-  const { categories } = useCategories("product");
 
   return (
     <main className="min-h-screen">

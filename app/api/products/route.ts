@@ -4,10 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, err, parsePagination } from "@/lib/api";
-import { hasRole } from "@/lib/roleHelpers";
 
-// ── GET /api/products ─────────────────────────────────────────────────────────
-// Query params: category, group, featured, minPrice, maxPrice, search, sort, page, limit
+// ── GET /api/products (same as before)
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
@@ -18,6 +16,7 @@ export async function GET(req: NextRequest) {
     const featured = sp.get("featured");
     const search = sp.get("search");
     const sort = sp.get("sort") ?? "featured";
+    const mine = sp.get("mine"); // ✅ Add mine parameter
     const minPrice = sp.get("minPrice")
       ? parseInt(sp.get("minPrice")!)
       : undefined;
@@ -25,7 +24,27 @@ export async function GET(req: NextRequest) {
       ? parseInt(sp.get("maxPrice")!)
       : undefined;
 
-    // ── Where clause ──────────────────────────────────────────────────────────
+    // ✅ Handle mine=true for creator dashboard
+    if (mine === "true") {
+      const session = await getServerSession(authOptions);
+      if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const products = await prisma.product.findMany({
+        where: { sellerId: session.user.id },
+        include: {
+          category: {
+            select: { id: true, name: true, icon: true, color: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return NextResponse.json({ products, count: products.length });
+    }
+
+    // ── Where clause for public listing ──────────────────────────────────────
     const where: any = { active: true, stock: { gt: 0 } };
 
     if (category)
@@ -95,17 +114,22 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST /api/products — create product (ADMIN ONLY) ─────────────────────────
+// ── POST /api/products — create product (ADMIN or CREATOR) ───────────────────
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasRole(session.user.role, "ADMIN"))
-      return NextResponse.json(
-        { error: "Forbidden - Admin required" },
-        { status: 403 },
-      );
+    }
+
+    // ✅ Allow ADMIN or CREATOR
+    const userRoles = Array.isArray(session.user.role)
+      ? session.user.role
+      : [session.user.role];
+
+    if (!userRoles.some((r) => ["ADMIN", "MARKETPLACE"].includes(r))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const data = await req.json();
 
@@ -118,6 +142,17 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 },
+      );
+    }
+
+    // Verify the category exists
+    const categoryExists = await prisma.productCategory.findUnique({
+      where: { id: data.categoryId },
+    });
+    if (!categoryExists) {
+      return NextResponse.json(
+        { error: "Invalid categoryId" },
         { status: 400 },
       );
     }
@@ -138,6 +173,10 @@ export async function POST(req: NextRequest) {
         badge: data.badge ?? null,
         benefits: data.benefits ?? [],
         ingredients: data.ingredients ?? [],
+        sellerId: session.user.id, // ✅ Set the creator as seller
+      },
+      include: {
+        category: true,
       },
     });
 

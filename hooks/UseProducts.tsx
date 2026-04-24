@@ -5,11 +5,9 @@ import type { PaginatedResponse, ApiResponse } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// NOTE: category and group are now plain strings — they come from the DB
-// via ProductCategory model, not hardcoded enums from /data/products.
 export interface ProductFilters {
-  category?: string; // category name e.g. "Skincare" (from ProductCategory.name)
-  group?: string; // optional group tag (free text field on Product)
+  category?: string | { id: string; name: string } | null; // ✅ Allow both string and object
+  group?: string;
   featured?: boolean;
   search?: string;
   minPrice?: number;
@@ -19,8 +17,6 @@ export interface ProductFilters {
   limit?: number;
 }
 
-// Shape of a product returned by the API
-// Using a flexible type since products now include a category relation
 export interface ProductItem {
   id: string;
   name: string;
@@ -47,7 +43,6 @@ export interface ProductItem {
   createdAt: string;
 }
 
-// Shape returned by GET /api/products
 type ProductsPage = PaginatedResponse<ProductItem>;
 
 // ─── Fetcher ──────────────────────────────────────────────────────────────────
@@ -70,17 +65,51 @@ async function fetcher<T>(url: string): Promise<T> {
 function buildProductsUrl(filters: ProductFilters): string {
   const params = new URLSearchParams();
 
-  if (filters.category?.trim()) params.set("category", filters.category.trim());
-  if (filters.group?.trim()) params.set("group", filters.group.trim());
-  if (filters.featured !== undefined)
+  // ✅ Handle category as string or object
+  const categoryValue = (() => {
+    if (!filters.category) return null;
+    if (typeof filters.category === "string") return filters.category.trim();
+    if (typeof filters.category === "object" && filters.category.name) {
+      return filters.category.name.trim();
+    }
+    return null;
+  })();
+
+  if (categoryValue) params.set("category", categoryValue);
+
+  // ✅ Safe string handling
+  if (
+    filters.group &&
+    typeof filters.group === "string" &&
+    filters.group.trim()
+  ) {
+    params.set("group", filters.group.trim());
+  }
+
+  if (filters.featured !== undefined) {
     params.set("featured", String(filters.featured));
-  if (filters.search?.trim()) params.set("search", filters.search.trim());
-  if (filters.minPrice !== undefined)
+  }
+
+  if (
+    filters.search &&
+    typeof filters.search === "string" &&
+    filters.search.trim()
+  ) {
+    params.set("search", filters.search.trim());
+  }
+
+  if (filters.minPrice !== undefined) {
     params.set("minPrice", String(filters.minPrice));
-  if (filters.maxPrice !== undefined)
+  }
+
+  if (filters.maxPrice !== undefined) {
     params.set("maxPrice", String(filters.maxPrice));
-  if (filters.sort && filters.sort !== "featured")
+  }
+
+  if (filters.sort && filters.sort !== "featured") {
     params.set("sort", filters.sort);
+  }
+
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
@@ -179,8 +208,15 @@ export function useFeaturedProducts(limit = 6) {
 }
 
 // ─── useProductsByCategory ────────────────────────────────────────────────────
-// Replaces the old useProductsByGroup — now uses category name from DB
 
 export function useProductsByCategory(categoryName: string, limit = 12) {
   return useProducts({ category: categoryName, limit });
+}
+
+// ✅ Add helper for when you have a category object
+export function useProductsByCategoryObject(
+  categoryObj: { id: string; name: string } | null,
+  limit = 12,
+) {
+  return useProducts({ category: categoryObj, limit });
 }
