@@ -5,17 +5,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Star, Clock, Calendar, Loader2 } from "lucide-react";
-import {
-  SERVICE_CATEGORY_GROUPS,
-  type ServiceCategoryGroup,
-} from "@/data/services";
+import { useCategories } from "@/hooks/useCategories";
 import { useServices } from "@/hooks/useServices";
 import { useCurrency } from "@/hooks/useCurrency";
 
 export default function ServicesSection() {
-  const [selectedGroup, setSelectedGroup] = useState<
-    ServiceCategoryGroup | "All"
-  >("All");
+  const { categories, loading: categoriesLoading } = useCategories("service");
+  const [selectedGroup, setSelectedGroup] = useState<string | "All">("All");
   const { convert, currency, loading: currencyLoading } = useCurrency();
 
   // Use the hook to fetch services
@@ -88,13 +84,13 @@ export default function ServicesSection() {
         >
           All Services
         </button>
-        {SERVICE_CATEGORY_GROUPS.map((group) => (
+        {categories.map((category) => (
           <button
-            key={group.group}
-            onClick={() => setSelectedGroup(group.group)}
+            key={category.id}
+            onClick={() => setSelectedGroup(category.id)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200"
             style={
-              selectedGroup === group.group
+              selectedGroup === category.id
                 ? {
                     background:
                       "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -107,8 +103,8 @@ export default function ServicesSection() {
                   }
             }
           >
-            <span>{group.icon}</span>
-            <span className="hidden sm:inline">{group.group}</span>
+            <span>{category.icon}</span>
+            <span className="hidden sm:inline">{category.name}</span>
           </button>
         ))}
       </div>
@@ -187,7 +183,8 @@ export default function ServicesSection() {
                     backdropFilter: "blur(8px)",
                   }}
                 >
-                  {service.category}
+                  {categories.find((c) => c.id === service.categoryId)?.name ||
+                    service.categoryId}
                 </span>
               </Link>
 

@@ -4,10 +4,22 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Edit, Trash2, Plus } from "lucide-react";
 import DeleteProductButton from "@/components/ui/deleteButton";
+import { useCategories } from "@/hooks/useCategories";
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
+  });
+
+  const { categories } = await useCategories("product");
+
+  //checking it the categyid exists in the categories list and if it does, replace it with the category name
+  const productsWithCategory = products.map((product) => {
+    const category = categories.find((cat) => cat.id === product.categoryId);
+    return {
+      ...product,
+      category: category ? category.name : "Uncategorized",
+    };
   });
 
   return (
@@ -82,7 +94,8 @@ export default async function ProductsPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-[var(--text-secondary)]">
-                  {product.category}
+                  {categories.find((cat) => cat.id === product.categoryId)
+                    ?.name || "Uncategorized"}
                 </td>
                 <td className="px-6 py-4 font-medium text-[var(--text-primary)]">
                   {product.price.toLocaleString()} XAF
@@ -166,7 +179,8 @@ export default async function ProductsPage() {
                     {product.price.toLocaleString()} XAF
                   </span>
                   <span className="text-sm text-[var(--text-secondary)]">
-                    {product.category}
+                    {categories.find((cat) => cat.id === product.categoryId)
+                      ?.name || "Uncategorized"}
                   </span>
                 </div>
 

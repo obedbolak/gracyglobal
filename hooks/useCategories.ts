@@ -1,5 +1,7 @@
 // hooks/useCategories.ts
 
+"use client";
+
 import { useState, useEffect, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

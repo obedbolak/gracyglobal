@@ -21,28 +21,30 @@ import {
 } from "lucide-react";
 import { useCourse, useEnrollment, useEnroll } from "@/hooks/useCourses";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/hooks/useCategories";
 import { LessonType, CourseLevel } from "@prisma/client";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CATEGORIES: Record<string, { label: string; icon: string }> = {
-  Business: { label: "Business", icon: "💼" },
-  Technology: { label: "Technology", icon: "💻" },
-  "Health & Wellness": { label: "Health", icon: "🌿" },
-  "Personal Development": { label: "Personal Dev", icon: "🚀" },
-  Finance: { label: "Finance", icon: "💰" },
-  Marketing: { label: "Marketing", icon: "📣" },
-  Design: { label: "Design", icon: "🎨" },
-  Language: { label: "Language", icon: "🌍" },
-  Parenting: { label: "Parenting", icon: "👨‍👩‍👧" },
-  Career: { label: "Career", icon: "📈" },
-  Other: { label: "Other", icon: "📚" },
-};
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
   BEGINNER: "Beginner",
   INTERMEDIATE: "Intermediate",
   ADVANCED: "Advanced",
+};
+
+// Default category emoji mapping (fallback)
+const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
+  Business: "💼",
+  Technology: "💻",
+  "Health & Wellness": "🌿",
+  "Personal Development": "🚀",
+  Finance: "💰",
+  Marketing: "📣",
+  Design: "🎨",
+  Language: "🌍",
+  Parenting: "👨‍👩‍👧",
+  Career: "📈",
+  Other: "📚",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,6 +91,7 @@ export default function CourseDetailPage({
   const { course, isLoading, error } = useCourse(id);
   const { enrolled, enrollment, mutate: mutateEnrollment } = useEnrollment(id);
   const { enroll, isEnrolling, error: enrollError } = useEnroll(id);
+  const { categories: courseCategories } = useCategories("course");
 
   const [enrollFeedback, setEnrollFeedback] = useState("");
 
@@ -143,7 +146,16 @@ export default function CourseDetailPage({
 
   // ── Derived values ───────────────────────────────────────────────────────
 
-  const cat = CATEGORIES[course.category];
+  // Get category data from fetched categories
+  const courseCategory = course.categoryId
+    ? courseCategories.find((cat) => cat.id === course.categoryId)
+    : undefined;
+
+  const categoryLabel =
+    courseCategory?.name || course.categoryId || "Uncategorized";
+  const categoryIcon =
+    courseCategory?.icon || DEFAULT_CATEGORY_ICONS[categoryLabel] || "📚";
+
   const totalLessons = course.sections.reduce(
     (acc, s) => acc + s.lessons.length,
     0,
@@ -152,7 +164,7 @@ export default function CourseDetailPage({
     (acc, s) => acc + s.lessons.filter((l) => l.isFree).length,
     0,
   );
-  const totalEnrolled = course.enrollments?.length ?? 0;
+  const totalEnrolled = course.enrollments.length;
   const duration = getTotalDuration(course.sections);
   const firstLesson = course.sections[0]?.lessons[0];
 
@@ -228,12 +240,12 @@ export default function CourseDetailPage({
               />
               <div className="absolute bottom-0 left-0 right-0 p-8">
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {cat && (
+                  {categoryLabel && (
                     <span
                       className="text-sm px-3 py-1 rounded-full font-semibold"
                       style={{ background: "var(--purple)", color: "white" }}
                     >
-                      {cat.icon} {cat.label}
+                      {categoryIcon} {categoryLabel}
                     </span>
                   )}
                   <span

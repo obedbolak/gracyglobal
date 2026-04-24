@@ -6,13 +6,19 @@ import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
+import { useCategories } from "@/hooks/useCategories";
 
 // Extract all unique categories
-const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
-const serviceGroups = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
+// const serviceCategories = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
+// const serviceGroups = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
 
 export default function CreateServicePage() {
+  //lets use categories hook to fetch categories from the database instead of using the hardcoded ones
+  const { categories } = useCategories("service");
+  const serviceCategories = categories.map((c) => c.name);
+  const serviceGroups = Array.from(
+    new Set(categories.map((c) => c.name)),
+  ).filter((g) => g); // Filter out empty groups
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<

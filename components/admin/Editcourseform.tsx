@@ -26,6 +26,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import ImageUpload from "@/components/shared/ImageUpload";
+import { useCategories } from "@/hooks/useCategories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,12 +69,13 @@ const LESSON_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export default function EditCourseForm({ course }: EditCourseFormProps) {
   const router = useRouter();
+  const { categories } = useCategories("course");
 
   // Basic info state
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [thumbnail, setThumbnail] = useState(course.thumbnail || "");
-  const [category, setCategory] = useState(course.category);
+  const [category, setCategory] = useState(course.categoryId || ""); // ← FIXED: Use course.categories[0] instead of course.category
   const [level, setLevel] = useState<CourseLevel>(course.level);
   const [price, setPrice] = useState(course.price.toString());
   const [isFree, setIsFree] = useState(course.isFree);

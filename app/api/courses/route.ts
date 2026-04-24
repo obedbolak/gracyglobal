@@ -1,5 +1,3 @@
-// app/api/courses/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -12,7 +10,7 @@ import { hasRole } from "@/lib/roleHelpers";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
+    const categoryId = searchParams.get("categoryId"); // Changed from 'category'
     const level = searchParams.get("level") as CourseLevel | null;
     const featured = searchParams.get("featured");
     const teacherId = searchParams.get("teacherId"); // For teacher dashboard
@@ -32,11 +30,12 @@ export async function GET(req: NextRequest) {
         // Only show published unless requesting own courses or admin
         ...(!teacherId && !includeUnpublished && { published: true }),
         ...(teacherId && { teacherId }),
-        ...(category && { category }),
+        ...(categoryId && { categoryId }), // ← FIXED: Use categoryId instead of category
         ...(level && { level }),
         ...(featured === "true" && { featured: true }),
       },
       include: {
+        category: true, // ← Include the category relation
         sections: {
           include: {
             lessons: {
@@ -107,7 +106,7 @@ interface CourseInput {
   title: string;
   description: string;
   thumbnail?: string | null;
-  category: string;
+  categoryId: string; // ← FIXED: Changed from 'category' to 'categoryId'
   level: CourseLevel;
   price?: number;
   isFree?: boolean;
@@ -140,6 +139,24 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    if (!data.categoryId?.trim()) {
+      return NextResponse.json(
+        { error: "Category ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // Verify categoryId exists
+    const categoryExists = await prisma.courseCategory.findUnique({
+      where: { id: data.categoryId },
+    });
+
+    if (!categoryExists) {
+      return NextResponse.json(
+        { error: "Category not found" },
+        { status: 404 },
+      );
+    }
 
     // Create course with sections and lessons in a transaction
     const course = await prisma.$transaction(async (tx) => {
@@ -149,7 +166,7 @@ export async function POST(req: NextRequest) {
           title: data.title.trim(),
           description: data.description.trim(),
           thumbnail: data.thumbnail || null,
-          category: data.category || "Other",
+          categoryId: data.categoryId, // ← FIXED: Use categoryId
           level: data.level || "BEGINNER",
           price: data.isFree ? 0 : data.price || 0,
           isFree: data.isFree ?? true,
@@ -193,6 +210,7 @@ export async function POST(req: NextRequest) {
       return tx.course.findUnique({
         where: { id: newCourse.id },
         include: {
+          category: true, // ← Include category relation
           sections: {
             include: {
               lessons: {
@@ -200,6 +218,13 @@ export async function POST(req: NextRequest) {
               },
             },
             orderBy: { order: "asc" },
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
           },
           _count: {
             select: {

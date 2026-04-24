@@ -6,6 +6,7 @@ import { Star, Clock, Check, ChevronLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/hooks/useCategories";
 
 export default function ServiceBookingPage({
   params,
@@ -14,6 +15,7 @@ export default function ServiceBookingPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { categories } = useCategories("service");
 
   const { service, loading, error } = useService(id);
   const { convert } = useCurrency();
@@ -265,7 +267,8 @@ export default function ServiceBookingPage({
                 </h3>
                 <div
                   className={
-                    service.category === "Housing & Property Services"
+                    categories.find((c) => c.id === service.categoryId)
+                      ?.name === "Housing & Property Services"
                       ? "grid grid-cols-1 md:grid-cols-2 gap-4"
                       : "space-y-3"
                   }

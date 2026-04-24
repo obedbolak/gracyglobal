@@ -19,10 +19,12 @@ import {
 import { useProduct, useProducts } from "@/hooks/UseProducts";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/hooks/useCategories";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function ProductDetailSkeleton() {
+  const categories = useCategories("product");
   return (
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 animate-pulse">
@@ -157,6 +159,8 @@ export default function ProductDetailPage() {
     setTimeout(() => setAdded(false), 2000);
   }
 
+  const { categories } = useCategories("product");
+
   return (
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -225,7 +229,8 @@ export default function ProductDetailPage() {
                   color: "var(--badge-purple-text)",
                 }}
               >
-                {product.category}
+                {categories.find((c) => c.id === product.categoryId)?.name ||
+                  "Uncategorized"}
               </span>
               {product.badge && (
                 <span

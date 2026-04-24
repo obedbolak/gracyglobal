@@ -24,7 +24,11 @@ export async function GET(
     // Adjust this query once you have a direct CommunityEvent model
     const liveSessions = await prisma.liveSession.findMany({
       where: {
-        course: { category: community.category },
+        course: {
+          category: {
+            name: community.category, // ← wrap in object with 'name' field
+          },
+        },
         status: { not: "CANCELLED" },
       },
       orderBy: { scheduledAt: "asc" },

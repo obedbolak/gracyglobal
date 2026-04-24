@@ -13,10 +13,12 @@ import {
 
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/hooks/useCategories";
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, total, count } = useCart();
   const { convert, loading: currencyLoading } = useCurrency();
+  const { categories } = useCategories("product");
 
   const fmt = (xaf: number) => (currencyLoading ? "..." : convert(xaf));
 
@@ -121,7 +123,8 @@ export default function CartPage() {
                         className="text-xs mb-3"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {product.category}
+                        {categories.find((c) => c.id === product.categoryId)
+                          ?.name || "Uncategorized"}
                       </p>
                       <div className="flex items-center gap-3">
                         {/* Quantity controls */}

@@ -4,8 +4,11 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus, Package } from "lucide-react";
 import { ServiceActions } from "./_components/ServiceActions";
+import { useCategories } from "@/hooks/useCategories";
 
 export default async function ServicesPage() {
+  const { categories } = await useCategories("service");
+
   const services = await prisma.service.findMany({
     include: {
       options: {
@@ -128,7 +131,8 @@ export default async function ServicesPage() {
                   {service.group}
                 </span>
                 <span className="px-2 py-1 bg-[var(--glass-bg)] text-[var(--text-secondary)] text-xs rounded-full">
-                  {service.category}
+                  {categories.find((cat) => cat.id === service.categoryId)
+                    ?.name || "Uncategorized"}
                 </span>
               </div>
 

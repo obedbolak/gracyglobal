@@ -6,11 +6,7 @@ import { useRouter } from "next/navigation";
 import MultiImageUpload from "@/components/shared/MultiImageUpload";
 import { ArrowLeft, Save, Trash2, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
-
-// Extract categories
-const SERVICE_CATEGORIES = SERVICE_CATEGORY_GROUPS.flatMap((g) => g.categories);
-const SERVICE_GROUPS = SERVICE_CATEGORY_GROUPS.map((g) => g.group);
+import { useCategories } from "@/hooks/useCategories";
 
 interface ServiceOption {
   id: string;
@@ -30,7 +26,7 @@ interface Service {
   name: string;
   description: string;
   images: string[];
-  category: string;
+  categoryId: string;
   group: string;
   featured: boolean;
   active: boolean;
@@ -49,10 +45,16 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const { categories } = useCategories("service");
+  const SERVICE_CATEGORIES = categories.map((c) => c.name);
+  const SERVICE_GROUPS = Array.from(
+    new Set(categories.map((c) => c.name)),
+  ).filter((g) => g); // Filter out empty groups
+
   const [formData, setFormData] = useState({
     name: service.name,
     description: service.description,
-    category: service.category,
+    categoryId: service.categoryId,
     group: service.group,
     badge: service.badge || "",
     availability: service.availability || "",
@@ -98,7 +100,7 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
           name: formData.name,
           description: formData.description,
           images: images.map((img) => img.url),
-          category: formData.category,
+          categoryId: formData.categoryId,
           group: formData.group,
           featured: formData.featured,
           active: formData.active,
@@ -355,9 +357,9 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
               </label>
               <select
                 required
-                value={formData.category}
+                value={formData.categoryId}
                 onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
+                  setFormData({ ...formData, categoryId: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
               >

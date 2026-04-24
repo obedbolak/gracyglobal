@@ -18,6 +18,7 @@ import {
 import PlansModal from "./PlansModal";
 import CreatorProductForm from "@/components/creator/creatorProductForm";
 import CreatorServiceForm from "@/components/creator/creatorServiceForm";
+import { useCategories } from "@/hooks/useCategories";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ function ProductCard({
   product: Product;
   onEdit: () => void;
 }) {
+  const { categories } = useCategories("product");
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--divider)] rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative h-44 bg-[var(--sidebar-item-hover)]">
@@ -165,7 +167,8 @@ function ProductCard({
       </div>
       <div className="p-4">
         <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-          {product.category}
+          {categories.find((c) => c.id === product.category)?.name ||
+            "Uncategorized"}
         </p>
         <h3 className="font-semibold text-[var(--text-primary)] truncate mb-1">
           {product.name}
@@ -206,6 +209,7 @@ function ServiceCard({
   service: Service;
   onEdit: () => void;
 }) {
+  const { categories } = useCategories("service");
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--divider)] rounded-2xl p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -219,7 +223,8 @@ function ServiceCard({
         </span>
       </div>
       <p className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-        {service.category}
+        {categories.find((c) => c.id === service.category)?.name ||
+          "Uncategorized"}
       </p>
       <h3 className="font-semibold text-[var(--text-primary)] truncate mb-1">
         {service.name}
