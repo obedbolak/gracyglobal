@@ -1,25 +1,16 @@
-// app/admin/products/page.tsx
-
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Edit, Trash2, Plus } from "lucide-react";
 import DeleteProductButton from "@/components/ui/deleteButton";
-import { useCategories } from "@/hooks/useCategories";
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
   });
 
-  const { categories } = await useCategories("product");
-
-  //checking it the categyid exists in the categories list and if it does, replace it with the category name
-  const productsWithCategory = products.map((product) => {
-    const category = categories.find((cat) => cat.id === product.categoryId);
-    return {
-      ...product,
-      category: category ? category.name : "Uncategorized",
-    };
+  // ✅ Fetch categories directly from Prisma (server-side)
+  const categories = await prisma.productCategory.findMany({
+    orderBy: { sortOrder: "asc" },
   });
 
   return (
@@ -33,6 +24,13 @@ export default async function ProductsPage() {
             Manage marketplace products
           </p>
         </div>
+        <Link
+          href="/admin/categories"
+          className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
+        >
+          <Plus className="w-5 h-5" />
+          Manage Categories
+        </Link>
 
         <Link
           href="/admin/products/create"
@@ -226,7 +224,7 @@ export default async function ProductsPage() {
             <p className="text-[var(--text-muted)]">No products found</p>
             <Link
               href="/admin/products/create"
-              className="inline-block mt-4 text-[var(--purple)] hover:underline"
+              className="inline-block mt-4 text-[var(--purple)} hover:underline"
             >
               Create your first product
             </Link>
