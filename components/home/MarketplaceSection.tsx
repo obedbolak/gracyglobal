@@ -5,67 +5,54 @@ import { ShoppingCart, ShieldCheck, RotateCcw, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_GROUPS } from "@/data/products";
+import { useCategories } from "@/hooks/useCategories";
 
 const trustBadges = [
   { icon: ShieldCheck, label: "Secure Checkout" },
   { icon: RotateCcw, label: "Money Back" },
 ];
 
-// Select 7 main categories to display
-const FEATURED_CATEGORIES = CATEGORY_GROUPS.slice(0, 7);
-
-// Category images from Pexels
-const CATEGORY_IMAGES: Record<string, string> = {
-  "Fashion & Apparel":
-    "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Food & Beverages":
-    "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Arts & Crafts":
-    "https://images.pexels.com/photos/1266808/pexels-photo-1266808.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Beauty & Personal Care":
-    "https://images.pexels.com/photos/3373736/pexels-photo-3373736.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Home & Living":
-    "https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Electronics & Tech":
-    "https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-  "Health & Wellness":
-    "https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
-};
-
-// Category colors for visual variety (fallback overlays)
-const CATEGORY_COLORS = [
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(16, 185, 129, 0.85), rgba(5, 150, 105, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(124, 58, 237, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(217, 119, 6, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(239, 68, 68, 0.85), rgba(220, 38, 38, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(6, 182, 212, 0.85), rgba(8, 145, 178, 0.85))",
-  },
-  {
-    overlay:
-      "linear-gradient(135deg, rgba(236, 72, 153, 0.85), rgba(219, 39, 119, 0.85))",
-  },
-];
+// Simple fallback color if category has no color set
+const DEFAULT_COLOR = "#6B7280"; // neutral gray
 
 export default function MarketplaceSection() {
+  // ✅ Fetch real categories from database
+  const { categories, loading, error } = useCategories("product");
+
+  // Take first 7 active categories, sorted by sortOrder
+  const featuredCategories = categories
+    .filter((cat) => cat.active)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .slice(0, 7);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <section className="py-16 relative overflow-hidden">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[300px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--purple)]" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <section className="py-16 relative overflow-hidden">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p style={{ color: "var(--error-text)" }}>
+              Failed to load categories
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 relative overflow-hidden">
       <div
@@ -121,36 +108,83 @@ export default function MarketplaceSection() {
 
         {/* Category cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {FEATURED_CATEGORIES.map((category, index) => {
-            const colors = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
-            const categoryCount = category.categories.length;
-            const imageUrl =
-              CATEGORY_IMAGES[category.group] ||
-              `https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop`;
+          {featuredCategories.map((category) => {
+            // ✅ Only use color from database
+            const categoryColor = category.color || DEFAULT_COLOR;
+
+            // Generate gradients based on DB color
+            const background = `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}20)`;
+            const overlay = `linear-gradient(135deg, ${categoryColor}DD, ${categoryColor}EE)`;
+
+            // Check if category has an image
+            const hasImage = category.image && category.image.trim() !== "";
 
             return (
               <Link
-                key={category.group}
-                href={`/marketplace?group=${encodeURIComponent(category.group)}`}
+                key={category.id}
+                href={`/marketplace?categoryId=${category.id}`}
                 className="block group"
               >
                 <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
-                  {/* Image section */}
+                  {/* Image/Icon section */}
                   <div className="relative aspect-square overflow-hidden">
-                    <img
-                      src={imageUrl}
-                      alt={category.group}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                    {/* Gradient overlay */}
+                    {hasImage ? (
+                      // Show image if available
+                      <>
+                        <img
+                          src={category.image!} // ✅ Safe because hasImage is true                          alt={category.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            const iconContainer =
+                              target.nextElementSibling as HTMLElement;
+                            if (iconContainer)
+                              iconContainer.style.display = "flex";
+                          }}
+                        />
+                        {/* Fallback icon container (hidden by default) */}
+                        <div
+                          className="w-full h-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                          style={{
+                            background: background,
+                            display: "none",
+                          }}
+                        >
+                          <span
+                            className="text-6xl transition-transform duration-300 group-hover:scale-110"
+                            style={{ color: categoryColor }}
+                          >
+                            {category.icon || "📦"}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      // Show icon if no image
+                      <div
+                        className="w-full h-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                        style={{ background: background }}
+                      >
+                        <span
+                          className="text-6xl transition-transform duration-300 group-hover:scale-110"
+                          style={{ color: categoryColor }}
+                        >
+                          {category.icon || "📦"}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Hover overlay */}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ background: colors.overlay }}
+                      style={{ background: overlay }}
                     />
-                    {/* Category icon overlay */}
+
+                    {/* Category icon overlay on hover */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="text-5xl drop-shadow-lg">
-                        {category.icon}
+                      <span className="text-5xl drop-shadow-lg text-white">
+                        {category.icon || "📦"}
                       </span>
                     </div>
                   </div>
@@ -161,13 +195,11 @@ export default function MarketplaceSection() {
                       className="font-bold text-sm mb-1 text-center line-clamp-2 min-h-[40px]"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {category.group}
+                      {category.name}
                     </div>
 
                     <div className="flex items-center justify-center gap-1 text-xs font-medium group-hover:gap-1.5 transition-all duration-200">
-                      <span style={{ color: "var(--text-muted)" }}>
-                        {categoryCount} items
-                      </span>
+                      <span style={{ color: "var(--text-muted)" }}>Browse</span>
                       <ArrowRight
                         size={12}
                         className="transition-transform duration-200 group-hover:translate-x-0.5"

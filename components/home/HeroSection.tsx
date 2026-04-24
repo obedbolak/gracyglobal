@@ -61,7 +61,7 @@ const slides = [
       { label: "Companies", value: "80+" },
       { label: "Avg. Salary", value: "CFA 350k" },
     ],
-    preview: "community", // shows communities as stand-in; swap for jobs hook when ready
+    preview: "community",
   },
   {
     id: "community",
@@ -206,41 +206,51 @@ function MarketplacePreview({ products }: { products: any[] }) {
   const items = products.slice(0, 3);
   return (
     <div className="grid grid-cols-3 gap-2">
-      {items.map((p, i) => (
-        <motion.div
-          key={p.id ?? i}
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
-          className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid rgba(255,255,255,0.15)" }}
-        >
-          <div className="h-20 relative overflow-hidden">
-            <img
-              src={
-                p.images?.[0] ??
-                "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
-              }
-              alt={p.name}
-              className="w-full h-full object-cover"
-            />
+      {items.map((p, i) => {
+        // ✅ Safely extract category name
+        const categoryName = p.category?.name || p.group || "Product";
+        const categoryIcon = p.category?.icon || "";
+
+        return (
+          <motion.div
+            key={p.id ?? i}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
+            className="rounded-xl overflow-hidden"
+            style={{ border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            <div className="h-20 relative overflow-hidden">
+              <img
+                src={
+                  p.images?.[0] ??
+                  "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
+                }
+                alt={p.name}
+                className="w-full h-full object-cover"
+              />
+              <div
+                className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                style={{ background: "rgba(123,47,190,0.80)" }}
+              >
+                {categoryIcon && `${categoryIcon} `}
+                {categoryName}
+              </div>
+            </div>
             <div
-              className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
-              style={{ background: "rgba(123,47,190,0.80)" }}
+              className="p-2"
+              style={{ background: "rgba(255,255,255,0.08)" }}
             >
-              {p.category ?? p.group}
+              <div className="text-white text-[10px] font-bold truncate">
+                {p.name}
+              </div>
+              <div className="text-white/60 text-[9px]">
+                CFA {(p.price ?? 0).toLocaleString()}
+              </div>
             </div>
-          </div>
-          <div className="p-2" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="text-white text-[10px] font-bold truncate">
-              {p.name}
-            </div>
-            <div className="text-white/60 text-[9px]">
-              CFA {(p.price ?? 0).toLocaleString()}
-            </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }

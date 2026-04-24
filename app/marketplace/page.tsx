@@ -635,15 +635,31 @@ function MarketplacePageContent() {
   }, [search, activeCategory, sort, minPriceXAF, maxPriceXAF]);
 
   useEffect(() => {
-    const categoryParam = searchParams.get("category");
+    const categoryIdParam = searchParams.get("categoryId");
+    const categoryNameParam = searchParams.get("category");
     const searchParam = searchParams.get("search");
     const sortParam = searchParams.get("sort") as SortOption;
-    if (categoryParam) setActiveCategory(categoryParam);
+
+    // Handle categoryId parameter (from MarketplaceSection links)
+    if (categoryIdParam && categories.length > 0) {
+      const category = categories.find((c) => c.id === categoryIdParam);
+      if (category) {
+        setActiveCategory(category.name);
+      }
+    }
+    // Handle category name parameter (legacy or direct)
+    else if (categoryNameParam) {
+      setActiveCategory(categoryNameParam);
+    }
+
     if (searchParam) setSearch(searchParam);
-    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam))
+
+    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam)) {
       setSort(sortParam);
+    }
+
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [searchParams]);
+  }, [searchParams, categories]); // ✅ Adde
 
   function handleAddToCart(product: (typeof products)[0]) {
     addToCart(product);
