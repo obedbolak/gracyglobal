@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         active: data.active ?? true,
         featured: data.featured || false,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        posterId: session.user.id, // ← ADD THIS
       },
     });
 

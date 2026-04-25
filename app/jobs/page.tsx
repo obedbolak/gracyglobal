@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import useSWR from "swr";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type JobCategory =
+export type JobCategory =
   | "TECH"
   | "MARKETING"
   | "DESIGN"
@@ -17,11 +18,11 @@ type JobCategory =
   | "HEALTH"
   | "OTHER";
 
-type JobType = "REMOTE" | "HYBRID" | "CONTRACT" | "FREELANCE";
+export type JobType = "REMOTE" | "HYBRID" | "CONTRACT" | "FREELANCE";
 
-type PageView = "jobs" | "post-job" | "job-seeker";
+type PageView = "jobs" | "post-job" | "job-seeker" | "applied";
 
-interface Job {
+export interface Job {
   id: string;
   title: string;
   company: string;
@@ -36,6 +37,53 @@ interface Job {
   featured: boolean;
   createdAt: string;
   expiresAt?: string;
+  posterId?: string;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  userId: string;
+  coverNote?: string;
+  status: string;
+  createdAt: string;
+  job: Job;
+}
+
+export interface JobPostPayload {
+  title: string;
+  company: string;
+  companyLogo?: string;
+  description: string;
+  category: JobCategory;
+  type: JobType;
+  salaryMin?: number;
+  salaryMax?: number;
+  location?: string;
+  skills: string[];
+  featured?: boolean;
+  expiresAt?: string;
+}
+
+export interface JobSeekerPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  category: JobCategory;
+  type: JobType;
+  expectedSalary?: number;
+  location?: string;
+  skills: string[];
+  experience: string;
+  portfolio?: string;
+  resume?: string;
+  availability?: string;
+}
+
+export interface JobFilters {
+  category?: JobCategory | "ALL";
+  type?: JobType | "ALL";
+  featured?: boolean;
 }
 
 interface JobPostForm {
@@ -109,6 +157,148 @@ const CATEGORY_ICONS: Record<JobCategory, string> = {
   OTHER: "🌐",
 };
 
+// ─── Fetcher ─────────────────────────────────────────────────────────────────
+
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  });
+
+// ─── useJobs Hook ─────────────────────────────────────────────────────────────
+
+function buildJobsKey(filters: JobFilters): string {
+  const params = new URLSearchParams();
+  if (filters.category && filters.category !== "ALL")
+    params.set("category", filters.category);
+  if (filters.type && filters.type !== "ALL") params.set("type", filters.type);
+  if (filters.featured) params.set("featured", "true");
+  const qs = params.toString();
+  return `/api/jobs${qs ? `?${qs}` : ""}`;
+}
+
+function useJobs(filters: JobFilters = {}) {
+  const { data: session } = useSession();
+  const jobsKey = buildJobsKey(filters);
+
+  const {
+    data: jobsData,
+    error: jobsError,
+    isLoading: jobsLoading,
+    mutate: mutateJobs,
+  } = useSWR<{ jobs: Job[] }>(jobsKey, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  });
+
+  const {
+    data: appliedData,
+    error: appliedError,
+    isLoading: appliedLoading,
+    mutate: mutateApplied,
+  } = useSWR<{ applications: JobApplication[] }>(
+    session?.user ? "/api/jobs/applied" : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+    },
+  );
+
+  const appliedIds = new Set(
+    (appliedData?.applications || []).map((app) => app.jobId),
+  );
+
+  const postJob = useCallback(
+    async (payload: JobPostPayload): Promise<Job> => {
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to post job");
+      await mutateJobs();
+      return data.job;
+    },
+    [mutateJobs],
+  );
+
+  const applyToJob = useCallback(
+    async (jobId: string, coverNote?: string): Promise<JobApplication> => {
+      const res = await fetch(`/api/jobs/${jobId}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverNote }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to apply");
+      await mutateApplied();
+      return data.application;
+    },
+    [mutateApplied],
+  );
+
+  const submitJobSeekerProfile = useCallback(
+    async (payload: JobSeekerPayload) => {
+      const res = await fetch("/api/jobs/job-seekers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit profile");
+      return data.profile;
+    },
+    [],
+  );
+
+  const deleteJob = useCallback(
+    async (jobId: string) => {
+      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete job");
+      await mutateJobs();
+    },
+    [mutateJobs],
+  );
+
+  const updateJob = useCallback(
+    async (jobId: string, payload: Partial<JobPostPayload>): Promise<Job> => {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update job");
+      await mutateJobs();
+      return data.job;
+    },
+    [mutateJobs],
+  );
+
+  const refreshJobs = useCallback(() => mutateJobs(), [mutateJobs]);
+  const refreshApplied = useCallback(() => mutateApplied(), [mutateApplied]);
+
+  return {
+    jobs: jobsData?.jobs || [],
+    applications: appliedData?.applications || [],
+    appliedIds,
+    jobsLoading,
+    appliedLoading,
+    jobsError,
+    appliedError,
+    postJob,
+    applyToJob,
+    submitJobSeekerProfile,
+    deleteJob,
+    updateJob,
+    refreshJobs,
+    refreshApplied,
+  };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
@@ -129,7 +319,7 @@ function formatSalary(min?: number, max?: number): string | null {
   return `Up to $${fmt(max!)}`;
 }
 
-// ─── Shared Form Field Components ─────────────────────────────────────────────
+// ─── Shared Form Field ────────────────────────────────────────────────────────
 
 function FormField({
   label,
@@ -164,9 +354,10 @@ function FormField({
 interface PostJobFormProps {
   onBack: () => void;
   onSuccess: () => void;
+  postJob: (payload: JobPostPayload) => Promise<Job>;
 }
 
-function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
+function PostJobForm({ onBack, onSuccess, postJob }: PostJobFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<JobPostForm>({
@@ -191,22 +382,16 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
     setLoading(true);
     setError(null);
     try {
-      const payload = {
+      await postJob({
         ...form,
+        companyLogo: form.companyLogo || undefined,
         salaryMin: form.salaryMin ? parseInt(form.salaryMin) : undefined,
         salaryMax: form.salaryMax ? parseInt(form.salaryMax) : undefined,
         skills: form.skills
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
-      };
-      const res = await fetch("/api/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to post job");
       onSuccess();
     } catch (e: any) {
       setError(e.message);
@@ -220,7 +405,6 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
       className="max-w-3xl mx-auto px-4 py-8"
       style={{ animation: "fade-up 0.35s ease both" }}
     >
-      {/* Back button */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
@@ -229,7 +413,6 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
         ← Back to Jobs
       </button>
 
-      {/* Header */}
       <div className="mb-8">
         <h1
           className="text-3xl font-bold mb-2"
@@ -242,10 +425,9 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
         </p>
       </div>
 
-      {/* Form Card */}
       <div className="glass p-8 flex flex-col gap-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Section: Basic Info */}
+          {/* Basic Info */}
           <div className="flex flex-col gap-1">
             <p
               className="text-xs font-semibold uppercase tracking-wider mb-3"
@@ -279,7 +461,7 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Job Details */}
+          {/* Job Details */}
           <div className="flex flex-col gap-1">
             <p
               className="text-xs font-semibold uppercase tracking-wider mb-3"
@@ -330,7 +512,7 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Compensation */}
+          {/* Compensation */}
           <div className="flex flex-col gap-1">
             <p
               className="text-xs font-semibold uppercase tracking-wider mb-3"
@@ -362,7 +544,7 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Media & Skills */}
+          {/* Media & Skills */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -384,10 +566,9 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
                 type="text"
                 value={form.skills}
                 onChange={(e) => update("skills", e.target.value)}
-                placeholder="e.g. React, TypeScript, Node.js  (comma-separated)"
+                placeholder="e.g. React, TypeScript, Node.js (comma-separated)"
                 className="glass-input w-full px-4 py-2.5 text-sm"
               />
-              {/* Live skill preview */}
               {form.skills && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {form.skills
@@ -409,7 +590,7 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Description */}
+          {/* Description */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -454,9 +635,7 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
             <button
               type="button"
               onClick={() => update("featured", !form.featured)}
-              className={`relative w-12 h-6 rounded-full transition-all flex-shrink-0 ${
-                form.featured ? "btn-primary" : ""
-              }`}
+              className="relative w-12 h-6 rounded-full transition-all flex-shrink-0"
               style={{
                 background: form.featured
                   ? "var(--purple)"
@@ -485,7 +664,6 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
             </p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -513,9 +691,14 @@ function PostJobForm({ onBack, onSuccess }: PostJobFormProps) {
 interface JobSeekerFormProps {
   onBack: () => void;
   onSuccess: () => void;
+  submitJobSeekerProfile: (payload: JobSeekerPayload) => Promise<any>;
 }
 
-function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
+function JobSeekerForm({
+  onBack,
+  onSuccess,
+  submitJobSeekerProfile,
+}: JobSeekerFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<JobSeekerForm>({
@@ -541,8 +724,9 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
     setLoading(true);
     setError(null);
     try {
-      const payload = {
+      await submitJobSeekerProfile({
         ...form,
+        phone: form.phone || undefined,
         expectedSalary: form.expectedSalary
           ? parseInt(form.expectedSalary)
           : undefined,
@@ -550,14 +734,10 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
-      };
-      const res = await fetch("/api/job-seekers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        portfolio: form.portfolio || undefined,
+        resume: form.resume || undefined,
+        availability: form.availability || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to submit profile");
       onSuccess();
     } catch (e: any) {
       setError(e.message);
@@ -571,7 +751,6 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
       className="max-w-3xl mx-auto px-4 py-8"
       style={{ animation: "fade-up 0.35s ease both" }}
     >
-      {/* Back button */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
@@ -580,7 +759,6 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
         ← Back to Jobs
       </button>
 
-      {/* Header */}
       <div className="mb-8">
         <h1
           className="text-3xl font-bold mb-2"
@@ -593,10 +771,9 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
         </p>
       </div>
 
-      {/* Form Card */}
       <div className="glass p-8 flex flex-col gap-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Section: Personal Info */}
+          {/* Personal Info */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -639,7 +816,7 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Job Preferences */}
+          {/* Job Preferences */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -710,7 +887,7 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Skills */}
+          {/* Skills */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -726,7 +903,6 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
                 placeholder="e.g. React, Python, Project Management (comma-separated)"
                 className="glass-input w-full px-4 py-2.5 text-sm"
               />
-              {/* Live skill preview */}
               {form.skills && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {form.skills
@@ -748,7 +924,7 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Links */}
+          {/* Links */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -780,7 +956,7 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
 
           <hr style={{ borderColor: "var(--divider)" }} />
 
-          {/* Section: Experience */}
+          {/* Experience */}
           <div className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
@@ -813,7 +989,6 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
             </p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -832,6 +1007,147 @@ function JobSeekerForm({ onBack, onSuccess }: JobSeekerFormProps) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// ─── Applied Jobs View ────────────────────────────────────────────────────────
+
+interface AppliedJobsViewProps {
+  onBack: () => void;
+  applications: JobApplication[];
+  loading: boolean;
+}
+
+function AppliedJobsView({
+  onBack,
+  applications,
+  loading,
+}: AppliedJobsViewProps) {
+  return (
+    <div
+      className="max-w-3xl mx-auto px-4 py-8"
+      style={{ animation: "fade-up 0.35s ease both" }}
+    >
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
+        style={{ color: "var(--text-muted)" }}
+      >
+        ← Back to Jobs
+      </button>
+
+      <div className="mb-8">
+        <h1
+          className="text-3xl font-bold mb-2"
+          style={{ color: "var(--text-primary)" }}
+        >
+          My Applications
+        </h1>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {applications.length} job{applications.length !== 1 ? "s" : ""}{" "}
+          applied to
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <JobCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : applications.length === 0 ? (
+        <div className="glass p-12 text-center">
+          <div className="text-4xl mb-3">📭</div>
+          <p
+            className="font-semibold mb-1"
+            style={{ color: "var(--text-primary)" }}
+          >
+            No applications yet
+          </p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Start applying to jobs to see them here
+          </p>
+          <button
+            onClick={onBack}
+            className="btn-primary mt-6 px-6 py-2.5 text-sm font-semibold rounded-lg"
+          >
+            Browse Jobs →
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {applications.map((app) => {
+            const job: Job = app.job;
+            const salary = formatSalary(job.salaryMin, job.salaryMax);
+            return (
+              <div key={app.id} className="glass p-5 flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <CompanyAvatar logo={job.companyLogo} company={job.company} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3
+                        className="font-semibold text-sm"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {job.title}
+                      </h3>
+                      <span
+                        className="px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                        style={{
+                          background: "var(--success-bg)",
+                          color: "var(--success-text)",
+                        }}
+                      >
+                        ✓ {app.status}
+                      </span>
+                    </div>
+                    <p
+                      className="text-xs mt-0.5"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {job.company}
+                      {job.location ? ` · ${job.location}` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <span
+                    className={`${TYPE_COLORS[job.type as JobType]} px-2.5 py-0.5 rounded-full text-xs font-semibold`}
+                  >
+                    {job.type}
+                  </span>
+                  <span className="badge-neutral px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {job.category.replace("_", " ")}
+                  </span>
+                  {salary && (
+                    <span className="badge-neutral px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {salary}
+                    </span>
+                  )}
+                  <span className="badge-neutral px-2.5 py-0.5 rounded-full text-xs font-medium ml-auto">
+                    Applied {timeAgo(app.createdAt)}
+                  </span>
+                </div>
+
+                {app.coverNote && (
+                  <div
+                    className="text-xs px-3 py-2 rounded-lg italic"
+                    style={{
+                      background: "var(--glass-bg-subtle)",
+                      color: "var(--text-muted)",
+                      border: "1px solid var(--glass-border)",
+                    }}
+                  >
+                    "{app.coverNote}"
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -887,13 +1203,16 @@ function CompanyAvatar({ logo, company }: { logo?: string; company: string }) {
   );
 }
 
+// ─── Apply Modal ──────────────────────────────────────────────────────────────
+
 interface ApplyModalProps {
   job: Job;
   onClose: () => void;
   onSuccess: () => void;
+  applyToJob: (jobId: string, coverNote?: string) => Promise<JobApplication>;
 }
 
-function ApplyModal({ job, onClose, onSuccess }: ApplyModalProps) {
+function ApplyModal({ job, onClose, onSuccess, applyToJob }: ApplyModalProps) {
   const [coverNote, setCoverNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -902,13 +1221,7 @@ function ApplyModal({ job, onClose, onSuccess }: ApplyModalProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/jobs/${job.id}/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coverNote }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to apply");
+      await applyToJob(job.id, coverNote);
       onSuccess();
     } catch (e: any) {
       setError(e.message);
@@ -1001,6 +1314,8 @@ function ApplyModal({ job, onClose, onSuccess }: ApplyModalProps) {
     </div>
   );
 }
+
+// ─── Job Detail Panel ─────────────────────────────────────────────────────────
 
 interface JobDetailPanelProps {
   job: Job;
@@ -1178,6 +1493,8 @@ function EmptyDetailPanel() {
   );
 }
 
+// ─── Job Card ─────────────────────────────────────────────────────────────────
+
 interface JobCardProps {
   job: Job;
   isSelected: boolean;
@@ -1287,61 +1604,27 @@ function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
 export default function JobsPage() {
   const { data: session } = useSession();
 
-  // ── Single view state controls everything ──
   const [view, setView] = useState<PageView>("jobs");
-
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<JobCategory | "ALL">("ALL");
   const [type, setType] = useState<JobType | "ALL">("ALL");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [applyTarget, setApplyTarget] = useState<Job | null>(null);
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [successId, setSuccessId] = useState<string | null>(null);
 
-  const fetchJobs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (category !== "ALL") params.set("category", category);
-      if (type !== "ALL") params.set("type", type);
-      if (featuredOnly) params.set("featured", "true");
-
-      const res = await fetch(`/api/jobs?${params.toString()}`);
-      const data = await res.json();
-      setJobs(data.jobs || []);
-      setSelectedJob((current) => {
-        if (!current) return null;
-        return (data.jobs || []).find((j: Job) => j.id === current.id) || null;
-      });
-    } catch {
-      setJobs([]);
-      setSelectedJob(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [category, type, featuredOnly]);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
-
-  useEffect(() => {
-    if (session?.user) {
-      fetch("/api/jobs/applied")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.applications) {
-            setAppliedIds(
-              new Set(data.applications.map((app: any) => app.jobId)),
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  }, [session]);
+  // ── useJobs hook — single source of truth ──
+  const {
+    jobs,
+    applications,
+    appliedIds,
+    jobsLoading,
+    appliedLoading,
+    postJob,
+    applyToJob,
+    submitJobSeekerProfile,
+    refreshJobs,
+  } = useJobs({ category, type, featured: featuredOnly });
 
   const filtered = jobs.filter((j) => {
     if (!search.trim()) return true;
@@ -1354,6 +1637,7 @@ export default function JobsPage() {
     );
   });
 
+  // Clear selected job if it's no longer in filtered list
   useEffect(() => {
     if (selectedJob && !filtered.find((j) => j.id === selectedJob.id)) {
       setSelectedJob(null);
@@ -1362,7 +1646,6 @@ export default function JobsPage() {
 
   function handleApplySuccess() {
     if (!applyTarget) return;
-    setAppliedIds((prev) => new Set([...prev, applyTarget.id]));
     setSuccessId(applyTarget.id);
     setApplyTarget(null);
     setTimeout(() => setSuccessId(null), 4000);
@@ -1370,7 +1653,7 @@ export default function JobsPage() {
 
   function handlePostJobSuccess() {
     setView("jobs");
-    fetchJobs();
+    refreshJobs();
     setSuccessId("job-posted");
     setTimeout(() => setSuccessId(null), 4000);
   }
@@ -1411,6 +1694,7 @@ export default function JobsPage() {
           <PostJobForm
             onBack={() => setView("jobs")}
             onSuccess={handlePostJobSuccess}
+            postJob={postJob}
           />
         )}
 
@@ -1419,6 +1703,16 @@ export default function JobsPage() {
           <JobSeekerForm
             onBack={() => setView("jobs")}
             onSuccess={handleJobSeekerSuccess}
+            submitJobSeekerProfile={submitJobSeekerProfile}
+          />
+        )}
+
+        {/* ── APPLIED JOBS VIEW ── */}
+        {view === "applied" && (
+          <AppliedJobsView
+            onBack={() => setView("jobs")}
+            applications={applications}
+            loading={appliedLoading}
           />
         )}
 
@@ -1441,7 +1735,7 @@ export default function JobsPage() {
                 </div>
 
                 {session?.user && (
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => setView("post-job")}
                       className="btn-primary px-5 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 whitespace-nowrap"
@@ -1455,6 +1749,25 @@ export default function JobsPage() {
                     >
                       <span className="text-lg leading-none">💼</span>
                       Need a Job?
+                    </button>
+                    <button
+                      onClick={() => setView("applied")}
+                      className="btn-secondary px-5 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <span className="text-lg leading-none">📋</span>
+                      My Applications
+                      {applications.length > 0 && (
+                        <span
+                          className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold"
+                          style={{
+                            background: "var(--purple)",
+                            color: "white",
+                            fontSize: "0.65rem",
+                          }}
+                        >
+                          {applications.length}
+                        </span>
+                      )}
                     </button>
                   </div>
                 )}
@@ -1508,7 +1821,7 @@ export default function JobsPage() {
                 </button>
               </div>
 
-              {!loading && (
+              {!jobsLoading && (
                 <p
                   className="text-xs mt-3 px-1"
                   style={{ color: "var(--text-muted)" }}
@@ -1544,7 +1857,7 @@ export default function JobsPage() {
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 {/* List */}
                 <div className="flex flex-col gap-3 w-full lg:w-[420px] lg:flex-shrink-0">
-                  {loading ? (
+                  {jobsLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <JobCardSkeleton key={i} />
                     ))
@@ -1577,7 +1890,7 @@ export default function JobsPage() {
                   )}
                 </div>
 
-                {/* Detail panel */}
+                {/* Detail panel — desktop */}
                 <div
                   className="hidden lg:block flex-1 sticky top-24"
                   style={{ minWidth: 0, maxHeight: "calc(100vh - 8rem)" }}
@@ -1596,7 +1909,7 @@ export default function JobsPage() {
                 </div>
               </div>
 
-              {/* Mobile detail modal */}
+              {/* Detail panel — mobile */}
               {selectedJob && filtered.length > 0 && (
                 <div
                   className="lg:hidden fixed inset-0 z-40 flex items-end"
@@ -1628,12 +1941,13 @@ export default function JobsPage() {
         )}
       </div>
 
-      {/* Apply modal (always available) */}
+      {/* Apply modal */}
       {applyTarget && (
         <ApplyModal
           job={applyTarget}
           onClose={() => setApplyTarget(null)}
           onSuccess={handleApplySuccess}
+          applyToJob={applyToJob}
         />
       )}
     </>

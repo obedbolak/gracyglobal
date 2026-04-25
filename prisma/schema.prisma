@@ -24,6 +24,9 @@ model User {
   updatedAt       DateTime         @updatedAt
   serviceBookings ServiceBooking[]
 
+  postedJobs       Job[]            @relation("PostedJobs") // ← ADD
+jobSeekerProfile JobSeeker?       // ← ADD
+
   // Relations
   accounts         Account[]
   sessions         Session[]
@@ -361,7 +364,51 @@ enum BookingStatus {
   COMPLETED
   CANCELLED
 }
+model JobCategoryModel {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  slug        String      @unique
+  icon        String?
+  color       String?
+  description String?
+  active      Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
+  jobs        Job[]       @relation("JobCategoryRelation")
+
+  @@index([active])
+  @@index([slug])
+  @@map("job_categories")
+}
+
+model JobSeeker {
+  id             String      @id @default(cuid())
+  userId         String      @unique
+  name           String
+  email          String
+  phone          String?
+  category       JobCategory
+  type           JobType
+  expectedSalary Int?
+  location       String?
+  skills         String[]
+  experience     String      @db.Text
+  portfolio      String?
+  resume         String?
+  availability   String?
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category, type])
+  @@index([active])
+  @@map("job_seekers")
+}
 // ─── JOBS ────────────────────────────────────────────────────────────────────
 
 model Job {
@@ -381,8 +428,15 @@ model Job {
   createdAt   DateTime    @default(now())
   expiresAt   DateTime?
 
-  applications JobApplication[]
+  jobCategoryId   String?              // ← ADD
+  jobCategory     JobCategoryModel?    @relation("JobCategoryRelation", fields: [jobCategoryId], references: [id], onDelete: SetNull)
 
+
+  posterId    String?     // ← OPTIONAL with ?
+  poster      User?       @relation("PostedJobs", fields: [posterId], references: [id], onDelete: Cascade) // ← OPTIONAL with ?
+
+  applications JobApplication[]
+    @@index([jobCategoryId])
   @@map("jobs")
 }
 
@@ -415,6 +469,7 @@ model JobApplication {
 
   user User @relation(fields: [userId], references: [id])
   job  Job  @relation(fields: [jobId], references: [id])
+
 
   @@unique([userId, jobId])
   @@map("job_applications")
