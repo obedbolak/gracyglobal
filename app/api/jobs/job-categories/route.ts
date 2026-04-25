@@ -7,24 +7,44 @@ import { prisma } from "@/lib/prisma";
 import { hasRole } from "@/lib/roleHelpers";
 
 // GET — public, returns all active categories
-// GET — public, returns all active categories
 export async function GET(req: NextRequest) {
   try {
-    console.log("GET /api/jobs/job-categories hit");
-    console.log("Prisma client keys:", Object.keys(prisma));
+    const { searchParams } = new URL(req.url);
+    const all = searchParams.get("all"); // admin: include inactive
+
+    const session = await getServerSession(authOptions);
+
+    //for everyone no admin so everyone can fetch
 
     const categories = await prisma.jobCategoryModel.findMany({
-      where: { active: true },
+      where: all === "true" ? {} : { active: true },
       orderBy: { sortOrder: "asc" },
-      include: {
-        _count: { select: { jobs: true } },
-      },
     });
 
-    console.log("Categories found:", categories.length);
-    return NextResponse.json({ categories });
+    const jobCounts = await prisma.job.groupBy({
+      by: ["jobCategoryId", "category"],
+      _count: { _all: true },
+    });
+
+    const categoriesWithCount = categories.map((category) => {
+      const enumValue = category.slug.toUpperCase().replace(/-/g, "_");
+      const total = jobCounts
+        .filter(
+          (group) =>
+            group.jobCategoryId === category.id || group.category === enumValue,
+        )
+        .reduce((sum, group) => sum + group._count._all, 0);
+
+      return {
+        ...category,
+        _count: {
+          jobs: total,
+        },
+      };
+    });
+
+    return NextResponse.json({ categories: categoriesWithCount });
   } catch (error: any) {
-    console.error("GET /api/jobs/job-categories error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

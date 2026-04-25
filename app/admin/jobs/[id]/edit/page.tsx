@@ -13,6 +13,9 @@ export default async function EditJobPage({ params }: PageProps) {
 
   const job = await prisma.job.findUnique({
     where: { id },
+    include: {
+      jobCategory: true,
+    },
   });
 
   if (!job) {

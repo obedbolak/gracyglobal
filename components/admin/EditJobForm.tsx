@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/shared/ImageUpload";
 import { ArrowLeft, Save, Trash2, Plus, X } from "lucide-react";
@@ -23,20 +23,37 @@ const jobCategories: JobCategory[] = [
 
 const jobTypes: JobType[] = ["REMOTE", "HYBRID", "CONTRACT", "FREELANCE"];
 
+interface JobCategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+function normalizeCategorySlug(slug: string) {
+  return slug.replace(/-/g, "_").toUpperCase();
+}
+
 interface EditJobFormProps {
-  job: Job;
+  job: Job & {
+    jobCategoryId?: string | null;
+    jobCategory?: { id: string; name: string; slug: string } | null;
+  };
 }
 
 export default function EditJobForm({ job }: EditJobFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [categories, setCategories] = useState<JobCategoryOption[]>([]);
 
   const [formData, setFormData] = useState({
     title: job.title,
     company: job.company,
     description: job.description,
-    category: job.category as JobCategory,
+    jobCategoryId: job.jobCategoryId || "",
+    category: job.jobCategory
+      ? normalizeCategorySlug(job.jobCategory.slug)
+      : (job.category as string),
     type: job.type as JobType,
     salaryMin: job.salaryMin?.toString() || "",
     salaryMax: job.salaryMax?.toString() || "",
@@ -48,6 +65,20 @@ export default function EditJobForm({ job }: EditJobFormProps) {
       ? new Date(job.expiresAt).toISOString().split("T")[0]
       : "",
   });
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetch("/api/jobs/job-categories?all=true");
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (error) {
+        console.error("Failed to load job categories", error);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   const [companyLogo, setCompanyLogo] = useState(job.companyLogo || "");
 
@@ -228,19 +259,25 @@ export default function EditJobForm({ job }: EditJobFormProps) {
               </label>
               <select
                 required
-                value={formData.category}
-                onChange={(e) =>
+                value={formData.jobCategoryId}
+                onChange={(e) => {
+                  const selectedCategory = categories.find(
+                    (category) => category.id === e.target.value,
+                  );
                   setFormData({
                     ...formData,
-                    category: e.target.value as JobCategory,
-                  })
-                }
+                    jobCategoryId: e.target.value,
+                    category: selectedCategory
+                      ? normalizeCategorySlug(selectedCategory.slug)
+                      : "",
+                  });
+                }}
                 className="glass-input w-full px-4 py-3"
               >
                 <option value="">Select category</option>
-                {jobCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat.replace("_", " ")}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>

@@ -2,126 +2,155 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useJobs } from "@/hooks/useJobs";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  TECH: "💻",
-  MARKETING: "📣",
-  DESIGN: "🎨",
-  CUSTOMER_SERVICE: "🎧",
-  WRITING: "✍️",
-  FINANCE: "💰",
-  EDUCATION: "📚",
-  HEALTH: "🏥",
-  OTHER: "🌐",
-};
 
 export default function JobsSection() {
   const { categories, categoriesLoading } = useJobs();
 
   return (
-    <section className="py-16 relative">
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+    <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
           <div>
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
+              style={{
+                background: "var(--badge-blue-bg)",
+                border: "1px solid var(--divider-strong)",
+              }}
+            >
+              <span
+                className="text-xs font-semibold uppercase tracking-[0.18em]"
+                style={{ color: "var(--blue)" }}
+              >
+                Remote Jobs
+              </span>
+            </div>
             <h2
-              className="text-2xl font-extrabold mb-1"
+              className="text-3xl md:text-4xl font-bold mb-3"
               style={{ color: "var(--text-primary)" }}
             >
               Find Remote Jobs
             </h2>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Search for remote work opportunities across the World.
+            <p
+              className="text-base max-w-2xl"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Discover remote opportunities from trusted employers and apply to
+              roles that fit your skills.
             </p>
           </div>
-          <Button asChild size="sm" variant="scarlet">
+
+          <Button asChild size="sm" variant="default">
             <Link href="/jobs">Browse All Jobs</Link>
           </Button>
         </div>
 
-        {/* Categories Grid */}
         {categoriesLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, idx) => (
               <div
-                key={i}
-                className="h-16 rounded-xl animate-pulse"
-                style={{ background: "var(--bg-muted, #f3f4f6)" }}
+                key={idx}
+                className="rounded-2xl p-5 h-28 animate-pulse"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
               />
             ))}
           </div>
         ) : categories.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {categories
               .filter((c) => c.active)
               .sort((a, b) => a.sortOrder - b.sortOrder)
-              .map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/jobs?category=${cat.slug}`}
-                  className="group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
-                  style={{
-                    borderColor: "var(--border-subtle, #e5e7eb)",
-                    background: "var(--bg-card, #fff)",
-                  }}
-                >
-                  <span className="text-xl">
-                    {cat.icon || CATEGORY_ICONS[cat.name] || "🌐"}
-                  </span>
-                  <div className="min-w-0">
-                    <p
-                      className="text-sm font-semibold truncate"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {cat.name}
-                    </p>
-                    {cat._count?.jobs !== undefined && (
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--text-muted)" }}
+              .map((cat) => {
+                const iconBackground =
+                  cat.color &&
+                  cat.color.startsWith("#") &&
+                  cat.color.length === 7
+                    ? `${cat.color}1a`
+                    : "var(--badge-blue-bg)";
+                const iconBorder =
+                  cat.color &&
+                  cat.color.startsWith("#") &&
+                  cat.color.length === 7
+                    ? `${cat.color}30`
+                    : "var(--divider-strong)";
+
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/jobs?category=${cat.slug}`}
+                    className="group block rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]"
+                  >
+                    <div className="flex flex-col h-full">
+                      <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5"
+                        style={{
+                          background: iconBackground,
+                          border: `2px solid ${iconBorder}`,
+                          color: cat.color ?? "var(--blue)",
+                        }}
                       >
-                        {cat._count.jobs} job{cat._count.jobs !== 1 ? "s" : ""}
-                      </p>
-                    )}
-                  </div>
-                  {cat.color && (
-                    <span
-                      className="ml-auto w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: cat.color }}
-                    />
-                  )}
-                </Link>
-              ))}
+                        {cat.icon || "🌐"}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p
+                          className="text-base font-semibold mb-2 truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {cat.name}
+                        </p>
+                        {cat._count?.jobs !== undefined && (
+                          <p
+                            className="text-sm mb-5"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {cat._count.jobs} job
+                            {cat._count.jobs !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-auto flex items-center justify-between">
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          View category
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-[var(--blue)] transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
           </div>
         ) : (
-          /* Fallback: Coming Soon */
-          <div className="text-center py-16">
-            <div className="max-w-md mx-auto">
-              <h3
-                className="text-3xl font-bold mb-4"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Coming Soon
-              </h3>
-              <p
-                className="text-lg mb-2"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Remote Jobs Platform
-              </p>
-              <p
-                className="text-sm mb-6"
-                style={{ color: "var(--text-muted)" }}
-              >
-                We're building an amazing platform to connect you with the best
-                remote job opportunities worldwide.
-              </p>
-              <Button asChild size="sm" variant="scarlet">
-                <Link href="/jobs">Learn More</Link>
-              </Button>
-            </div>
+          <div
+            className="rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-12 text-center"
+            style={{ boxShadow: "var(--glass-shadow)" }}
+          >
+            <h3
+              className="text-3xl font-bold mb-3"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Coming Soon
+            </h3>
+            <p
+              className="text-base mb-4"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Remote jobs are on their way. Check back soon for curated listings
+              and application support.
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/jobs">Learn More</Link>
+            </Button>
           </div>
         )}
       </div>

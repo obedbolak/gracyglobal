@@ -17,6 +17,7 @@ import { useCounselors } from "@/hooks/useCounselors";
 import { useCourses } from "@/hooks/useCourses";
 import { useFeaturedProducts } from "@/hooks/UseProducts";
 import { useCommunities } from "@/hooks/useCommunity";
+import { useJobs } from "@/hooks/useJobs";
 
 // ─── Slide shell (no preview items — those come from hooks) ────────────────────
 
@@ -31,9 +32,9 @@ const slides = [
       "Connect with certified mental health professionals, relationship coaches, and life counselors. 1-on-1 sessions via text or video — private, affordable, and available now.",
     href: "/counselors",
     cta: "Book a Session",
-    gradient: "linear-gradient(135deg, #7b2fbe 0%, #1a3adb 100%)",
-    glowA: "rgba(123,47,190,0.45)",
-    glowB: "rgba(26,58,219,0.30)",
+    gradient: "linear-gradient(135deg, var(--purple), var(--blue))",
+    glowA: "rgba(123,47,190,0.35)",
+    glowB: "rgba(26,58,219,0.25)",
     badge: "1,000+ Sessions",
     stats: [
       { label: "Active Counselors", value: "120+" },
@@ -52,16 +53,16 @@ const slides = [
       "Browse 500+ vetted remote opportunities from top global companies. Full-time, freelance, and contract roles across tech, design, marketing and more.",
     href: "/jobs",
     cta: "Browse Jobs",
-    gradient: "linear-gradient(135deg, #dc143c 0%, #7b2fbe 100%)",
-    glowA: "rgba(220,20,60,0.45)",
-    glowB: "rgba(123,47,190,0.30)",
+    gradient: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+    glowA: "rgba(220,20,60,0.35)",
+    glowB: "rgba(123,47,190,0.25)",
     badge: "500+ Jobs",
     stats: [
       { label: "Open Positions", value: "500+" },
       { label: "Companies", value: "80+" },
       { label: "Avg. Salary", value: "CFA 350k" },
     ],
-    preview: "community",
+    preview: "jobs",
   },
   {
     id: "community",
@@ -73,9 +74,9 @@ const slides = [
       "Join youth empowerment programs, women's initiatives and community development projects. Volunteer, lead, and create impact where it matters most.",
     href: "/community",
     cta: "Join a Project",
-    gradient: "linear-gradient(135deg, #1a3adb 0%, #dc143c 100%)",
-    glowA: "rgba(26,58,219,0.45)",
-    glowB: "rgba(220,20,60,0.30)",
+    gradient: "linear-gradient(135deg, var(--blue), var(--purple))",
+    glowA: "rgba(26,58,219,0.35)",
+    glowB: "rgba(123,47,190,0.25)",
     badge: "50+ Projects",
     stats: [
       { label: "Active Projects", value: "50+" },
@@ -94,9 +95,9 @@ const slides = [
       "Discover curated wellness, beauty and skincare products from African entrepreneurs. Every purchase supports local businesses and communities.",
     href: "/marketplace",
     cta: "Shop Now",
-    gradient: "linear-gradient(135deg, #1a3adb 0%, #7b2fbe 50%, #dc143c 100%)",
-    glowA: "rgba(123,47,190,0.45)",
-    glowB: "rgba(220,20,60,0.25)",
+    gradient: "linear-gradient(135deg, var(--purple), var(--blue))",
+    glowA: "rgba(123,47,190,0.35)",
+    glowB: "rgba(26,58,219,0.2)",
     badge: "10+ Products",
     stats: [
       { label: "Products", value: "10+" },
@@ -110,7 +111,7 @@ const slides = [
 // ─── Preview renderers ─────────────────────────────────────────────────────────
 
 function CounselorPreview({ counselors }: { counselors: any[] }) {
-  const items = counselors.slice(0, 3);
+  const items = counselors.slice(0, 4);
   return (
     <div className="flex flex-col gap-3">
       {items.map((c, i) => (
@@ -121,8 +122,8 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
           transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
           className="flex items-center gap-3 rounded-2xl p-3"
           style={{
-            background: "rgba(255,255,255,0.10)",
-            border: "1px solid rgba(255,255,255,0.15)",
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
             backdropFilter: "blur(10px)",
           }}
         >
@@ -135,10 +136,18 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
             className="w-10 h-10 rounded-full object-cover object-top ring-2 ring-white/20"
           />
           <div className="flex-1 min-w-0">
-            <div className="text-white font-semibold text-sm truncate">
+            <div
+              className="font-semibold text-sm truncate"
+              style={{ color: "var(--text-primary)" }}
+            >
               {c.user?.name ?? "Counselor"}
             </div>
-            <div className="text-white/55 text-xs truncate">{c.specialty}</div>
+            <div
+              className="text-xs truncate"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {c.specialty}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold">
@@ -147,7 +156,10 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
             {c.available ? (
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "rgba(74,222,128,0.2)", color: "#4ade80" }}
+                style={{
+                  background: "var(--success-bg)",
+                  color: "var(--success-text)",
+                }}
               >
                 Available
               </span>
@@ -155,8 +167,8 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
               <span
                 className="text-[10px] px-2 py-0.5 rounded-full"
                 style={{
-                  background: "rgba(255,255,255,0.10)",
-                  color: "rgba(255,255,255,0.40)",
+                  background: "var(--glass-bg-subtle)",
+                  color: "var(--text-muted)",
                 }}
               >
                 Busy
@@ -170,7 +182,7 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
 }
 
 function CommunityPreview({ communities }: { communities: any[] }) {
-  const items = communities.slice(0, 3);
+  const items = communities.slice(0, 6);
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((c, i) => (
@@ -180,21 +192,29 @@ function CommunityPreview({ communities }: { communities: any[] }) {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
           className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid rgba(255,255,255,0.15)" }}
+          style={{ border: "1px solid var(--glass-border)" }}
         >
           <div
             className="h-20 bg-cover bg-center"
             style={{
               backgroundImage: c.image
                 ? `url(${c.image})`
-                : "linear-gradient(135deg, #7b2fbe, #1a3adb)",
+                : "linear-gradient(135deg, var(--purple), var(--blue))",
             }}
           />
-          <div className="p-2" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="text-white text-[10px] font-bold leading-tight truncate">
+          <div className="p-2" style={{ background: "var(--glass-bg-subtle)" }}>
+            <div
+              className="text-[10px] font-bold leading-tight truncate"
+              style={{ color: "var(--text-muted)" }}
+            >
               {c.name}
             </div>
-            <div className="text-white/45 text-[9px] mt-0.5">{c.category}</div>
+            <div
+              className="text-[9px] mt-0.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {c.category}
+            </div>
           </div>
         </motion.div>
       ))}
@@ -203,7 +223,7 @@ function CommunityPreview({ communities }: { communities: any[] }) {
 }
 
 function MarketplacePreview({ products }: { products: any[] }) {
-  const items = products.slice(0, 3);
+  const items = products.slice(0, 6);
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((p, i) => {
@@ -218,7 +238,7 @@ function MarketplacePreview({ products }: { products: any[] }) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
             className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid rgba(255,255,255,0.15)" }}
+            style={{ border: "1px solid var(--glass-border)" }}
           >
             <div className="h-20 relative overflow-hidden">
               <img
@@ -230,8 +250,11 @@ function MarketplacePreview({ products }: { products: any[] }) {
                 className="w-full h-full object-cover"
               />
               <div
-                className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
-                style={{ background: "rgba(123,47,190,0.80)" }}
+                className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: "var(--badge-purple-bg)",
+                  color: "var(--badge-purple-text)",
+                }}
               >
                 {categoryIcon && `${categoryIcon} `}
                 {categoryName}
@@ -239,18 +262,78 @@ function MarketplacePreview({ products }: { products: any[] }) {
             </div>
             <div
               className="p-2"
-              style={{ background: "rgba(255,255,255,0.08)" }}
+              style={{ background: "var(--glass-bg-subtle)" }}
             >
-              <div className="text-white text-[10px] font-bold truncate">
+              <div
+                className="text-[10px] font-bold truncate"
+                style={{ color: "var(--text-muted)" }}
+              >
                 {p.name}
               </div>
-              <div className="text-white/60 text-[9px]">
+              <div
+                className="text-[9px]"
+                style={{ color: "var(--text-muted)" }}
+              >
                 CFA {(p.price ?? 0).toLocaleString()}
               </div>
             </div>
           </motion.div>
         );
       })}
+    </div>
+  );
+}
+
+function JobsPreview({ jobs }: { jobs: any[] }) {
+  const items = jobs.slice(0, 4);
+  return (
+    <div className="space-y-3">
+      {items.length === 0 ? (
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          No live remote jobs available right now.
+        </p>
+      ) : (
+        items.map((job, index) => (
+          <motion.div
+            key={job.id ?? index}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + index * 0.08, duration: 0.35 }}
+            className="rounded-2xl p-4"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p
+                  className="text-sm font-semibold truncate"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {job.title}
+                </p>
+                <p
+                  className="text-xs truncate"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {job.company}
+                  {job.location ? ` · ${job.location}` : ""}
+                </p>
+              </div>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.18em] px-2 py-1 rounded-full"
+                style={{
+                  background: "var(--glass-bg-subtle)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {job.category?.replace("_", " ")}
+              </span>
+            </div>
+          </motion.div>
+        ))
+      )}
     </div>
   );
 }
@@ -265,14 +348,23 @@ function PreviewSkeleton({ type }: { type: string }) {
             key={i}
             className="flex items-center gap-3 rounded-2xl p-3 animate-pulse"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.10)",
+              background: "var(--glass-bg-subtle)",
+              border: "1px solid var(--glass-border-subtle)",
             }}
           >
-            <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0" />
+            <div
+              className="w-10 h-10 rounded-full flex-shrink-0"
+              style={{ background: "var(--skeleton-base)" }}
+            />
             <div className="flex-1 space-y-1.5">
-              <div className="h-2.5 w-3/4 rounded bg-white/20" />
-              <div className="h-2 w-1/2 rounded bg-white/15" />
+              <div
+                className="h-2.5 w-3/4 rounded"
+                style={{ background: "var(--skeleton-base)" }}
+              />
+              <div
+                className="h-2 w-1/2 rounded"
+                style={{ background: "var(--skeleton-base)" }}
+              />
             </div>
           </div>
         ))}
@@ -285,15 +377,24 @@ function PreviewSkeleton({ type }: { type: string }) {
         <div
           key={i}
           className="rounded-xl overflow-hidden animate-pulse"
-          style={{ border: "1px solid rgba(255,255,255,0.10)" }}
+          style={{ border: "1px solid var(--glass-border-subtle)" }}
         >
-          <div className="h-20 bg-white/15" />
+          <div
+            className="h-20"
+            style={{ background: "var(--skeleton-base)" }}
+          />
           <div
             className="p-2 space-y-1"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "var(--glass-bg-subtle)" }}
           >
-            <div className="h-2 w-3/4 rounded bg-white/20" />
-            <div className="h-1.5 w-1/2 rounded bg-white/15" />
+            <div
+              className="h-2 w-3/4 rounded"
+              style={{ background: "var(--skeleton-base)" }}
+            />
+            <div
+              className="h-1.5 w-1/2 rounded"
+              style={{ background: "var(--skeleton-base)" }}
+            />
           </div>
         </div>
       ))}
@@ -343,8 +444,9 @@ export default function HeroSection() {
   const { counselors, loading: loadingCounselors } = useCounselors({
     available: true,
   });
-  const { products, isLoading: loadingProducts } = useFeaturedProducts(3);
+  const { products, isLoading: loadingProducts } = useFeaturedProducts(6);
   const { communities, loading: loadingCommunities } = useCommunities();
+  const { jobs, categories, jobsLoading, categoriesLoading } = useJobs();
 
   const go = useCallback((next: number, direction: number) => {
     setDir(direction);
@@ -418,7 +520,29 @@ export default function HeroSection() {
   ]);
 
   const slide = slides[active];
-  const Icon = slide.icon;
+  const companiesCount = new Set(jobs.map((job) => job.company)).size;
+  const slideData =
+    slide.id === "jobs"
+      ? {
+          ...slide,
+          badge: jobsLoading ? "Loading…" : `${jobs.length} Jobs`,
+          stats: [
+            {
+              label: "Open Positions",
+              value: jobsLoading ? "..." : `${jobs.length}`,
+            },
+            {
+              label: "Companies",
+              value: jobsLoading ? "..." : `${companiesCount}`,
+            },
+            {
+              label: "Categories",
+              value: categoriesLoading ? "..." : `${categories.length}`,
+            },
+          ],
+        }
+      : slide;
+  const Icon = slideData.icon;
 
   // Resolve which preview + loading state to show for current slide
   const renderPreview = () => {
@@ -428,6 +552,12 @@ export default function HeroSection() {
           <PreviewSkeleton type="counselors" />
         ) : (
           <CounselorPreview counselors={counselors} />
+        );
+      case "jobs":
+        return jobsLoading ? (
+          <PreviewSkeleton type="jobs" />
+        ) : (
+          <JobsPreview jobs={jobs} />
         );
       case "community":
         return loadingCommunities ? (
@@ -449,6 +579,7 @@ export default function HeroSection() {
   return (
     <section
       className="relative overflow-hidden"
+      style={{ background: "var(--bg-base)" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -599,10 +730,9 @@ export default function HeroSection() {
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/register"
-              className="px-8 py-3.5 rounded-2xl text-white font-bold text-sm transition-all duration-200 hover:scale-105 hover:-translate-y-0.5"
+              className="px-8 py-3.5 rounded-2xl text-[var(--text-inverse)] font-bold text-sm transition-all duration-200 hover:scale-105 hover:-translate-y-0.5"
               style={{
-                background:
-                  "linear-gradient(135deg, var(--purple), var(--blue))",
+                background: "var(--btn-primary-bg)",
                 boxShadow: "var(--btn-primary-shadow)",
               }}
             >
@@ -639,7 +769,7 @@ export default function HeroSection() {
                   i === active
                     ? {
                         background: slide.gradient,
-                        color: "#fff",
+                        color: "var(--text-inverse)",
                         boxShadow: `0 4px 14px ${slide.glowA}`,
                         border: "1px solid rgba(255,255,255,0.20)",
                       }
@@ -662,16 +792,16 @@ export default function HeroSection() {
         <div
           className="rounded-3xl overflow-hidden relative"
           style={{
-            background: slide.gradient,
-            boxShadow: `0 24px 80px ${slide.glowA}, 0 4px 24px rgba(0,0,0,0.2)`,
-            border: "1px solid rgba(255,255,255,0.15)",
+            background: "var(--bg-gradient)",
+            boxShadow: "var(--card-shadow), 0 4px 24px rgba(0,0,0,0.2)",
+            border: "1px solid var(--card-border)",
           }}
         >
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(145deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 60%, transparent 100%)",
+                "linear-gradient(145deg, var(--glass-bg-subtle) 0%, transparent 60%, transparent 100%)",
             }}
           />
 
@@ -693,47 +823,47 @@ export default function HeroSection() {
                     <div
                       className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center"
                       style={{
-                        background: "rgba(255,255,255,0.18)",
-                        border: "1px solid rgba(255,255,255,0.28)",
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--glass-border)",
                         backdropFilter: "blur(8px)",
                       }}
                     >
-                      <Icon size={20} className="text-white" />
+                      <Icon size={20} className="text-[var(--text-on-glass)]" />
                     </div>
-                    <span className="text-xs font-bold tracking-widest uppercase text-white/70">
-                      {slide.label}
+                    <span className="text-xs font-bold tracking-widest uppercase text-[var(--text-on-glass)]">
+                      {slideData.label}
                     </span>
                     <span
                       className="ml-auto text-[11px] font-bold px-3 py-1 rounded-full"
                       style={{
-                        background: "rgba(255,255,255,0.16)",
-                        color: "rgba(255,255,255,0.90)",
-                        border: "1px solid rgba(255,255,255,0.22)",
+                        background: "var(--glass-bg-subtle)",
+                        color: "var(--text-on-glass)",
+                        border: "1px solid var(--glass-border-subtle)",
                       }}
                     >
-                      {slide.badge}
+                      {slideData.badge}
                     </span>
                   </div>
 
                   <div>
-                    <h2 className="text-2xl lg:text-3xl font-extrabold text-white leading-tight mb-2">
-                      {slide.title}
+                    <h2 className="text-2xl lg:text-3xl font-extrabold text-[var(--text-on-glass)] leading-tight mb-2">
+                      {slideData.title}
                     </h2>
-                    <p className="text-sm text-white/60 font-medium mb-3">
-                      {slide.subtitle}
+                    <p className="text-sm font-medium mb-3 text-[var(--text-on-glass)]">
+                      {slideData.subtitle}
                     </p>
-                    <p className="text-sm text-white/45 leading-relaxed font-light max-w-md">
-                      {slide.description}
+                    <p className="text-sm leading-relaxed font-light max-w-md text-[var(--text-on-glass)]">
+                      {slideData.description}
                     </p>
                   </div>
 
                   <div className="flex gap-5 sm:gap-6">
-                    {slide.stats.map((s, i) => (
+                    {slideData.stats.map((s, i) => (
                       <div key={i} className="flex flex-col gap-0.5">
-                        <span className="text-lg font-extrabold text-white">
+                        <span className="text-lg font-extrabold text-[var(--text-on-glass)]">
                           {s.value}
                         </span>
-                        <span className="text-[11px] text-white/45">
+                        <span className="text-[11px] text-[var(--text-on-glass)]">
                           {s.label}
                         </span>
                       </div>
@@ -741,15 +871,15 @@ export default function HeroSection() {
                   </div>
 
                   <Link
-                    href={slide.href}
-                    className="inline-flex items-center gap-2 self-start px-6 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 group"
+                    href={slideData.href}
+                    className="inline-flex items-center gap-2 self-start px-6 py-3 rounded-xl text-sm font-bold text-[var(--text-on-glass)] transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 group"
                     style={{
-                      background: "rgba(255,255,255,0.18)",
-                      border: "1px solid rgba(255,255,255,0.28)",
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
                       backdropFilter: "blur(10px)",
                     }}
                   >
-                    {slide.cta}
+                    {slideData.cta}
                     <ArrowRight
                       size={15}
                       className="transition-transform duration-200 group-hover:translate-x-1"
@@ -764,21 +894,27 @@ export default function HeroSection() {
                   onClick={prev}
                   className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
                   style={{
-                    background: "rgba(255,255,255,0.15)",
-                    border: "1px solid rgba(255,255,255,0.22)",
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
                   }}
                 >
-                  <ChevronLeft size={16} className="text-white" />
+                  <ChevronLeft
+                    size={16}
+                    className="text-[var(--text-on-glass)]"
+                  />
                 </button>
                 <button
                   onClick={next}
                   className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
                   style={{
-                    background: "rgba(255,255,255,0.15)",
-                    border: "1px solid rgba(255,255,255,0.22)",
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
                   }}
                 >
-                  <ChevronRight size={16} className="text-white" />
+                  <ChevronRight
+                    size={16}
+                    className="text-[var(--text-on-glass)]"
+                  />
                 </button>
 
                 <div className="flex items-center gap-2 ml-2">
@@ -793,14 +929,14 @@ export default function HeroSection() {
                         borderRadius: "99px",
                         background:
                           i === active
-                            ? "rgba(255,255,255,0.95)"
-                            : "rgba(255,255,255,0.30)",
+                            ? "var(--accent-primary)"
+                            : "var(--glass-border)",
                       }}
                     />
                   ))}
                 </div>
 
-                <span className="ml-auto text-xs text-white/35 font-mono">
+                <span className="ml-auto text-xs text-[var(--text-on-glass)] font-mono">
                   {String(active + 1).padStart(2, "0")} /{" "}
                   {String(slides.length).padStart(2, "0")}
                 </span>
@@ -810,7 +946,7 @@ export default function HeroSection() {
             {/* RIGHT — live preview */}
             <div
               className="hidden lg:flex items-center p-8 lg:p-10"
-              style={{ borderLeft: "1px solid rgba(255,255,255,0.10)" }}
+              style={{ borderLeft: "1px solid var(--glass-border-subtle)" }}
             >
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div
@@ -834,7 +970,7 @@ export default function HeroSection() {
             <motion.div
               key={slide.id + "-progress"}
               className="absolute bottom-0 left-0 h-[3px]"
-              style={{ background: "rgba(255,255,255,0.60)" }}
+              style={{ background: "var(--accent-primary)" }}
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
               transition={{ duration: 5, ease: "linear" }}

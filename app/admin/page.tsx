@@ -9,6 +9,7 @@ import {
   Users,
   Package,
   DollarSign,
+  Globe,
 } from "lucide-react";
 
 export default async function AdminDashboard() {
@@ -20,6 +21,7 @@ export default async function AdminDashboard() {
     counselorsCount,
     ordersCount,
     usersCount,
+    communitiesCount,
   ] = await Promise.all([
     prisma.product.count({ where: { active: true } }),
     prisma.course.count({ where: { published: true } }),
@@ -27,6 +29,7 @@ export default async function AdminDashboard() {
     prisma.counselor.count({ where: { verified: true } }),
     prisma.order.count(),
     prisma.user.count(),
+    prisma.community.count(),
   ]);
 
   const stats = [
@@ -50,6 +53,12 @@ export default async function AdminDashboard() {
       icon: Briefcase,
       color: "scarlet" as const,
       trend: { value: 5, isPositive: false },
+    },
+    {
+      title: "Communities",
+      value: communitiesCount,
+      icon: Globe,
+      color: "purple" as const,
     },
     {
       title: "Verified Counselors",

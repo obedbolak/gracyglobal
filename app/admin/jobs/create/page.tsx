@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/shared/ImageUpload";
 import { ArrowLeft, Save, Plus, X } from "lucide-react";
@@ -22,13 +22,25 @@ const jobCategories = [
 
 const jobTypes = ["REMOTE", "HYBRID", "CONTRACT", "FREELANCE"];
 
+interface JobCategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+function normalizeCategorySlug(slug: string) {
+  return slug.replace(/-/g, "_").toUpperCase();
+}
+
 export default function CreateJobPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<JobCategoryOption[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     company: "",
     description: "",
+    jobCategoryId: "",
     category: "",
     type: "REMOTE",
     salaryMin: "",
@@ -41,6 +53,20 @@ export default function CreateJobPage() {
   });
   const [companyLogo, setCompanyLogo] = useState("");
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetch("/api/jobs/job-categories?all=true");
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (error) {
+        console.error("Failed to load job categories", error);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,11 +76,19 @@ export default function CreateJobPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          company: formData.company,
+          description: formData.description,
+          category: formData.category,
+          jobCategoryId: formData.jobCategoryId || null,
+          type: formData.type,
           companyLogo,
           salaryMin: formData.salaryMin ? parseInt(formData.salaryMin) : null,
           salaryMax: formData.salaryMax ? parseInt(formData.salaryMax) : null,
+          location: formData.location || null,
           skills: formData.skills.filter((s) => s.trim()),
+          active: formData.active,
+          featured: formData.featured,
           expiresAt: formData.expiresAt ? new Date(formData.expiresAt) : null,
         }),
       });
@@ -181,16 +215,25 @@ export default function CreateJobPage() {
               </label>
               <select
                 required
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
+                value={formData.jobCategoryId}
+                onChange={(e) => {
+                  const selectedCategory = categories.find(
+                    (category) => category.id === e.target.value,
+                  );
+                  setFormData({
+                    ...formData,
+                    jobCategoryId: e.target.value,
+                    category: selectedCategory
+                      ? normalizeCategorySlug(selectedCategory.slug)
+                      : "",
+                  });
+                }}
                 className="glass-input w-full px-4 py-3"
               >
                 <option value="">Select category</option>
-                {jobCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat.replace("_", " ")}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>

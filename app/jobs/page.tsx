@@ -50,12 +50,25 @@ export interface JobApplication {
   job: Job;
 }
 
+export interface JobCategory_Model {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  active: boolean;
+  sortOrder: number;
+  _count?: { jobs: number };
+}
+
 export interface JobPostPayload {
   title: string;
   company: string;
   companyLogo?: string;
   description: string;
   category: JobCategory;
+  jobCategoryId?: string;
   type: JobType;
   salaryMin?: number;
   salaryMax?: number;
@@ -92,6 +105,7 @@ interface JobPostForm {
   companyLogo: string;
   description: string;
   category: JobCategory;
+  jobCategoryId: string;
   type: JobType;
   salaryMin: string;
   salaryMax: string;
@@ -209,6 +223,21 @@ function useJobs(filters: JobFilters = {}) {
     (appliedData?.applications || []).map((app) => app.jobId),
   );
 
+  const {
+    data: categoriesData,
+    error: categoriesError,
+    isLoading: categoriesLoading,
+  } = useSWR<{ categories: JobCategory_Model[] }>(
+    "/api/jobs/job-categories",
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    },
+  );
+
+  const categories = categoriesData?.categories || [];
+
   const postJob = useCallback(
     async (payload: JobPostPayload): Promise<Job> => {
       const res = await fetch("/api/jobs", {
@@ -296,6 +325,9 @@ function useJobs(filters: JobFilters = {}) {
     updateJob,
     refreshJobs,
     refreshApplied,
+    categories,
+    categoriesLoading,
+    categoriesError,
   };
 }
 
@@ -355,9 +387,17 @@ interface PostJobFormProps {
   onBack: () => void;
   onSuccess: () => void;
   postJob: (payload: JobPostPayload) => Promise<Job>;
+  categories: JobCategory_Model[];
+  categoriesLoading: boolean;
 }
 
-function PostJobForm({ onBack, onSuccess, postJob }: PostJobFormProps) {
+function PostJobForm({
+  onBack,
+  onSuccess,
+  postJob,
+  categories,
+  categoriesLoading,
+}: PostJobFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<JobPostForm>({
@@ -366,6 +406,7 @@ function PostJobForm({ onBack, onSuccess, postJob }: PostJobFormProps) {
     companyLogo: "",
     description: "",
     category: "TECH",
+    jobCategoryId: "",
     type: "REMOTE",
     salaryMin: "",
     salaryMax: "",
@@ -472,17 +513,36 @@ function PostJobForm({ onBack, onSuccess, postJob }: PostJobFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField label="Category">
                 <select
-                  value={form.category}
-                  onChange={(e) =>
-                    update("category", e.target.value as JobCategory)
-                  }
+                  value={form.jobCategoryId}
+                  onChange={(e) => {
+                    const selectedCategory = categories.find(
+                      (category) => category.id === e.target.value,
+                    );
+                    update("jobCategoryId", e.target.value);
+                    if (selectedCategory) {
+                      update(
+                        "category",
+                        selectedCategory.slug
+                          .toUpperCase()
+                          .replace(/-/g, "_") as JobCategory,
+                      );
+                    }
+                  }}
                   className="glass-input px-3 py-2.5 text-sm"
+                  required
                 >
-                  {CATEGORIES.filter((c) => c.value !== "ALL").map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
+                  <option value="">Select category</option>
+                  {categoriesLoading
+                    ? CATEGORIES.filter((c) => c.value !== "ALL").map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))
+                    : categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
                 </select>
               </FormField>
               <FormField label="Job Type">
@@ -1624,6 +1684,8 @@ export default function JobsPage() {
     applyToJob,
     submitJobSeekerProfile,
     refreshJobs,
+    categories,
+    categoriesLoading,
   } = useJobs({ category, type, featured: featuredOnly });
 
   const filtered = jobs.filter((j) => {
@@ -1695,6 +1757,8 @@ export default function JobsPage() {
             onBack={() => setView("jobs")}
             onSuccess={handlePostJobSuccess}
             postJob={postJob}
+            categories={categories}
+            categoriesLoading={categoriesLoading}
           />
         )}
 

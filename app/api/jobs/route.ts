@@ -7,6 +7,63 @@ import { prisma } from "@/lib/prisma";
 import { JobCategory, JobType } from "@prisma/client";
 import { hasRole } from "@/lib/roleHelpers";
 
+function normalizeCategorySlug(slug: string): JobCategory {
+  const normalized = slug.replace(/-/g, "_").toUpperCase();
+  return Object.values(JobCategory).includes(normalized as JobCategory)
+    ? (normalized as JobCategory)
+    : JobCategory.OTHER;
+}
+
+function getCategorySlugFromEnum(category: string | null | undefined) {
+  if (!category) return null;
+  return category.toLowerCase().replace(/_/g, "-");
+}
+
+function getCategoryLabelFromEnum(category: string | null | undefined) {
+  if (!category) return null;
+  return category
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+async function resolveJobCategoryId(
+  category: string | null | undefined,
+  explicitId?: string | null,
+) {
+  if (explicitId) {
+    const jobCategory = await prisma.jobCategoryModel.findUnique({
+      where: { id: explicitId },
+    });
+    if (jobCategory) return jobCategory.id;
+  }
+
+  const slug = getCategorySlugFromEnum(category);
+  const name = getCategoryLabelFromEnum(category);
+  if (!slug && !name) return null;
+
+  const jobCategory = await prisma.jobCategoryModel.findFirst({
+    where: {
+      OR: [
+        ...(slug ? [{ slug }] : []),
+        ...(name
+          ? [
+              {
+                name: {
+                  equals: name,
+                  mode: "insensitive" as const,
+                },
+              },
+            ]
+          : []),
+      ],
+    },
+  });
+
+  return jobCategory?.id || null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -39,13 +96,29 @@ export async function POST(req: NextRequest) {
 
     const data = await req.json();
 
+    const jobCategoryId = await resolveJobCategoryId(
+      data.category,
+      data.jobCategoryId || null,
+    );
+
+    const categoryValue = jobCategoryId
+      ? normalizeCategorySlug(
+          (
+            await prisma.jobCategoryModel.findUnique({
+              where: { id: jobCategoryId },
+            })
+          )?.slug || data.category,
+        )
+      : (data.category as JobCategory) || JobCategory.OTHER;
+
     const job = await prisma.job.create({
       data: {
         title: data.title,
         company: data.company,
         companyLogo: data.companyLogo || null,
         description: data.description,
-        category: data.category as JobCategory,
+        category: categoryValue,
+        jobCategoryId,
         type: data.type as JobType,
         salaryMin: data.salaryMin || null,
         salaryMax: data.salaryMax || null,
@@ -54,7 +127,7 @@ export async function POST(req: NextRequest) {
         active: data.active ?? true,
         featured: data.featured || false,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        posterId: session.user.id, // ← ADD THIS
+        posterId: session.user.id,
       },
     });
 
