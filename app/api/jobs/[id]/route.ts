@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { JobCategory } from "@prisma/client";
+import { JobCategory, Prisma } from "@prisma/client";
 import { hasRole } from "@/lib/roleHelpers";
 
 function normalizeCategorySlug(slug: string): JobCategory {
@@ -47,7 +47,7 @@ async function resolveJobCategoryId(
     where: {
       OR: [
         ...(slug ? [{ slug }] : []),
-        ...(name ? [{ name: { equals: name, mode: "insensitive" } }] : []),
+        ...(name ? [{ name: { equals: name, mode: "insensitive" as Prisma.QueryMode } }] : []),
       ],
     },
   });
