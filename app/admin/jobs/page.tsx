@@ -54,7 +54,7 @@ export default async function JobsPage() {
         </div>
       </div>
 
-      <JobsAdminGrid initialJobs={jobs} />
+      <JobsAdminGrid initialJobs={jobs.map(j => ({ ...j, createdAt: j.createdAt.toISOString() }))} />
     </div>
   );
 }
