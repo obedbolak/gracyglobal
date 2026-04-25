@@ -19,18 +19,18 @@ export default function HomePage() {
       {/* Two-column layout for Counselors + Jobs (mirrors the reference design) */}
       <div className="max-w-7xl mx-auto">
         {/* On large screens, side by side */}
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-100">
+        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
           <CounselorsSection />
           <JobsSection />
         </div>
 
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-800">
+        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
           <CommunitySection />
           <MarketplaceSection />
         </div>
 
         {/* Learn + Services side by side on large screens */}
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-800">
+        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
           <LearnSection />
           <ServicesSection />
         </div>

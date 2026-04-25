@@ -25,7 +25,7 @@ const SYSTEM_IMAGES: Record<string, string> = {
 
 export default function CommunitySection() {
   return (
-    <section className="py-16 relative">
+    <section className="py-16">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "var(--glass-bg-subtle)" }}
