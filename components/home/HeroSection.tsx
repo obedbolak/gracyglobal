@@ -738,18 +738,6 @@ export default function HeroSection() {
             >
               Get Started Free
             </Link>
-            <Link
-              href="/counselors"
-              className="px-8 py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-105"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-secondary)",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              Explore Platform
-            </Link>
           </div>
         </div>
       </div>
