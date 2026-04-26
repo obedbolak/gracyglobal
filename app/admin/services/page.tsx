@@ -4,23 +4,23 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus, Package } from "lucide-react";
 import { ServiceActions } from "./_components/ServiceActions";
-import { useCategories } from "@/hooks/useCategories";
 
 export default async function ServicesPage() {
-  const { categories } = await useCategories("service");
-
-  const services = await prisma.service.findMany({
-    include: {
-      options: {
-        where: { active: true },
-        orderBy: { amount: "asc" },
+  const [categories, services] = await Promise.all([
+    prisma.serviceCategory.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.service.findMany({
+      include: {
+        options: {
+          where: { active: true },
+          orderBy: { amount: "asc" },
+        },
+        _count: {
+          select: { bookings: true },
+        },
       },
-      _count: {
-        select: { bookings: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
