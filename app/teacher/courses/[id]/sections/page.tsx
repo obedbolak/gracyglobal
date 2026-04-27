@@ -1,3 +1,4 @@
+//app/teacher/courses/[id]/sections/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -113,6 +114,7 @@ export default function TeacherCourseSectionsPage() {
                 type: l.type,
                 content: l.content || "",
                 videoUrl: l.videoUrl || "",
+                documentUrl: l.documentUrl || "", // ← ADD THIS
                 duration: l.duration || 0,
                 isFree: l.isFree,
               })) || [],

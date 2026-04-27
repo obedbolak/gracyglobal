@@ -16,6 +16,7 @@ export default async function CoursesPage() {
   const courses = await prisma.course.findMany({
     orderBy: { createdAt: "desc" },
     include: {
+      category: true, // ← add this
       _count: {
         select: {
           enrollments: true,
@@ -175,7 +176,7 @@ export default async function CoursesPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[var(--text-muted)]">Category</span>
                     <span className="font-medium text-[var(--text-secondary)]">
-                      {course.categoryId ? course.categoryId : "Uncategorized"}
+                      {course.category?.name ?? "Uncategorized"}{" "}
                     </span>
                   </div>
 

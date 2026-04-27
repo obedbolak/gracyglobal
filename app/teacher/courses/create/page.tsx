@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -26,6 +26,7 @@ import Link from "next/link";
 import ImageUpload from "@/components/shared/ImageUpload";
 import VideoUpload from "@/components/shared/VideoUpload";
 import DocumentUpload from "@/components/shared/DocumentUpload";
+import { useCategories, CategoryType } from "@/hooks/useCategories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,8 +56,8 @@ interface CourseFormData {
   title: string;
   description: string;
   thumbnail: string;
-  category: string;
-  level: CourseLevel;
+  level: string;
+  categoryId: string; // ← was: category: string  level: CourseLevel;
   price: number;
   isFree: boolean;
   published: boolean;
@@ -149,13 +150,14 @@ export default function CreateCoursePage() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { categories, loading: categoriesLoading } = useCategories("course");
 
   // Course details
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
     description: "",
     thumbnail: "",
-    category: CATEGORIES[0],
+    categoryId: "",
     level: "BEGINNER",
     price: 0,
     isFree: true,
@@ -452,6 +454,12 @@ export default function CreateCoursePage() {
     0,
   );
 
+  useEffect(() => {
+    if (categories.length > 0 && !formData.categoryId) {
+      setFormData((f) => ({ ...f, categoryId: categories[0].id }));
+    }
+  }, [categories]);
+
   // ── Render Step 1: Course Details ────────────────────────────────────────
 
   const renderStep1 = () => (
@@ -539,15 +547,15 @@ export default function CreateCoursePage() {
               Category
             </label>
             <select
-              value={formData.category}
+              value={formData.categoryId}
               onChange={(e) =>
-                setFormData((f) => ({ ...f, category: e.target.value }))
+                setFormData((f) => ({ ...f, categoryId: e.target.value }))
               }
               className="w-full p-3 rounded-xl glass-input text-sm"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
                 </option>
               ))}
             </select>
@@ -1305,7 +1313,8 @@ export default function CreateCoursePage() {
                   color: "var(--badge-purple-text)",
                 }}
               >
-                {formData.category}
+                {categories.find((c) => c.id === formData.categoryId)?.name ||
+                  "Uncategorized"}
               </span>
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-semibold"

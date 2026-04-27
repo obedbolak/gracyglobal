@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import ImageUpload from "@/components/shared/ImageUpload";
+import { useCategories } from "@/hooks/useCategories";
 import {
   ArrowLeft,
   Save,
@@ -13,28 +14,8 @@ import {
   Users,
   Layers,
   BarChart,
-  Eye,
-  EyeOff,
-  Trash2,
   CheckCircle,
 } from "lucide-react";
-
-const CATEGORIES = [
-  "Spiritual Development",
-  "Healing & Wellness",
-  "Meditation",
-  "Energy Work",
-  "Personal Growth",
-  "Mindfulness",
-  "Life Coaching",
-  "Relationships",
-  "Business",
-  "Technology",
-  "Finance",
-  "Marketing",
-  "Design",
-  "Other",
-];
 
 const LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 
@@ -43,7 +24,7 @@ interface CourseData {
   title: string;
   description: string;
   thumbnail: string | null;
-  category: string;
+  categoryId: string; // ← was: category: string
   level: string;
   price: number;
   isFree: boolean;
@@ -59,6 +40,8 @@ export default function EditCoursePage() {
   const { data: session } = useSession();
   const courseId = params.id as string;
 
+  const { categories, loading: categoriesLoading } = useCategories("course");
+
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +52,7 @@ export default function EditCoursePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnail, setThumbnail] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryId, setCategoryId] = useState(""); // ← was: category
   const [level, setLevel] = useState("");
   const [price, setPrice] = useState(0);
   const [isFree, setIsFree] = useState(true);
@@ -90,7 +73,7 @@ export default function EditCoursePage() {
         setTitle(c.title);
         setDescription(c.description);
         setThumbnail(c.thumbnail || "");
-        setCategory(c.category);
+        setCategoryId(c.categoryId || ""); // ← was: setCategory(c.category)
         setLevel(c.level);
         setPrice(c.price);
         setIsFree(c.isFree);
@@ -104,6 +87,11 @@ export default function EditCoursePage() {
   };
 
   const handleSave = async () => {
+    if (!categoryId) {
+      setError("Please select a category");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -115,7 +103,7 @@ export default function EditCoursePage() {
           title,
           description,
           thumbnail: thumbnail || null,
-          category,
+          categoryId, // ← was: category
           level,
           price: isFree ? 0 : price,
           isFree,
@@ -186,7 +174,7 @@ export default function EditCoursePage() {
           </h1>
         </div>
 
-        {/* Quick stats + actions */}
+        {/* Quick stats */}
         <div className="flex items-center gap-3">
           <div
             className="px-4 py-2 rounded-xl text-center"
@@ -362,13 +350,17 @@ export default function EditCoursePage() {
               Category
             </label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              disabled={categoriesLoading}
               className="w-full p-3 rounded-xl glass-input text-sm"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              <option value="">
+                {categoriesLoading ? "Loading..." : "Select a category"}
+              </option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
                 </option>
               ))}
             </select>
@@ -446,7 +438,6 @@ export default function EditCoursePage() {
 
         {/* Toggles */}
         <div className="space-y-4">
-          {/* Featured */}
           <div className="flex items-center justify-between">
             <div>
               <p
@@ -483,8 +474,8 @@ export default function EditCoursePage() {
         {/* Save */}
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 disabled:opacity-70"
+          disabled={saving || !categoryId}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 disabled:opacity-70 disabled:hover:scale-100"
           style={{
             background: "linear-gradient(135deg, var(--purple), var(--blue))",
             boxShadow: "0 4px 16px rgba(123,47,190,0.4)",
