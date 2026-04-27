@@ -54,7 +54,7 @@ export default function TestUpload() {
             <h2 className="text-xl font-semibold mb-4">🎥 Video Upload</h2>
             <VideoUpload
               folder="test/videos"
-              maxSize={50}
+              maxSize={100}
               onUploadComplete={(url, publicId) => {
                 addResult("Video", { url, publicId });
               }}

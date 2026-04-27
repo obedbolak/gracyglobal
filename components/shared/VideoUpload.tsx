@@ -16,7 +16,7 @@ interface VideoUploadProps {
 export default function VideoUpload({
   onUploadComplete,
   folder = "gracyglobal/videos",
-  maxSize = 100, // 100MB for videos
+  maxSize = 500, // raised to 500MB — Cloudinary free tier supports up to 100MB, paid up to 2GB
   label = "Upload Video",
   currentVideo,
 }: VideoUploadProps) {
@@ -25,6 +25,7 @@ export default function VideoUpload({
   const [preview, setPreview] = useState<string | null>(currentVideo || null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,56 +48,93 @@ export default function VideoUpload({
     setUploading(true);
     setProgress(0);
 
-    try {
-      // Show preview
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
+    // Show local preview immediately while uploading
+    const localUrl = URL.createObjectURL(file);
+    setPreview(localUrl);
 
-      // Upload to Cloudinary
-      const formData = new FormData();
-      formData.append("files", file);
-      formData.append("folder", folder);
-      formData.append("resourceType", "video");
+    // ─── DIRECT UPLOAD TO CLOUDINARY ────────────────────────────────────────
+    // We bypass /api/upload entirely so Vercel never touches the video bytes.
+    // The file goes: Browser → Cloudinary directly via XHR.
+    // XHR (not fetch) is required for real upload progress events.
+    // ────────────────────────────────────────────────────────────────────────
 
-      const xhr = new XMLHttpRequest();
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_VIDEO_UPLOAD_PRESET;
 
-      // Track upload progress
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100);
-          setProgress(percentComplete);
-        }
-      });
-
-      // Handle completion
-      xhr.addEventListener("load", () => {
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText);
-          onUploadComplete(data.uploads.url, data.uploads.publicId);
-          setUploading(false);
-        } else {
-          const error = JSON.parse(xhr.responseText);
-          throw new Error(error.error || "Upload failed");
-        }
-      });
-
-      // Handle error
-      xhr.addEventListener("error", () => {
-        throw new Error("Upload failed");
-      });
-
-      xhr.open("POST", "/api/upload");
-      xhr.send(formData);
-    } catch (err: any) {
-      setError(err.message || "Upload failed");
-      setPreview(currentVideo || null);
+    if (!cloudName || !uploadPreset) {
+      setError(
+        "Cloudinary is not configured. Add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_VIDEO_UPLOAD_PRESET to your .env.local",
+      );
       setUploading(false);
-      setProgress(0);
+      setPreview(currentVideo || null);
+      return;
     }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+    formData.append("folder", folder);
+    // Ask Cloudinary to return duration in the response
+    formData.append("resource_type", "video");
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+
+    // Real upload progress
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      setUploading(false);
+      URL.revokeObjectURL(localUrl); // clean up blob URL
+
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        // Cloudinary returns duration in seconds for video uploads
+        const durationSeconds = Math.round(data.duration ?? 0);
+        setPreview(data.secure_url); // swap blob URL for real Cloudinary URL
+        onUploadComplete(data.secure_url, data.public_id, durationSeconds);
+      } else {
+        let message = "Upload failed";
+        try {
+          const err = JSON.parse(xhr.responseText);
+          message = err?.error?.message || message;
+        } catch {}
+        setError(message);
+        setPreview(currentVideo || null);
+      }
+    });
+
+    xhr.addEventListener("error", () => {
+      setUploading(false);
+      URL.revokeObjectURL(localUrl);
+      setError("Network error — please check your connection and try again.");
+      setPreview(currentVideo || null);
+    });
+
+    xhr.addEventListener("abort", () => {
+      setUploading(false);
+      URL.revokeObjectURL(localUrl);
+      setPreview(currentVideo || null);
+      setProgress(0);
+    });
+
+    xhr.open(
+      "POST",
+      `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+    );
+    xhr.send(formData);
+  };
+
+  const cancelUpload = () => {
+    xhrRef.current?.abort();
   };
 
   const clearVideo = () => {
+    cancelUpload();
     setPreview(null);
     setError(null);
     setProgress(0);
@@ -136,6 +174,13 @@ export default function VideoUpload({
                   <p className="text-sm text-[var(--text-muted)] mt-2">
                     Uploading... {progress}%
                   </p>
+                  <button
+                    type="button"
+                    onClick={cancelUpload}
+                    className="text-xs text-[var(--error-text)] mt-2 hover:underline"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             ) : (
@@ -175,11 +220,30 @@ export default function VideoUpload({
               </video>
             </div>
 
-            <div className="p-4 flex items-center gap-2 border-t border-[var(--divider)]">
-              <FileVideo className="w-5 h-5 text-[var(--purple)]" />
-              <span className="text-sm text-[var(--text-secondary)]">
-                Video ready to use
-              </span>
+            <div className="p-4 border-t border-[var(--divider)]">
+              <div className="flex items-center gap-2 mb-2">
+                <FileVideo className="w-5 h-5 text-[var(--purple)]" />
+                <span className="text-sm text-[var(--text-secondary)]">
+                  {uploading ? `Uploading… ${progress}%` : "Video ready to use"}
+                </span>
+                {uploading && (
+                  <button
+                    type="button"
+                    onClick={cancelUpload}
+                    className="ml-auto text-xs text-[var(--error-text)] hover:underline"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              {uploading && (
+                <div className="h-2 bg-[var(--glass-bg-strong)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[var(--purple)] to-[var(--purple-light)] transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

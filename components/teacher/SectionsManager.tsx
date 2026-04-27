@@ -325,14 +325,14 @@ export default function TeacherSectionsManager({
         {lessonDraft.type === "VIDEO" && (
           <div className="mb-4">
             <VideoUpload
-              folder="courses"
+              folder="gracyglobal/videos" // was "courses"
               label="Video File"
               currentVideo={lessonDraft.videoUrl}
               onUploadComplete={(url, publicId, duration) =>
                 setLessonDraft((d) => ({
                   ...d,
                   videoUrl: url,
-                  duration: duration || d.duration,
+                  duration: duration ? Math.ceil(duration / 60) : d.duration,
                 }))
               }
             />

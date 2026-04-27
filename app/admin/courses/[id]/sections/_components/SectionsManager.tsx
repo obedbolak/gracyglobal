@@ -21,6 +21,7 @@ import {
   EyeOff,
   BookOpen,
 } from "lucide-react";
+import DocumentUpload from "@/components/shared/DocumentUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ interface Lesson {
   type: LessonType;
   content: string | null;
   videoUrl: string | null;
+  documentUrl: string | null;
   duration: number | null;
   isFree: boolean;
   order: number;
@@ -62,6 +64,11 @@ const LESSON_TYPES: {
 }[] = [
   { value: "VIDEO", label: "Video", icon: <Video className="w-4 h-4" /> },
   { value: "TEXT", label: "Text", icon: <FileText className="w-4 h-4" /> },
+  {
+    value: "DOCUMENT",
+    label: "Document",
+    icon: <BookOpen className="w-4 h-4" />,
+  },
   { value: "QUIZ", label: "Quiz", icon: <HelpCircle className="w-4 h-4" /> },
   { value: "LIVE", label: "Live", icon: <Radio className="w-4 h-4" /> },
 ];
@@ -69,6 +76,7 @@ const LESSON_TYPES: {
 const TYPE_COLORS: Record<LessonType, string> = {
   VIDEO: "bg-[var(--blue-faint)] text-[var(--blue)]",
   TEXT: "bg-[var(--purple-faint)] text-[var(--purple)]",
+  DOCUMENT: "bg-[var(--orange-faint)] text-[var(--orange)]",
   QUIZ: "bg-[var(--scarlet-faint)] text-[var(--scarlet)]",
   LIVE: "bg-green-500/10 text-green-500",
 };
@@ -76,6 +84,7 @@ const TYPE_COLORS: Record<LessonType, string> = {
 const TYPE_ICONS: Record<LessonType, React.ReactNode> = {
   VIDEO: <Video className="w-3.5 h-3.5" />,
   TEXT: <FileText className="w-3.5 h-3.5" />,
+  DOCUMENT: <FileText className="w-3.5 h-3.5" />,
   QUIZ: <HelpCircle className="w-3.5 h-3.5" />,
   LIVE: <Radio className="w-3.5 h-3.5" />,
 };
@@ -87,6 +96,7 @@ interface LessonDraft {
   type: LessonType;
   content: string;
   videoUrl: string;
+  documentUrl: string; // ← ADD
   duration: string;
   isFree: boolean;
 }
@@ -96,6 +106,7 @@ const emptyLesson = (): LessonDraft => ({
   type: "VIDEO",
   content: "",
   videoUrl: "",
+  documentUrl: "",
   duration: "",
   isFree: false,
 });
@@ -242,6 +253,7 @@ export default function SectionsManager({
       type: lesson.type,
       content: lesson.content || "",
       videoUrl: lesson.videoUrl || "",
+      documentUrl: lesson.documentUrl || "", // ← ADD
       duration: lesson.duration?.toString() || "",
       isFree: lesson.isFree,
     });
@@ -327,7 +339,6 @@ export default function SectionsManager({
       <h4 className="text-sm font-semibold text-[var(--text-primary)]">
         {lessonId ? "Edit Lesson" : "New Lesson"}
       </h4>
-
       {/* Title */}
       <div className="space-y-1">
         <label className="text-xs font-medium text-[var(--text-muted)]">
@@ -344,7 +355,6 @@ export default function SectionsManager({
           autoFocus
         />
       </div>
-
       {/* Type */}
       <div className="space-y-1">
         <label className="text-xs font-medium text-[var(--text-muted)]">
@@ -368,7 +378,6 @@ export default function SectionsManager({
           ))}
         </div>
       </div>
-
       {/* Video URL */}
       {lessonDraft.type === "VIDEO" && (
         <div className="space-y-1">
@@ -386,7 +395,6 @@ export default function SectionsManager({
           />
         </div>
       )}
-
       {/* Text content */}
       {lessonDraft.type === "TEXT" && (
         <div className="space-y-1">
@@ -404,7 +412,21 @@ export default function SectionsManager({
           />
         </div>
       )}
-
+      // After the TEXT block:
+      {lessonDraft.type === "DOCUMENT" && (
+        <DocumentUpload
+          folder="gracyglobal/documents"
+          label="Lesson Document"
+          currentDocument={
+            lessonDraft.documentUrl
+              ? { url: lessonDraft.documentUrl, filename: "Current document" }
+              : undefined
+          }
+          onUploadComplete={(url, publicId, filename) => {
+            setLessonDraft((d) => ({ ...d, documentUrl: url }));
+          }}
+        />
+      )}
       {/* Duration + Free preview */}
       <div className="flex gap-4 items-end">
         <div className="space-y-1 flex-1">
@@ -443,7 +465,6 @@ export default function SectionsManager({
           </span>
         </label>
       </div>
-
       {/* Actions */}
       <div className="flex gap-2 pt-1">
         <button

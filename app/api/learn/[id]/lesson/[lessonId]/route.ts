@@ -123,7 +123,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN"))
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { lessonId } = await params;
@@ -136,6 +140,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         type: data.type as LessonType,
         content: data.content || null,
         videoUrl: data.videoUrl || null,
+        documentUrl: data.documentUrl || null, // ← CORRECT
         duration: data.duration ? parseInt(data.duration) : null,
         isFree: data.isFree ?? false,
       },
@@ -150,7 +155,11 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN"))
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { lessonId } = await params;

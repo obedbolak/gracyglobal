@@ -13,7 +13,11 @@ interface RouteParams {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN"))
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { sectionId } = await params;

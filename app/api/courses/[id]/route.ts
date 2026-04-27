@@ -61,9 +61,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { id } = await params;
     const data = await req.json();
@@ -93,9 +96,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { id } = await params;
 

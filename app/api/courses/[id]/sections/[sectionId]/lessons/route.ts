@@ -14,7 +14,11 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN"))
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { sectionId } = await params;
@@ -33,6 +37,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         type: data.type as LessonType,
         content: data.content || null,
         videoUrl: data.videoUrl || null,
+        documentUrl: data.documentUrl || null, // ← ADD
         duration: data.duration ? parseInt(data.duration) : null,
         isFree: data.isFree ?? false,
         order: (last?.order ?? 0) + 1,
@@ -49,7 +54,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN"))
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "TEACHER"))
+    )
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { orderedIds } = await req.json();

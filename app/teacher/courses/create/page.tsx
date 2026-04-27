@@ -25,10 +25,11 @@ import {
 import Link from "next/link";
 import ImageUpload from "@/components/shared/ImageUpload";
 import VideoUpload from "@/components/shared/VideoUpload";
+import DocumentUpload from "@/components/shared/DocumentUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type LessonType = "VIDEO" | "TEXT" | "QUIZ" | "LIVE";
+type LessonType = "VIDEO" | "TEXT" | "DOCUMENT" | "QUIZ" | "LIVE";
 type CourseLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
 interface LessonDraft {
@@ -37,6 +38,8 @@ interface LessonDraft {
   type: LessonType;
   content: string;
   videoUrl: string;
+  documentUrl: string; // ← ADD
+
   duration: number;
   isFree: boolean;
 }
@@ -92,6 +95,11 @@ const LESSON_TYPES: {
 }[] = [
   { value: "VIDEO", label: "Video", icon: <Video className="w-4 h-4" /> },
   { value: "TEXT", label: "Text", icon: <FileText className="w-4 h-4" /> },
+  {
+    value: "DOCUMENT",
+    label: "Document",
+    icon: <BookOpen className="w-4 h-4" />,
+  },
   { value: "QUIZ", label: "Quiz", icon: <HelpCircle className="w-4 h-4" /> },
   { value: "LIVE", label: "Live", icon: <Radio className="w-4 h-4" /> },
 ];
@@ -99,6 +107,7 @@ const LESSON_TYPES: {
 const TYPE_COLORS: Record<LessonType, string> = {
   VIDEO: "bg-[var(--blue-faint)] text-[var(--blue)]",
   TEXT: "bg-[var(--purple-faint)] text-[var(--purple)]",
+  DOCUMENT: "bg-[var(--orange-faint)] text-[var(--orange)]",
   QUIZ: "bg-[var(--scarlet-faint)] text-[var(--scarlet)]",
   LIVE: "bg-green-500/10 text-green-500",
 };
@@ -113,6 +122,7 @@ const emptyLesson = (): LessonDraft => ({
   type: "VIDEO",
   content: "",
   videoUrl: "",
+  documentUrl: "",
   duration: 0,
   isFree: false,
 });
@@ -396,6 +406,7 @@ export default function CreateCoursePage() {
             type: l.type,
             content: l.type === "TEXT" ? l.content : null,
             videoUrl: l.type === "VIDEO" ? l.videoUrl : null,
+            documentUrl: l.type === "DOCUMENT" ? l.documentUrl : null, // ← ADD
             duration: l.duration || null,
             isFree: l.isFree,
             order: lIdx + 1,
@@ -1117,13 +1128,14 @@ export default function CreateCoursePage() {
       {/* Video Upload */}
       {lessonDraft.type === "VIDEO" && (
         <VideoUpload
-          folder="courses/videos"
+          folder="gracyglobal/videos" // was "courses/videos"
           label="Lesson Video"
           currentVideo={lessonDraft.videoUrl}
-          onUploadComplete={(url, publicId) => {
+          onUploadComplete={(url, publicId, duration) => {
             setLessonDraft((d) => ({
               ...d,
               videoUrl: url,
+              duration: duration ? Math.ceil(duration / 60) : d.duration,
             }));
           }}
         />
@@ -1148,6 +1160,21 @@ export default function CreateCoursePage() {
             className="w-full mt-1 p-3 rounded-xl glass-input text-sm resize-none"
           />
         </div>
+      )}
+
+      {lessonDraft.type === "DOCUMENT" && (
+        <DocumentUpload
+          folder="gracyglobal/documents"
+          label="Lesson Document"
+          currentDocument={
+            lessonDraft.documentUrl
+              ? { url: lessonDraft.documentUrl, filename: "Current document" }
+              : undefined
+          }
+          onUploadComplete={(url, publicId, filename) => {
+            setLessonDraft((d) => ({ ...d, documentUrl: url }));
+          }}
+        />
       )}
 
       {/* Duration + Free preview */}

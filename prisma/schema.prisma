@@ -843,6 +843,7 @@ model Lesson {
   title       String
   type        LessonType
   content     String?    @db.Text // TEXT lessons
+  documentUrl String?    // ← ADD THIS
   videoUrl    String? // VIDEO lessons
   duration    Int? // minutes
   order       Int
@@ -860,6 +861,7 @@ model Lesson {
 enum LessonType {
   VIDEO
   TEXT
+  DOCUMENT
   QUIZ
   LIVE
 }
