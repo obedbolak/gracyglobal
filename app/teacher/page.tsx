@@ -49,7 +49,6 @@ export default function TeacherDashboardPage() {
 
   const fetchDashboard = async () => {
     try {
-      // Get teacher's courses
       const res = await fetch(
         `/api/courses?teacherId=${session?.user?.id}&includeUnpublished=true`,
       );
@@ -80,9 +79,16 @@ export default function TeacherDashboardPage() {
           totalStudents,
           totalEarnings,
           totalLessons,
-          completionRate: 0, // Calculate from enrollment progress later
+          completionRate: 0,
         },
-        recentCourses: courses.slice(0, 6),
+        // ✅ FIX: normalize category — extract .name if it's an object
+        recentCourses: courses.slice(0, 6).map((c: any) => ({
+          ...c,
+          category:
+            typeof c.category === "object" && c.category !== null
+              ? c.category.name
+              : (c.category ?? ""),
+        })),
       });
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard");
