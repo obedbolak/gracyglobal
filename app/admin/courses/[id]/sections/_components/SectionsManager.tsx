@@ -22,6 +22,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import DocumentUpload from "@/components/shared/DocumentUpload";
+import VideoUpload from "@/components/shared/VideoUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -381,17 +382,19 @@ export default function SectionsManager({
       {/* Video URL */}
       {lessonDraft.type === "VIDEO" && (
         <div className="space-y-1">
-          <label className="text-xs font-medium text-[var(--text-muted)]">
-            Video URL
-          </label>
-          <input
-            type="url"
-            value={lessonDraft.videoUrl}
-            onChange={(e) =>
-              setLessonDraft((d) => ({ ...d, videoUrl: e.target.value }))
-            }
-            placeholder="https://..."
-            className="glass-input w-full px-3 py-2 text-sm"
+          <VideoUpload
+            folder="gracyglobal/videos"
+            label="Lesson Video"
+            currentVideo={lessonDraft.videoUrl || undefined}
+            onUploadComplete={(url, publicId, duration) => {
+              setLessonDraft((d) => ({
+                ...d,
+                videoUrl: url,
+                duration: duration
+                  ? String(Math.round(duration / 60))
+                  : d.duration, // ← convert seconds → minutes
+              }));
+            }}
           />
         </div>
       )}
@@ -412,7 +415,7 @@ export default function SectionsManager({
           />
         </div>
       )}
-      // After the TEXT block:
+
       {lessonDraft.type === "DOCUMENT" && (
         <DocumentUpload
           folder="gracyglobal/documents"
