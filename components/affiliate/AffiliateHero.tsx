@@ -11,21 +11,24 @@ export default function AffiliateHero() {
       <div
         className="absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(123,47,190,0.35) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(123,47,190,0.35) 0%, transparent 70%)",
           filter: "blur(80px)",
         }}
       />
       <div
         className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(220,20,60,0.25) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(220,20,60,0.25) 0%, transparent 70%)",
           filter: "blur(80px)",
         }}
       />
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(26,58,219,0.12) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(26,58,219,0.12) 0%, transparent 70%)",
           filter: "blur(100px)",
         }}
       />
@@ -60,7 +63,8 @@ export default function AffiliateHero() {
             Earn While You{" "}
             <span
               style={{
-                background: "linear-gradient(90deg, var(--purple-light), var(--scarlet-light), var(--blue-light))",
+                background:
+                  "linear-gradient(90deg, var(--purple-light), var(--scarlet-light), var(--blue-light))",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -78,7 +82,10 @@ export default function AffiliateHero() {
             className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-10"
             style={{ color: "var(--text-muted)" }}
           >
-            Join the GracyGlobal affiliate network. Share our platform, earn commissions on every referral, and help build a stronger Africa — one click at a time.
+            Join the GracyGlobal affiliate network. Share your unique link, earn
+            20% on every subscription payment — Counsellor, Teacher,
+            Marketplace, and Service plans included — and help build a stronger
+            Africa one click at a time.
           </motion.p>
 
           {/* CTAs */}
@@ -89,15 +96,19 @@ export default function AffiliateHero() {
             className="flex flex-wrap items-center justify-center gap-4 mb-16"
           >
             <Link
-              href="/register?role=affiliate"
+              href="/dashboard/affiliate-dashboard"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-white font-bold text-sm transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 group"
               style={{
-                background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                background:
+                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
                 boxShadow: "0 4px 20px rgba(220,20,60,0.35)",
               }}
             >
               Become an Affiliate
-              <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+              <ArrowRight
+                size={15}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
             </Link>
             <a
               href="#how-it-works"
@@ -113,7 +124,7 @@ export default function AffiliateHero() {
             </a>
           </motion.div>
 
-          {/* Quick trust indicators */}
+          {/* Trust indicators */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -121,9 +132,9 @@ export default function AffiliateHero() {
             className="flex flex-wrap items-center justify-center gap-6"
           >
             {[
-              { icon: TrendingUp, label: "Up to 30% commission" },
-              { icon: Users, label: "500+ active affiliates" },
-              { icon: Sparkles, label: "Instant payouts" },
+              { icon: TrendingUp, label: "20% commission per payment" },
+              { icon: Users, label: "All plan types included" },
+              { icon: Sparkles, label: "Recurring commissions" },
             ].map(({ icon: Icon, label }, i) => (
               <div
                 key={i}
