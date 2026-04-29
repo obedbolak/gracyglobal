@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
       include: {
         affiliate: {
           include: {
-            referrals: { orderBy: { createdAt: "desc" }, take: 10 },
+            referrals: {
+              orderBy: { createdAt: "desc" },
+              take: 10,
+            },
             payouts: { orderBy: { requestedAt: "desc" }, take: 5 },
           },
         },
@@ -42,8 +45,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ affiliate: null }, { status: 200 });
     }
 
+    // ── Enrich referrals with referred user's name/email ──────────────────
+    const enrichedReferrals = await Promise.all(
+      user.affiliate.referrals.map(async (referral) => {
+        const referred = await prisma.user.findUnique({
+          where: { id: referral.referredUserId },
+          select: { name: true, email: true, createdAt: true },
+        });
+        return {
+          ...referral,
+          name: referred?.name ?? "Unknown",
+          email: referred?.email ?? "—",
+          joinedAt: referred?.createdAt ?? referral.createdAt,
+        };
+      }),
+    );
+
     return NextResponse.json(
-      { affiliate: user.affiliate },
+      {
+        affiliate: {
+          ...user.affiliate,
+          referrals: enrichedReferrals,
+          // commissions not yet in schema — return empty array so
+          // dashboard doesn't crash while accessing .length
+          commissions: [],
+        },
+      },
       { status: 200 },
     );
   } catch (error) {
@@ -73,7 +100,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Already an affiliate
     if (user.affiliate) {
       return NextResponse.json(
         { error: "Already registered as an affiliate" },
@@ -81,7 +107,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create affiliate profile
     const code = generateCode(user.name ?? user.email);
 
     const affiliate = await prisma.affiliate.create({
@@ -92,7 +117,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ affiliate }, { status: 201 });
+    return NextResponse.json(
+      {
+        affiliate: {
+          ...affiliate,
+          referrals: [],
+          payouts: [],
+          commissions: [],
+        },
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("[POST /api/affiliates]", error);
     return NextResponse.json(
@@ -102,7 +137,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── PATCH /api/affiliates — recalculate tier (called after new referral) ──
+// ── PATCH /api/affiliates — recalculate tier ──────────────────────────────
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -120,7 +155,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Not an affiliate" }, { status: 404 });
     }
 
-    // Count this month's converted referrals
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);

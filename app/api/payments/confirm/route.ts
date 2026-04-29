@@ -1,3 +1,4 @@
+// app/api/payments/confirm/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -38,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find the subscription
     const subscription = await prisma.userSubscription.findUnique({
       where: { id: subscriptionId },
     });
@@ -57,30 +57,89 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update subscription status to ACTIVE
+    // Update subscription + payment in a transaction
     const updated = await prisma.$transaction(async (tx) => {
-      // Update subscription to ACTIVE
       const sub = await tx.userSubscription.update({
         where: { id: subscriptionId },
-        data: {
-          status: "ACTIVE",
-        },
+        data: { status: "ACTIVE" },
         include: { plan: true },
       });
 
-      // Update payment status
-      await tx.payment.updateMany({
+      const payment = await tx.payment.updateMany({
         where: {
-          subscriptionId: subscriptionId,
+          subscriptionId,
           reference: paymentReference,
         },
-        data: {
-          status: "PAID",
-        },
+        data: { status: "PAID" },
       });
 
       return sub;
     });
+
+    // ── Affiliate commission handling ────────────────────────────────────────
+    try {
+      // Check if this user was referred by an affiliate
+      const referral = await prisma.affiliateReferral.findUnique({
+        where: { referredUserId: user.id },
+        include: { affiliate: true },
+      });
+
+      if (referral) {
+        // Find the payment record we just marked PAID
+        const payment = await prisma.payment.findFirst({
+          where: {
+            subscriptionId,
+            reference: paymentReference,
+            status: "PAID",
+          },
+        });
+
+        if (payment) {
+          const commissionAmount = Math.floor(
+            payment.amount * referral.affiliate.commissionRate,
+          );
+
+          // Create commission record (idempotent — paymentId is @unique)
+          await prisma.affiliateCommission.create({
+            data: {
+              affiliateId: referral.affiliateId,
+              referralId: referral.id,
+              paymentId: payment.id,
+              amount: commissionAmount,
+              status: "PENDING",
+            },
+          });
+
+          // Mark referral as CONVERTED on first payment
+          if (referral.status === "PENDING") {
+            await prisma.affiliateReferral.update({
+              where: { id: referral.id },
+              data: { status: "CONVERTED", convertedAt: new Date() },
+            });
+          }
+
+          // Add to affiliate's pending payout balance
+          await prisma.affiliate.update({
+            where: { id: referral.affiliateId },
+            data: {
+              totalEarnings: { increment: commissionAmount },
+              pendingPayout: { increment: commissionAmount },
+            },
+          });
+
+          console.log(
+            `✅ Commission created: ${commissionAmount} XAF for affiliate ${referral.affiliate.code}`,
+          );
+        }
+      }
+    } catch (commissionErr) {
+      // Don't fail the payment confirmation if commission tracking fails
+      console.error(
+        "⚠️ Commission creation failed (non-fatal):",
+        commissionErr,
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     return NextResponse.json({
       success: true,

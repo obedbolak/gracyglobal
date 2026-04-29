@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get data
     const data = otpRecord.data as any;
     if (!data) {
       return NextResponse.json(
@@ -72,8 +71,46 @@ export async function POST(req: NextRequest) {
       data: { used: true },
     });
 
-    console.log("✅ User created via OTP:", user);
+    // ── Affiliate referral handling ─────────────────────────────────────────
+    // Read the ref cookie from the request headers
+    const cookieHeader = req.headers.get("cookie") || "";
+    const refMatch = cookieHeader.match(/(?:^|;\s*)ref=([^;]+)/);
+    const refCode = refMatch ? decodeURIComponent(refMatch[1]) : null;
 
+    if (refCode) {
+      try {
+        const affiliate = await prisma.affiliate.findUnique({
+          where: { code: refCode, active: true },
+        });
+
+        if (affiliate && affiliate.userId !== user.id) {
+          // Create the referral record
+          await prisma.affiliateReferral.create({
+            data: {
+              affiliateId: affiliate.id,
+              referredUserId: user.id,
+              status: "PENDING", // becomes CONVERTED on first payment
+            },
+          });
+
+          // Bump totalReferrals counter
+          await prisma.affiliate.update({
+            where: { id: affiliate.id },
+            data: { totalReferrals: { increment: 1 } },
+          });
+
+          console.log(
+            `✅ Referral created: user ${user.id} referred by affiliate ${affiliate.code}`,
+          );
+        }
+      } catch (refErr) {
+        // Don't fail registration if referral tracking fails
+        console.error("⚠️ Referral tracking failed (non-fatal):", refErr);
+      }
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
+    console.log("✅ User created via OTP:", user);
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     console.error("❌ [POST /api/auth/verify-registration-otp]", error);

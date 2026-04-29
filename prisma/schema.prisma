@@ -46,6 +46,7 @@ jobSeekerProfile JobSeeker?       // ← ADD
   quizAttempts     QuizAttempt[]
   liveAttendances  LiveAttendance[]
   verificationOTP  VerificationOTP[]
+  referredAffiliate AffiliateReferral? @relation("ReferredUser")
 
   teacherCourses Course[]  @relation("TeacherCourses") // ← ADD THIS LINE
   sellerProducts Product[] @relation("SellerProducts") // ← ADD THIS
@@ -240,6 +241,7 @@ model Payment {
   // Relations
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription UserSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  commission   AffiliateCommission?
 
   @@index([userId, createdAt])
   @@map("payments")
@@ -702,16 +704,18 @@ model Affiliate {
   userId         String        @unique
   code           String        @unique
   tier           AffiliateTier @default(STARTER)
+  commissionRate Float         @default(0.20) // 20% default
   totalReferrals Int           @default(0)
-  totalEarnings  Int           @default(0)
-  pendingPayout  Int           @default(0)
+  totalEarnings  Int           @default(0) // in XAF, all-time
+  pendingPayout  Int           @default(0) // in XAF, awaiting payout
   active         Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referrals AffiliateReferral[]
-  payouts   AffiliatePayout[]
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals   AffiliateReferral[]
+  commissions AffiliateCommission[]
+  payouts     AffiliatePayout[]
 
   @@map("affiliates")
 }
@@ -722,24 +726,54 @@ enum AffiliateTier {
   ELITE
 }
 
+// One record per referred user
 model AffiliateReferral {
-  id          String         @id @default(cuid())
-  affiliateId String
-  referredId  String         @unique
-  status      ReferralStatus @default(PENDING)
-  commission  Int            @default(0)
-  convertedAt DateTime?
-  createdAt   DateTime       @default(now())
+  id             String         @id @default(cuid())
+  affiliateId    String
+  referredUserId String         @unique // the user who signed up via the link
+  status         ReferralStatus @default(PENDING)
+  convertedAt    DateTime?      // when they first paid
+  createdAt      DateTime       @default(now())
 
-  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  affiliate   Affiliate             @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  referredUser User                 @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  commissions AffiliateCommission[]
 
   @@map("affiliate_referrals")
 }
 
 enum ReferralStatus {
-  PENDING
-  CONVERTED
+  PENDING    // signed up but never paid
+  CONVERTED  // made at least one payment
   EXPIRED
+}
+
+// One record per subscription payment — recurring commissions
+model AffiliateCommission {
+  id         String           @id @default(cuid())
+  affiliateId String
+  referralId  String
+  payoutId    String?          // ← ADD THIS
+  paymentId   String           @unique // the Payment that triggered this
+  amount      Int              // commission in XAF
+  status      CommissionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  approvedAt  DateTime?
+
+  affiliate Affiliate        @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+    payout    AffiliatePayout?  @relation("PayoutCommissions", fields: [payoutId], references: [id]) // ← ADD THIS
+  referral  AffiliateReferral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  payment   Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId, status])
+  @@map("affiliate_commissions")
+}
+
+enum CommissionStatus {
+  PENDING   // payment received, not yet approved
+  APPROVED  // ready to be paid out
+  PAID      // included in a payout
+  CANCELLED // payment was refunded/failed
 }
 
 model AffiliatePayout {
@@ -752,7 +786,9 @@ model AffiliatePayout {
   requestedAt DateTime     @default(now())
   processedAt DateTime?
 
-  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  affiliate   Affiliate             @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  commissions AffiliateCommission[] @relation("PayoutCommissions")
+    
 
   @@map("affiliate_payouts")
 }

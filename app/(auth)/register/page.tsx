@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
@@ -16,8 +16,6 @@ import {
   ArrowRight,
   Chrome,
   Check,
-  GraduationCap,
-  Heart,
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -111,6 +109,8 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -126,6 +126,16 @@ export default function RegisterPage() {
   const [step, setStep] = useState<"form" | "otp">("form");
   const [otp, setOtp] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
+
+  // ── Save affiliate ref cookie on mount ──────────────────────────────────
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      // 30-day cookie — SameSite=Lax so it survives normal navigation
+      document.cookie = `ref=${encodeURIComponent(ref)}; max-age=${60 * 60 * 24 * 30}; path=/; SameSite=Lax`;
+    }
+  }, [searchParams]);
+  // ────────────────────────────────────────────────────────────────────────
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -146,9 +156,7 @@ export default function RegisterPage() {
         setError("Password must be at least 8 characters.");
         return;
       }
-
       setLoading(true);
-
       try {
         const res = await fetch("/api/auth/send-registration-otp", {
           method: "POST",
@@ -159,15 +167,12 @@ export default function RegisterPage() {
               selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
           }),
         });
-
         const data = await res.json();
-
         if (!res.ok) {
           setError(data.error ?? "Something went wrong. Please try again.");
           setLoading(false);
           return;
         }
-
         setStep("otp");
         setLoading(false);
       } catch {
@@ -175,39 +180,28 @@ export default function RegisterPage() {
         setLoading(false);
       }
     } else {
-      // Verify OTP
       if (!otp) {
         setError("Please enter the OTP.");
         return;
       }
-
       setLoading(true);
-
       try {
         const res = await fetch("/api/auth/verify-registration-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: form.email,
-            otp,
-          }),
+          body: JSON.stringify({ email: form.email, otp }),
         });
-
         const data = await res.json();
-
         if (!res.ok) {
           setError(data.error ?? "Something went wrong. Please try again.");
           setLoading(false);
           return;
         }
-
-        // Auto sign in after register
         await signIn("credentials", {
           email: form.email,
           password: form.password,
           redirect: false,
         });
-
         router.push("/dashboard");
       } catch {
         setError("Network error. Please check your connection.");
@@ -219,7 +213,6 @@ export default function RegisterPage() {
   async function handleResend() {
     setResendLoading(true);
     setError("");
-
     try {
       const res = await fetch("/api/auth/send-registration-otp", {
         method: "POST",
@@ -230,16 +223,11 @@ export default function RegisterPage() {
             selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
         }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? "Failed to resend OTP.");
-      }
+      if (!res.ok) setError(data.error ?? "Failed to resend OTP.");
     } catch {
       setError("Network error.");
     }
-
     setResendLoading(false);
   }
 
@@ -296,18 +284,7 @@ export default function RegisterPage() {
             filter: "blur(60px)",
           }}
         />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.06) 0%, transparent 60%)",
-          }}
-        />
-
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3"></div>
-
-        {/* Quote */}
+        <div className="relative z-10 flex items-center gap-3" />
         <div className="relative z-10">
           <p className="text-4xl font-extrabold text-white leading-tight mb-6 tracking-tight">
             "Your Ambition Just
@@ -321,8 +298,6 @@ export default function RegisterPage() {
             built for Africa and the world.
           </p>
         </div>
-
-        {/* Feature bullets */}
         <div className="relative z-10 flex flex-col gap-3">
           {[
             "Free to join — no hidden fees",
@@ -353,9 +328,6 @@ export default function RegisterPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          {/* Mobile logo */}
-
-          {/* Heading */}
           <div className="mb-8">
             <h1
               className="text-3xl font-extrabold mb-2 tracking-tight"
@@ -384,7 +356,6 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Google - only for form step */}
           {step === "form" && (
             <>
               <button
@@ -406,8 +377,6 @@ export default function RegisterPage() {
                 )}
                 Continue with Google
               </button>
-
-              {/* Divider */}
               <div className="flex items-center gap-3 mb-6">
                 <div
                   className="flex-1 h-px"
@@ -427,7 +396,6 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* Error */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
@@ -443,11 +411,9 @@ export default function RegisterPage() {
             </motion.div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {step === "form" ? (
               <>
-                {/* Name */}
                 <div className="relative">
                   <User
                     size={15}
@@ -466,8 +432,6 @@ export default function RegisterPage() {
                     onBlur={onBlur}
                   />
                 </div>
-
-                {/* Email */}
                 <div className="relative">
                   <Mail
                     size={15}
@@ -486,8 +450,6 @@ export default function RegisterPage() {
                     onBlur={onBlur}
                   />
                 </div>
-
-                {/* Phone */}
                 <div className="relative">
                   <Phone
                     size={15}
@@ -505,8 +467,6 @@ export default function RegisterPage() {
                     onBlur={onBlur}
                   />
                 </div>
-
-                {/* Country */}
                 <div className="relative">
                   <Globe
                     size={15}
@@ -543,8 +503,6 @@ export default function RegisterPage() {
                     ))}
                   </select>
                 </div>
-
-                {/* Password */}
                 <div>
                   <div className="relative">
                     <Lock
@@ -577,7 +535,6 @@ export default function RegisterPage() {
               </>
             ) : (
               <>
-                {/* OTP Input */}
                 <div className="relative">
                   <Lock
                     size={15}
@@ -611,7 +568,6 @@ export default function RegisterPage() {
               </>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -635,7 +591,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* Footer */}
           <p
             className="text-center text-xs mt-8 leading-relaxed"
             style={{ color: "var(--text-disabled)" }}
