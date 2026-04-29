@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -64,9 +64,7 @@ function PasswordStrength({ password }: { password: string }) {
     "var(--success-text)",
   ];
   const labels = ["Weak", "Fair", "Strong"];
-
   if (!password) return null;
-
   return (
     <div className="flex flex-col gap-2 mt-1">
       <div className="flex gap-1.5">
@@ -107,10 +105,21 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
+// ── Must be isolated so Suspense can wrap just this part ─────────────────────
+function AffiliateRefCapture() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      document.cookie = `ref=${encodeURIComponent(ref)}; max-age=${60 * 60 * 24 * 30}; path=/; SameSite=Lax`;
+    }
+  }, [searchParams]);
+  return null;
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -118,7 +127,6 @@ export default function RegisterPage() {
     phone: "",
     country: "",
   });
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -127,30 +135,13 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
 
-  // ── Save affiliate ref cookie on mount ──────────────────────────────────
-  useEffect(() => {
-    const ref = searchParams.get("ref");
-    if (ref) {
-      // 30-day cookie — SameSite=Lax so it survives normal navigation
-      document.cookie = `ref=${encodeURIComponent(ref)}; max-age=${60 * 60 * 24 * 30}; path=/; SameSite=Lax`;
-    }
-  }, [searchParams]);
-  // ────────────────────────────────────────────────────────────────────────
-
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
-  }
-
-  function toggleRole(role: string) {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
-    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
     if (step === "form") {
       if (form.password.length < 8) {
         setError("Password must be at least 8 characters.");
@@ -161,24 +152,19 @@ export default function RegisterPage() {
         const res = await fetch("/api/auth/send-registration-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...form,
-            role:
-              selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
-          }),
+          body: JSON.stringify({ ...form, role: ["USER"] }),
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error ?? "Something went wrong. Please try again.");
+          setError(data.error ?? "Something went wrong.");
           setLoading(false);
           return;
         }
         setStep("otp");
-        setLoading(false);
       } catch {
         setError("Network error. Please check your connection.");
-        setLoading(false);
       }
+      setLoading(false);
     } else {
       if (!otp) {
         setError("Please enter the OTP.");
@@ -193,7 +179,7 @@ export default function RegisterPage() {
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error ?? "Something went wrong. Please try again.");
+          setError(data.error ?? "Something went wrong.");
           setLoading(false);
           return;
         }
@@ -205,8 +191,8 @@ export default function RegisterPage() {
         router.push("/dashboard");
       } catch {
         setError("Network error. Please check your connection.");
-        setLoading(false);
       }
+      setLoading(false);
     }
   }
 
@@ -217,11 +203,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/send-registration-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          role:
-            selectedRoles.length > 0 ? ["USER", ...selectedRoles] : ["USER"],
-        }),
+        body: JSON.stringify({ ...form, role: ["USER"] }),
       });
       const data = await res.json();
       if (!res.ok) setError(data.error ?? "Failed to resend OTP.");
@@ -242,7 +224,6 @@ export default function RegisterPage() {
     color: "var(--text-primary)",
     outline: "none",
   };
-
   function onFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
     e.currentTarget.style.borderColor = "var(--input-border-focus)";
     e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
@@ -260,7 +241,12 @@ export default function RegisterPage() {
         backgroundImage: "var(--bg-gradient)",
       }}
     >
-      {/* ── Left decorative panel ── */}
+      {/* ── Cookie capture — wrapped in Suspense (Next.js 14+ requirement) ── */}
+      <Suspense fallback={null}>
+        <AffiliateRefCapture />
+      </Suspense>
+
+      {/* ── Left panel ── */}
       <div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"
         style={{
@@ -341,10 +327,11 @@ export default function RegisterPage() {
             >
               {step === "form" ? (
                 <>
+                  {" "}
                   Already have one?{" "}
                   <Link
                     href="/login"
-                    className="font-semibold transition-colors duration-200"
+                    className="font-semibold"
                     style={{ color: "var(--accent-primary)" }}
                   >
                     Sign in
@@ -524,7 +511,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowPass(!showPass)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                      className="absolute right-4 top-1/2 -translate-y-1/2"
                       style={{ color: "var(--text-disabled)" }}
                     >
                       {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -560,7 +547,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleResend}
                   disabled={resendLoading}
-                  className="text-xs font-medium transition-colors duration-200 self-start"
+                  className="text-xs font-medium self-start"
                   style={{ color: "var(--accent-primary)" }}
                 >
                   {resendLoading ? "Sending..." : "Didn't receive code? Resend"}
