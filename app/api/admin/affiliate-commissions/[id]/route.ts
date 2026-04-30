@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,11 +24,14 @@ export async function PATCH(
     }
 
     const commission = await prisma.affiliateCommission.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!commission) {
-      return NextResponse.json({ error: "Commission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Commission not found" },
+        { status: 404 },
+      );
     }
 
     if (commission.status !== "PENDING") {
@@ -37,7 +42,7 @@ export async function PATCH(
     }
 
     const updatedCommission = await prisma.affiliateCommission.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "APPROVED",
         approvedAt: new Date(),
