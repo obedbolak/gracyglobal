@@ -17,21 +17,8 @@ import {
 } from "lucide-react";
 import { useCourses } from "@/hooks/useCourses";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useCategories } from "@/hooks/useCategories";
 import { CourseLevel } from "@prisma/client";
-
-const CATEGORIES = [
-  { id: "Business", label: "Business", icon: "💼" },
-  { id: "Technology", label: "Technology", icon: "💻" },
-  { id: "Health & Wellness", label: "Health & Wellness", icon: "🌿" },
-  { id: "Personal Development", label: "Personal Dev", icon: "🚀" },
-  { id: "Finance", label: "Finance", icon: "💰" },
-  { id: "Marketing", label: "Marketing", icon: "📣" },
-  { id: "Design", label: "Design", icon: "🎨" },
-  { id: "Language", label: "Language", icon: "🌍" },
-  { id: "Parenting", label: "Parenting", icon: "👨‍👩‍👧" },
-  { id: "Career", label: "Career", icon: "📈" },
-  { id: "Other", label: "Other", icon: "📚" },
-];
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
   BEGINNER: "Beginner",
@@ -95,10 +82,7 @@ function AccordionSection({
 
       <div
         className="overflow-hidden transition-all duration-300"
-        style={{
-          maxHeight: open ? "600px" : "0px",
-          opacity: open ? 1 : 0,
-        }}
+        style={{ maxHeight: open ? "600px" : "0px", opacity: open ? 1 : 0 }}
       >
         <div
           className="p-2"
@@ -120,11 +104,13 @@ function SidebarContent({
   selectedCategory,
   courses,
   isLoading,
+  categories,
   onSelect,
 }: {
   selectedCategory: string;
   courses: any[];
   isLoading: boolean;
+  categories: { id: string; name: string; icon: string | null }[];
   onSelect: (id: string) => void;
 }) {
   const countForCategory = (catId: string) => {
@@ -132,7 +118,7 @@ function SidebarContent({
     if (catId === "free") return courses.filter((c) => c.isFree).length;
     if (catId === "paid") return courses.filter((c) => !c.isFree).length;
     if (catId === "featured") return courses.filter((c) => c.featured).length;
-    return courses.filter((c) => c.category === catId).length;
+    return courses.filter((c) => c.categoryId === catId).length; // ← match by real id
   };
 
   const renderItem = (item: { id: string; label: string; icon: string }) => {
@@ -182,7 +168,13 @@ function SidebarContent({
         {TYPE_FILTERS.map(renderItem)}
       </AccordionSection>
       <AccordionSection title="Categories" defaultOpen={true}>
-        {CATEGORIES.map(renderItem)}
+        {categories.map((cat) =>
+          renderItem({
+            id: cat.id, // ← real cuid from DB
+            label: cat.name,
+            icon: cat.icon ?? "📚",
+          }),
+        )}
       </AccordionSection>
     </div>
   );
@@ -194,6 +186,7 @@ function LearnPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { convert } = useCurrency();
+  const { categories } = useCategories("course"); // ← real categories from DB
 
   const categoryParam = searchParams.get("category") ?? "all";
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
@@ -207,12 +200,13 @@ function LearnPageContent() {
   const isFreeFilter = selectedCategory === "free";
   const isPaidFilter = selectedCategory === "paid";
   const isFeaturedFilter = selectedCategory === "featured";
-  const isRealCategory = CATEGORIES.some((c) => c.id === selectedCategory);
+  const isTypeFilter = ["all", "free", "paid", "featured"].includes(
+    selectedCategory,
+  );
+  const isRealCategory = !isTypeFilter; // anything else is a real category cuid
 
-  const { courses, isLoading, error } = useCourses({
-    ...(isRealCategory && { category: selectedCategory }),
-    ...(isFeaturedFilter && { featured: true }),
-  });
+  // Always fetch all courses — filter client-side
+  const { courses, isLoading, error } = useCourses({});
 
   const filtered = courses.filter((course) => {
     const matchesSearch =
@@ -220,7 +214,16 @@ function LearnPageContent() {
       course.description.toLowerCase().includes(search.toLowerCase());
     const matchesFree = !isFreeFilter || course.isFree;
     const matchesPaid = !isPaidFilter || !course.isFree;
-    return matchesSearch && matchesFree && matchesPaid;
+    const matchesFeatured = !isFeaturedFilter || course.featured;
+    const matchesCategory =
+      !isRealCategory || course.categoryId === selectedCategory; // ← match by cuid
+    return (
+      matchesSearch &&
+      matchesFree &&
+      matchesPaid &&
+      matchesFeatured &&
+      matchesCategory
+    );
   });
 
   const handleCategoryChange = (category: string) => {
@@ -244,9 +247,9 @@ function LearnPageContent() {
   const getLessonCount = (course: (typeof courses)[0]) =>
     course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
 
-  const allSidebarItems = [...TYPE_FILTERS, ...CATEGORIES];
   const activeLabel =
-    allSidebarItems.find((s) => s.id === selectedCategory)?.label ??
+    TYPE_FILTERS.find((f) => f.id === selectedCategory)?.label ??
+    categories.find((c) => c.id === selectedCategory)?.name ??
     selectedCategory;
 
   return (
@@ -303,8 +306,6 @@ function LearnPageContent() {
               }}
             />
           </div>
-
-          {/* Mobile filter button */}
           <button
             onClick={() => setMobileSidebarOpen(true)}
             className="lg:hidden flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
@@ -319,7 +320,7 @@ function LearnPageContent() {
           </button>
         </div>
 
-        {/* Mobile sidebar drawer overlay */}
+        {/* Mobile sidebar overlay */}
         {mobileSidebarOpen && (
           <div
             className="fixed inset-0 z-50 lg:hidden"
@@ -363,6 +364,7 @@ function LearnPageContent() {
             selectedCategory={selectedCategory}
             courses={courses}
             isLoading={isLoading}
+            categories={categories}
             onSelect={handleCategoryChange}
           />
         </div>
@@ -375,13 +377,13 @@ function LearnPageContent() {
               selectedCategory={selectedCategory}
               courses={courses}
               isLoading={isLoading}
+              categories={categories}
               onSelect={handleCategoryChange}
             />
           </aside>
 
           {/* Course grid */}
           <div className="flex-1 min-w-0">
-            {/* Result count */}
             {!isLoading && !error && (
               <p
                 className="text-sm mb-5"
@@ -410,7 +412,6 @@ function LearnPageContent() {
               </p>
             )}
 
-            {/* Loading skeletons */}
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -460,7 +461,8 @@ function LearnPageContent() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filtered.map((course) => {
-                  const cat = CATEGORIES.find(
+                  // ← look up category from real DB categories by cuid
+                  const cat = categories.find(
                     (c) => c.id === course.categoryId,
                   );
                   const lessonCount = getLessonCount(course);
@@ -526,7 +528,7 @@ function LearnPageContent() {
                                   color: "var(--text-secondary)",
                                 }}
                               >
-                                {cat.icon} {cat.label}
+                                {cat.icon ?? "📚"} {cat.name}
                               </span>
                             )}
                             <span
