@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import {
   Edit,
-  Trash2,
   Plus,
   ArrowLeft,
   EyeOff,
@@ -40,7 +39,7 @@ export default async function CourseCategoriesPage() {
           <div className="flex items-center gap-4 mb-3">
             <Link
               href="/admin/courses"
-              className="p-2 hover:bg-[var(--glass-bg-hover)] rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--glass-bg-hover)] rounded-lg transition-colors shrink-0"
             >
               <ArrowLeft className="w-5 h-5 text-[var(--text-primary)]" />
             </Link>
@@ -88,126 +87,221 @@ export default async function CourseCategoriesPage() {
       </div>
 
       <div className="glass rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-[var(--glass-bg-strong)] border-b border-[var(--divider)]">
-            <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Order
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Category
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Slug
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Courses
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Status
-              </th>
-              <th className="text-right px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--divider)]">
-            {categories.map((category) => (
-              <tr
-                key={category.id}
-                className="hover:bg-[var(--glass-bg-subtle)] transition-colors"
-              >
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--glass-bg-strong)] text-[var(--text-primary)] font-semibold text-sm">
+        {/* Desktop Table — hidden on mobile */}
+        <div className="hidden md:block">
+          <table className="w-full">
+            <thead className="bg-[var(--glass-bg-strong)] border-b border-[var(--divider)]">
+              <tr>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Order
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Category
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Slug
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Courses
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Status
+                </th>
+                <th className="text-right px-6 py-4 text-sm font-semibold text-[var(--text-secondary)]">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--divider)]">
+              {categories.map((category) => (
+                <tr
+                  key={category.id}
+                  className="hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--glass-bg-strong)] text-[var(--text-primary)] font-semibold text-sm">
+                      {category.sortOrder}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {category.image ? (
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--glass-bg-strong)]">
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : category.icon ? (
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
+                          style={{
+                            background: category.color
+                              ? `${category.color}20`
+                              : "var(--glass-bg-strong)",
+                          }}
+                        >
+                          {category.icon}
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-[var(--glass-bg-strong)]" />
+                      )}
+                      <div>
+                        <p className="font-medium text-[var(--text-primary)]">
+                          {category.name}
+                        </p>
+                        {category.color && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div
+                              className="w-4 h-4 rounded border border-[var(--divider)]"
+                              style={{ background: category.color }}
+                            />
+                            <span className="text-xs text-[var(--text-muted)]">
+                              {category.color}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-[var(--text-secondary)] font-mono text-sm">
+                    {category.slug}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[var(--purple-faint)] text-[var(--purple)]">
+                      {category._count.courses} courses
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                        category.active
+                          ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+                          : "bg-[var(--error-bg)] text-[var(--error-text)]"
+                      }`}
+                    >
+                      {category.active ? (
+                        "Active"
+                      ) : (
+                        <>
+                          <EyeOff className="w-3 h-3" /> Hidden
+                        </>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/courses/categories/${category.id}/edit`}
+                        className="p-2 hover:bg-[var(--purple-faint)] text-[var(--purple)] rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Link>
+                      <DeleteCourseCategoryButton
+                        id={category.id}
+                        name={category.name}
+                        courseCount={category._count.courses}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Cards — visible only on small screens */}
+        <div className="md:hidden divide-y divide-[var(--divider)]">
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              className="p-4 hover:bg-[var(--glass-bg-subtle)] transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                {/* Left: order + icon + name */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-[var(--glass-bg-strong)] text-[var(--text-primary)] font-semibold text-xs shrink-0">
                     {category.sortOrder}
                   </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    {category.image ? (
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--glass-bg-strong)]">
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : category.icon ? (
-                      <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
-                        style={{
-                          background: category.color
-                            ? `${category.color}20`
-                            : "var(--glass-bg-strong)",
-                        }}
-                      >
-                        {category.icon}
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-[var(--glass-bg-strong)]" />
-                    )}
-                    <div>
-                      <p className="font-medium text-[var(--text-primary)]">
-                        {category.name}
-                      </p>
-                      {category.color && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div
-                            className="w-4 h-4 rounded border border-[var(--divider)]"
-                            style={{ background: category.color }}
-                          />
-                          <span className="text-xs text-[var(--text-muted)]">
-                            {category.color}
-                          </span>
-                        </div>
-                      )}
+                  {category.image ? (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-[var(--glass-bg-strong)] shrink-0">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-[var(--text-secondary)] font-mono text-sm">
-                  {category.slug}
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[var(--purple-faint)] text-[var(--purple)]">
-                    {category._count.courses} courses
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                      category.active
-                        ? "bg-[var(--success-bg)] text-[var(--success-text)]"
-                        : "bg-[var(--error-bg)] text-[var(--error-text)]"
-                    }`}
-                  >
-                    {category.active ? (
-                      "Active"
-                    ) : (
-                      <>
-                        <EyeOff className="w-3 h-3" /> Hidden
-                      </>
-                    )}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link
-                      href={`/admin/courses/categories/${category.id}/edit`}
-                      className="p-2 hover:bg-[var(--purple-faint)] text-[var(--purple)] rounded-lg transition-colors"
+                  ) : category.icon ? (
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                      style={{
+                        background: category.color
+                          ? `${category.color}20`
+                          : "var(--glass-bg-strong)",
+                      }}
                     >
-                      <Edit className="w-4 h-4" />
-                    </Link>
-                    <DeleteCourseCategoryButton
-                      id={category.id}
-                      name={category.name}
-                      courseCount={category._count.courses}
-                    />
+                      {category.icon}
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-[var(--glass-bg-strong)] shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-medium text-[var(--text-primary)] truncate">
+                      {category.name}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)] font-mono truncate">
+                      {category.slug}
+                    </p>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+
+                {/* Right: actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Link
+                    href={`/admin/courses/categories/${category.id}/edit`}
+                    className="p-2 hover:bg-[var(--purple-faint)] text-[var(--purple)] rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Link>
+                  <DeleteCourseCategoryButton
+                    id={category.id}
+                    name={category.name}
+                    courseCount={category._count.courses}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom row: badges */}
+              <div className="flex items-center gap-2 mt-3 pl-9">
+                {category.color && (
+                  <div
+                    className="w-3.5 h-3.5 rounded border border-[var(--divider)] shrink-0"
+                    style={{ background: category.color }}
+                  />
+                )}
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--purple-faint)] text-[var(--purple)]">
+                  {category._count.courses} courses
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    category.active
+                      ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+                      : "bg-[var(--error-bg)] text-[var(--error-text)]"
+                  }`}
+                >
+                  {category.active ? (
+                    "Active"
+                  ) : (
+                    <>
+                      <EyeOff className="w-3 h-3" /> Hidden
+                    </>
+                  )}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {categories.length === 0 && (
           <div className="text-center py-12">

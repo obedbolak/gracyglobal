@@ -20,7 +20,7 @@ export default async function EditCourseCategoryPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-1xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <Link
           href="/admin/courses/categories"

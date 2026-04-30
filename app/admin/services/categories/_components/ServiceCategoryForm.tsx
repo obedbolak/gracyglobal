@@ -83,12 +83,12 @@ export default function ServiceCategoryForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="p-4 rounded-xl bg-[var(--error-bg)] border border-[var(--error-border)] flex items-start gap-3">
-          <X className="w-5 h-5 text-[var(--error-text)] flex-shrink-0 mt-0.5" />
+          <X className="w-5 h-5 text-[var(--error-text)] shrink-0 mt-0.5" />
           <p className="text-sm text-[var(--error-text)]">{error}</p>
         </div>
       )}
 
-      <div className="glass p-6 rounded-xl space-y-4">
+      <div className="glass p-4 sm:p-6 rounded-xl space-y-4">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">
           Category Details
         </h2>
@@ -124,7 +124,8 @@ export default function ServiceCategoryForm({
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* Icon + Color: stacked on mobile, side-by-side on md+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Icon (Emoji)
@@ -152,7 +153,7 @@ export default function ServiceCategoryForm({
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="w-14 h-12 rounded-lg border-2 border-[var(--divider)] cursor-pointer"
+                className="w-12 h-12 rounded-lg border-2 border-[var(--divider)] cursor-pointer shrink-0"
               />
               <input
                 type="text"
@@ -160,7 +161,7 @@ export default function ServiceCategoryForm({
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="glass-input flex-1 px-4 py-3 font-mono"
+                className="glass-input flex-1 min-w-0 px-4 py-3 font-mono"
                 placeholder="#7b2fbe"
                 pattern="^#[0-9A-Fa-f]{6}$"
               />
@@ -168,14 +169,19 @@ export default function ServiceCategoryForm({
           </div>
         </div>
 
-        <div className="glass p-6 rounded-xl space-y-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            Category Image (Optional)
-          </h2>
-          <p className="text-sm text-[var(--text-muted)]">
-            Upload an image for this service category. It will display instead
-            of the icon when available.
-          </p>
+        {/* Image upload — separated out of the nested glass card */}
+        <div className="space-y-2 pt-2">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              Category Image{" "}
+              <span className="font-normal text-[var(--text-muted)]">
+                (Optional)
+              </span>
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Displays instead of the icon when available.
+            </p>
+          </div>
           <ImageUpload
             folder="service-categories"
             currentImage={formData.image || undefined}
@@ -184,7 +190,8 @@ export default function ServiceCategoryForm({
           />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* Sort Order + Status: stacked on mobile, side-by-side on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Sort Order
@@ -207,7 +214,7 @@ export default function ServiceCategoryForm({
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Status
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer h-12 px-1">
               <input
                 type="checkbox"
                 checked={formData.active}
@@ -229,7 +236,11 @@ export default function ServiceCategoryForm({
           className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg"
         >
           <Save className="w-4 h-4" />
-          {category ? "Update Category" : "Create Category"}
+          {loading
+            ? "Saving..."
+            : category
+              ? "Update Category"
+              : "Create Category"}
         </button>
         <button
           type="button"
