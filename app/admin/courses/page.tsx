@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Users,
   Clock,
+  BarChart3,
 } from "lucide-react";
 
 export default async function CoursesPage() {
@@ -53,13 +54,22 @@ export default async function CoursesPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/courses/create"
-          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Create Course
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/courses/categories"
+            className="btn-secondary flex items-center gap-2 px-6 py-3 rounded-lg"
+          >
+            <BarChart3 className="w-5 h-5" />
+            Manage Categories
+          </Link>
+          <Link
+            href="/admin/courses/create"
+            className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg"
+          >
+            <Plus className="w-5 h-5" />
+            Create Course
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}

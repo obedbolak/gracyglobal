@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Users, BookOpen } from "lucide-react";
 import EditCourseForm from "@/components/admin/Editcourseform";
+import { useCategories } from "@/hooks/useCategories";
 
 interface PageProps {
   params: Promise<{ id: string }>;

@@ -38,20 +38,6 @@ interface EditCourseFormProps {
   course: CourseWithSections;
 }
 
-const CATEGORIES = [
-  "Business",
-  "Technology",
-  "Health & Wellness",
-  "Personal Development",
-  "Finance",
-  "Marketing",
-  "Design",
-  "Language",
-  "Parenting",
-  "Career",
-  "Other",
-];
-
 const LEVELS: { value: CourseLevel; label: string }[] = [
   { value: "BEGINNER", label: "Beginner" },
   { value: "INTERMEDIATE", label: "Intermediate" },
@@ -75,7 +61,7 @@ export default function EditCourseForm({ course }: EditCourseFormProps) {
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [thumbnail, setThumbnail] = useState(course.thumbnail || "");
-  const [category, setCategory] = useState(course.categoryId || ""); // ← FIXED: Use course.categories[0] instead of course.category
+  const [categoryId, setCategoryId] = useState(course.categoryId || "");
   const [level, setLevel] = useState<CourseLevel>(course.level);
   const [price, setPrice] = useState(course.price.toString());
   const [isFree, setIsFree] = useState(course.isFree);
@@ -114,7 +100,7 @@ export default function EditCourseForm({ course }: EditCourseFormProps) {
 
     if (!title.trim()) return setError("Title is required.");
     if (!description.trim()) return setError("Description is required.");
-    if (!category) return setError("Please select a category.");
+    if (!categoryId) return setError("Please select a category.");
 
     setSaving(true);
     try {
@@ -125,7 +111,7 @@ export default function EditCourseForm({ course }: EditCourseFormProps) {
           title: title.trim(),
           description: description.trim(),
           thumbnail: thumbnail || null,
-          category,
+          categoryId,
           level,
           price: isFree ? 0 : parseInt(price) || 0,
           isFree,
@@ -233,15 +219,15 @@ export default function EditCourseForm({ course }: EditCourseFormProps) {
               Category <span className="text-[var(--scarlet)]">*</span>
             </label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="glass-input w-full px-4 py-2.5"
               required
             >
               <option value="">Select category</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>

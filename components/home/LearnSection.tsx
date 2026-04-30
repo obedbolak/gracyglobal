@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { BookOpen, ArrowRight } from "lucide-react";
-import { COURSE_CATEGORIES, COURSES } from "@/data/courses";
+import { useCategories } from "@/hooks/useCategories";
 
 export default function LearnSection() {
+  const { categories, loading: isLoading } = useCategories("course");
+
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -39,60 +41,105 @@ export default function LearnSection() {
           </p>
         </div>
 
-        {/* Categories Grid — max 8, 4 per row on large screens */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {COURSE_CATEGORIES.slice(0, 8).map((category) => {
-            const categoryCoursesCount = COURSES.filter(
-              (c) => c.category === category.id,
-            ).length;
+        {/* Loading skeleton */}
+        {isLoading && (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-2xl animate-pulse"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gray-300/20 mb-3" />
+                <div className="h-3 bg-gray-300/20 rounded w-3/4 mb-2" />
+                <div className="h-2 bg-gray-300/20 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
 
-            return (
-              <Link key={category.id} href={`/learn?category=${category.id}`}>
-                <div
-                  className="p-4 rounded-2xl transition-all duration-300 flex flex-col group hover:scale-[1.02]"
-                  style={{
-                    background: "var(--glass-bg)",
-                    border: "1px solid var(--glass-border)",
-                  }}
+        {/* Categories Grid */}
+        {/* Categories Grid */}
+        {!isLoading && (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {categories
+              .filter((cat) => cat.active)
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .slice(0, 8)
+              .map((category, index) => (
+                <Link
+                  key={category.id}
+                  href={`/learn?category=${category.slug}`}
                 >
-                  {/* Icon */}
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-3 transition-transform group-hover:scale-110"
+                    className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] aspect-[4/3]"
                     style={{
-                      background: `${category.color}15`,
-                      border: `2px solid ${category.color}30`,
+                      background: category.color
+                        ? `${category.color}18`
+                        : "var(--glass-bg-strong)",
+                      border: "1px solid var(--glass-border)",
                     }}
                   >
-                    {category.icon}
-                  </div>
-
-                  {/* Name */}
-                  <h3
-                    className="text-sm font-semibold mb-1 leading-tight"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {category.name}
-                  </h3>
-
-                  {/* Course count + arrow */}
-                  <div className="flex items-center justify-between mt-2">
-                    <span
-                      className="text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {categoryCoursesCount}{" "}
-                      {categoryCoursesCount === 1 ? "Course" : "Courses"}
-                    </span>
-                    <ArrowRight
-                      className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-                      style={{ color: category.color }}
+                    {/* Background image */}
+                    {/* Background image */}
+                    {category.image ? (
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      /* No image — show icon centered as background */
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        {category.icon ? (
+                          <span className="text-6xl opacity-40">
+                            {category.icon}
+                          </span>
+                        ) : (
+                          <BookOpen
+                            className="w-16 h-16 opacity-30"
+                            style={{ color: category.color ?? "var(--blue)" }}
+                          />
+                        )}
+                      </div>
+                    )}
+                    {/* Dark gradient overlay */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%)",
+                      }}
                     />
+
+                    {/* Text content — bottom of card */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                      <h3 className="text-sm font-bold leading-tight text-white mb-1">
+                        {category.name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-xs font-semibold text-white/70 group-hover:gap-2 transition-all">
+                        Explore
+                        <ArrowRight size={13} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && categories.length === 0 && (
+          <div
+            className="text-center py-12"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <p className="text-sm">No course categories found.</p>
+          </div>
+        )}
 
         {/* CTA */}
         <div className="text-center">

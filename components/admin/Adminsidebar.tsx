@@ -18,12 +18,14 @@ import {
   ChevronLeft,
   ChevronRight,
   PanelLeft,
+  DollarSign,
 } from "lucide-react";
 
 const menuItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Products", href: "/admin/products", icon: ShoppingBag },
   { label: "Services", href: "/admin/services", icon: Briefcase },
+  { label: "Affiliates", href: "/admin/affiliates", icon: DollarSign },
   { label: "Courses", href: "/admin/courses", icon: GraduationCap },
   { label: "Jobs", href: "/admin/jobs", icon: FileText },
   { label: "Counselors", href: "/admin/counselors", icon: Users },

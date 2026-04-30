@@ -2,26 +2,16 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { SERVICE_CATEGORY_GROUPS } from "@/data/services";
 import { ArrowRight } from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
 
 export default function ServicesSection() {
-  const categoryImages: Record<string, string> = {
-    "Home & Errand":
-      "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=600&q=80",
-    Transport:
-      "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80",
-    "Home Comfort":
-      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
-    "Home Management":
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
-    "Care Services":
-      "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&q=80",
-    "Beauty & Wellness":
-      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&q=80",
-    "Priority Access":
-      "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&q=80",
-  };
+  const {
+    categories,
+    loading: isLoading,
+    error,
+    refetch,
+  } = useCategories("service");
 
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -49,83 +39,164 @@ export default function ServicesSection() {
           </motion.div>
         </div>
 
-        {/* Service Categories Grid — max 8 cards, 4 per row on large screens */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {SERVICE_CATEGORY_GROUPS.slice(0, 8).map((group, index) => (
-            <motion.div
-              key={group.group}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.07 }}
-            >
-              <Link
-                href={`/services?category=${encodeURIComponent(group.group)}`}
+        {/* Loading skeleton */}
+        {isLoading && (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl overflow-hidden animate-pulse"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
               >
-                <div
-                  className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02]"
-                  style={{
-                    background: "var(--glass-bg)",
-                    border: "1px solid var(--glass-border)",
-                  }}
-                >
-                  {/* Image — shorter aspect ratio to keep cards compact */}
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={categoryImages[group.group]}
-                      alt={group.group}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
-                      }}
-                    />
-
-                    {/* Icon Badge */}
-                    <div
-                      className="absolute top-2 left-2 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-                      style={{
-                        background: "var(--glass-bg-strong)",
-                        backdropFilter: "blur(12px)",
-                      }}
-                    >
-                      {group.icon}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-3">
-                    <h3
-                      className="text-sm font-bold mb-1 group-hover:opacity-80 transition-opacity leading-tight"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {group.group}
-                    </h3>
-                    <p
-                      className="text-xs mb-2"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {group.categories.length} service
-                      {group.categories.length > 1 ? "s" : ""}
-                    </p>
-
-                    {/* CTA */}
-                    <div
-                      className="flex items-center gap-1 text-xs font-semibold group-hover:gap-2 transition-all"
-                      style={{ color: "var(--blue)" }}
-                    >
-                      Explore
-                      <ArrowRight size={13} />
-                    </div>
-                  </div>
+                <div className="aspect-[4/3] bg-gray-300/20" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-gray-300/20 rounded w-3/4" />
+                  <div className="h-2 bg-gray-300/20 rounded w-1/2" />
                 </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Service Categories Grid */}
+        {!isLoading && (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {categories
+              .filter((cat) => cat.active)
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .slice(0, 8)
+              .map((category, index) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.07 }}
+                >
+                  <Link
+                    href={`/services?category=${encodeURIComponent(category.slug)}`}
+                  >
+                    <div
+                      className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02]"
+                      style={{
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--glass-border)",
+                      }}
+                    >
+                      {/* Image */}
+                      {/* Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        {category.image ? (
+                          <>
+                            <img
+                              src={category.image}
+                              alt={category.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                background:
+                                  "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
+                              }}
+                            />
+                            {/* Icon badge over image */}
+                            {category.icon && (
+                              <div
+                                className="absolute top-2 left-2 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                                style={{
+                                  background: category.color
+                                    ? `${category.color}22`
+                                    : "var(--glass-bg-strong)",
+                                  backdropFilter: "blur(12px)",
+                                  border: category.color
+                                    ? `1px solid ${category.color}44`
+                                    : undefined,
+                                }}
+                              >
+                                {category.icon}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          /* No image — show icon centered as placeholder */
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{
+                              background: category.color
+                                ? `${category.color}18`
+                                : "var(--glass-bg-strong)",
+                              border: category.color
+                                ? `1px solid ${category.color}33`
+                                : undefined,
+                            }}
+                          >
+                            {category.icon ? (
+                              <span className="text-5xl">{category.icon}</span>
+                            ) : (
+                              <img
+                                src="/placeholder-service.jpg"
+                                alt={category.name}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-3">
+                        <h3
+                          className="text-sm font-bold mb-1 group-hover:opacity-80 transition-opacity leading-tight"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {category.name}
+                        </h3>
+
+                        {/* Color accent dot */}
+                        {category.color && (
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span
+                              className="w-2 h-2 rounded-full"
+                              style={{ background: category.color }}
+                            />
+                            <p
+                              className="text-xs"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {category.slug}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* CTA */}
+                        <div
+                          className="flex items-center gap-1 text-xs font-semibold group-hover:gap-2 transition-all"
+                          style={{ color: "var(--blue)" }}
+                        >
+                          Explore
+                          <ArrowRight size={13} />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && categories.length === 0 && (
+          <div
+            className="text-center py-16"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <p className="text-sm">No service categories found.</p>
+          </div>
+        )}
 
         {/* View All Button */}
         <motion.div

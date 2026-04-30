@@ -811,6 +811,7 @@ model CourseCategory {
   name      String   @unique
   slug      String   @unique
   icon      String?
+  image     String?
   color     String?
   sortOrder Int      @default(0)
   active    Boolean  @default(true)
@@ -1029,6 +1030,7 @@ model ServiceCategory {
   name      String   @unique
   slug      String   @unique
   icon      String?
+  image     String?
   color     String?
   sortOrder Int      @default(0)
   active    Boolean  @default(true)

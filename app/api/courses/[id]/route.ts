@@ -77,7 +77,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         title: data.title,
         description: data.description,
         thumbnail: data.thumbnail || null,
-        category: data.category,
+        categoryId: data.categoryId,
         level: data.level as CourseLevel,
         price: data.price || 0,
         isFree: data.isFree || false,

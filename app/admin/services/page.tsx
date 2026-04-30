@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, BarChart3 } from "lucide-react";
 import { ServiceActions } from "./_components/ServiceActions";
 
 export default async function ServicesPage() {
@@ -34,13 +34,22 @@ export default async function ServicesPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/services/create"
-          className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" />
-          Add Service
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/services/categories"
+            className="btn-secondary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
+          >
+            <BarChart3 className="w-5 h-5" />
+            Manage Categories
+          </Link>
+          <Link
+            href="/admin/services/create"
+            className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-lg w-full sm:w-auto"
+          >
+            <Plus className="w-5 h-5" />
+            Add Service
+          </Link>
+        </div>
       </div>
 
       {/* Stats Overview */}
