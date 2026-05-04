@@ -599,7 +599,11 @@ function MarketplacePageContent() {
   const searchParams = useSearchParams();
   const topRef = useRef<HTMLDivElement>(null);
 
-  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories("product");
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useCategories("product");
 
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
