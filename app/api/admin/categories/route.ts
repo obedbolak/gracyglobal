@@ -7,12 +7,9 @@ import { prisma } from "@/lib/prisma";
 // GET /api/admin/categories - List all categories
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    // Allow public access for GET requests (needed for marketplace browsing)
     const categories = await prisma.productCategory.findMany({
+      where: { active: true },
       orderBy: { sortOrder: "asc" },
       include: {
         _count: {

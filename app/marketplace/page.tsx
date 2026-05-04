@@ -599,7 +599,7 @@ function MarketplacePageContent() {
   const searchParams = useSearchParams();
   const topRef = useRef<HTMLDivElement>(null);
 
-  const { categories } = useCategories("product");
+  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories("product");
 
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -774,13 +774,22 @@ function MarketplacePageContent() {
         </div>
 
         {/* ── Category tab bar ── */}
-        {categories.length > 0 && (
+        {categoriesError ? (
+          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+            Failed to load categories: {categoriesError}
+          </div>
+        ) : categoriesLoading ? (
+          <div className="mb-6 flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+            Loading categories...
+          </div>
+        ) : categories.length > 0 ? (
           <CategoryTabBar
             categories={categories}
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
           />
-        )}
+        ) : null}
 
         {/* ── Active filter chips ── */}
         {hasActiveFilters && (

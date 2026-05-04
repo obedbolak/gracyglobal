@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
+import { validateEmail, validateName } from "@/lib/utils";
 import {
   Eye,
   EyeOff,
@@ -143,6 +144,20 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     if (step === "form") {
+      // Validate name
+      const nameValidation = validateName(form.name);
+      if (!nameValidation.isValid) {
+        setError(nameValidation.error || "Invalid name");
+        return;
+      }
+
+      // Validate email
+      const emailValidation = validateEmail(form.email);
+      if (!emailValidation.isValid) {
+        setError(emailValidation.error || "Invalid email");
+        return;
+      }
+
       if (form.password.length < 8) {
         setError("Password must be at least 8 characters.");
         return;
