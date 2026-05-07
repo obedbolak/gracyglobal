@@ -11,23 +11,23 @@ export default function CounselorsHero() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [hasCompletedInitial, setHasCompletedInitial] = useState(false);
   const [isWaitingForNextCycle, setIsWaitingForNextCycle] = useState(false);
-  
+
   const phrases = [
     "Shouldn't Be Scary.",
     "Can Change Everything.",
     "Is Your First Step.",
     "Shows Real Strength.",
   ];
-  
+
   const staticText = '"We Need to Talk" ';
-  
+
   // Initial typing animation
   useEffect(() => {
     if (hasCompletedInitial) return;
-    
+
     let index = 0;
     const fullInitialText = staticText + phrases[0];
-    
+
     const typingInterval = setInterval(() => {
       if (index <= fullInitialText.length) {
         setDisplayedText(fullInitialText.slice(0, index));
@@ -44,51 +44,63 @@ export default function CounselorsHero() {
 
     return () => clearInterval(typingInterval);
   }, [hasCompletedInitial]);
-  
+
   // Handle rotating text effect
   useEffect(() => {
     if (!hasCompletedInitial || isWaitingForNextCycle) return;
-    
+
     const currentPhrase = phrases[currentPhraseIndex];
     const dynamicPart = displayedText.slice(staticText.length);
-    
-    const timeout = setTimeout(() => {
-      if (isDeleting) {
-        // Delete current phrase
-        if (dynamicPart.length > 0) {
-          setDisplayedText(staticText + dynamicPart.slice(0, -1));
+
+    const timeout = setTimeout(
+      () => {
+        if (isDeleting) {
+          // Delete current phrase
+          if (dynamicPart.length > 0) {
+            setDisplayedText(staticText + dynamicPart.slice(0, -1));
+          } else {
+            // Finished deleting, move to next phrase
+            setIsDeleting(false);
+            const nextIndex = (currentPhraseIndex + 1) % phrases.length;
+            setCurrentPhraseIndex(nextIndex);
+
+            // If we've completed a full cycle (back to index 0), wait 30 seconds
+            if (nextIndex === 0) {
+              setIsWaitingForNextCycle(true);
+              setTimeout(() => {
+                setIsWaitingForNextCycle(false);
+              }, 30000); // 30 seconds
+            }
+          }
         } else {
-          // Finished deleting, move to next phrase
-          setIsDeleting(false);
-          const nextIndex = (currentPhraseIndex + 1) % phrases.length;
-          setCurrentPhraseIndex(nextIndex);
-          
-          // If we've completed a full cycle (back to index 0), wait 30 seconds
-          if (nextIndex === 0) {
-            setIsWaitingForNextCycle(true);
-            setTimeout(() => {
-              setIsWaitingForNextCycle(false);
-            }, 30000); // 30 seconds
+          // Type new phrase
+          const targetPhrase = phrases[currentPhraseIndex];
+          if (dynamicPart.length < targetPhrase.length) {
+            setDisplayedText(
+              staticText + targetPhrase.slice(0, dynamicPart.length + 1),
+            );
+          } else {
+            // Finished typing, wait before deleting
+            setTimeout(() => setIsDeleting(true), 2000);
           }
         }
-      } else {
-        // Type new phrase
-        const targetPhrase = phrases[currentPhraseIndex];
-        if (dynamicPart.length < targetPhrase.length) {
-          setDisplayedText(staticText + targetPhrase.slice(0, dynamicPart.length + 1));
-        } else {
-          // Finished typing, wait before deleting
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
-      }
-    }, isDeleting ? 30 : 50);
-    
+      },
+      isDeleting ? 30 : 50,
+    );
+
     return () => clearTimeout(timeout);
-  }, [displayedText, isDeleting, currentPhraseIndex, hasCompletedInitial, phrases, isWaitingForNextCycle]);
+  }, [
+    displayedText,
+    isDeleting,
+    currentPhraseIndex,
+    hasCompletedInitial,
+    phrases,
+    isWaitingForNextCycle,
+  ]);
   return (
     <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
       {/* Background Image - Animated - Behind Hero Text */}
-      <div 
+      <div
         className="absolute right-0 top-1/2 -translate-y-1/2 w-1/2 h-[600px] pointer-events-none z-0 animate-float"
         style={{
           backgroundImage: "url(/images/counsel.png)",
@@ -98,7 +110,7 @@ export default function CounselorsHero() {
           opacity: 0.08,
         }}
       />
-      
+
       {/* Glow blobs */}
       <div
         className="absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full pointer-events-none"
@@ -170,21 +182,27 @@ export default function CounselorsHero() {
             ) : (
               displayedText
             )}
-            <span 
+            <span
               className="inline-block w-0.5 h-[0.9em] ml-1"
-              style={{ 
+              style={{
                 background: "var(--purple)",
                 verticalAlign: "middle",
-                animation: "blink 1s infinite"
+                animation: "blink 1s infinite",
               }}
             />
           </motion.h1>
-          
+
           {/* Blinking cursor animation */}
           <style jsx>{`
             @keyframes blink {
-              0%, 50% { opacity: 1; }
-              51%, 100% { opacity: 0; }
+              0%,
+              50% {
+                opacity: 1;
+              }
+              51%,
+              100% {
+                opacity: 0;
+              }
             }
           `}</style>
 
@@ -195,9 +213,12 @@ export default function CounselorsHero() {
             className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-10"
             style={{ color: "var(--text-muted)" }}
           >
-            Whether it's your marriage, your past, or your next chapter — our
-            certified counselors meet you exactly where you are. Private.
-            Affordable. Available now.
+            Are you overwhelmed, emotionally stressed, facing relationship,
+            personal, health, or life challenges, or simply need someone to talk
+            to? Gracy Global connects you with professional counsellors, medical
+            experts, pastors, and life coaches ready to support, guide, and
+            listen. Enjoy confidential one-on-one sessions from the comfort of
+            your home and begin your journey toward healing and clarity.
           </motion.p>
 
           {/* CTAs */}

@@ -1794,7 +1794,7 @@ export default function JobsPage() {
                     Find Your Dream Job
                   </h1>
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    Browse remote, hybrid, and freelance opportunities
+                    Looking for a job, remote opportunities, or on-site employment? Gracy Global gives you the platform to post a job, find qualified workers, or apply for available opportunities with ease. Whether you are hiring, searching, or ready to work, this space connects professionals, businesses, and job seekers to real opportunities for growth and success.
                   </p>
                 </div>
 

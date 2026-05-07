@@ -4,6 +4,7 @@
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -596,6 +597,7 @@ function SkeletonCard() {
 function MarketplacePageContent() {
   const { addToCart } = useCart();
   const { convert, rate, currency, loading: currencyLoading } = useCurrency();
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -722,6 +724,47 @@ function MarketplacePageContent() {
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20"
         ref={topRef}
       >
+        {/* ── Hero Section ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
+        >
+          <h1
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Gracy Global Marketplace
+          </h1>
+          <p
+            className="text-base sm:text-lg max-w-3xl mx-auto font-light leading-relaxed mb-8"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Do you have products to sell, or are you searching for trusted
+            business opportunities? Gracy Global Marketplace connects buyers,
+            sellers, entrepreneurs, and businesses in one powerful platform
+            built for growth and visibility. With our experienced marketers,
+            your products reach the right audience, attract real customers, and
+            generate the value and income your business deserves.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href={session?.user ? "/dashboard" : "/login"}
+              className="btn-primary px-6 py-3 text-sm font-semibold rounded-lg flex items-center gap-2"
+            >
+              <ShoppingBag size={16} />
+              Sell on Marketplace
+            </Link>
+            <Link
+              href="/marketplace"
+              className="btn-secondary px-6 py-3 text-sm font-semibold rounded-lg flex items-center gap-2"
+            >
+              Browse Products
+            </Link>
+          </div>
+        </motion.div>
+
         {/* ── Search + mobile filter ── */}
         <div className="flex items-center gap-3 mb-5">
           <div className="relative flex-1">
