@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { User, UserRole } from "@prisma/client";
 import ImageUpload from "@/components/shared/ImageUpload";
+import UserServiceManager from "@/components/admin/UserServiceManager";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -675,6 +676,16 @@ export default function EditUserForm({ user }: EditUserFormProps) {
             </div>
           )}
         </div>
+
+        {/* ── Service Management ── */}
+        <UserServiceManager 
+          userId={user.id}
+          currentRoles={roles}
+          onUpdate={() => {
+            // Refresh the page to get updated user data
+            window.location.reload();
+          }}
+        />
 
         {/* ── Changes Summary ── */}
         {hasChanges && (

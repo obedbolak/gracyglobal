@@ -48,12 +48,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !hasRole(session.user.role, "ADMIN")) {
+    if (!session?.user || (!hasRole(session.user.role, "ADMIN") && !hasRole(session.user.role, "COUNSELOR"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
     const { name, phone, country, image, role } = await req.json();
+
+    // Counselors can only update basic user info, not roles
+    const isCounselor = hasRole(session.user.role, "COUNSELOR") && !hasRole(session.user.role, "ADMIN");
+    if (isCounselor && role !== undefined) {
+      return NextResponse.json(
+        { error: "Counselors cannot modify user roles" },
+        { status: 403 },
+      );
+    }
 
     // Prepare update data
     const updateData: any = {};
@@ -61,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (phone !== undefined) updateData.phone = phone;
     if (country !== undefined) updateData.country = country;
     if (image !== undefined) updateData.image = image;
-    if (role !== undefined) {
+    if (role !== undefined && !isCounselor) {
       // Prevent self-demotion
       const roleArray = Array.isArray(role) ? role : [role];
       if (id === session.user.id && !roleArray.includes("ADMIN")) {
