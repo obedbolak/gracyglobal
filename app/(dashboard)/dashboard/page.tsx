@@ -686,6 +686,7 @@ export default function DashboardPage() {
           serviceBookings={profile._count.serviceBookings}
           counselorProfile={profile.counselorProfile}
           affiliate={profile.affiliate}
+          communityPosts={profile._count.communityPosts} // ← add this
         />
       </div>
 
