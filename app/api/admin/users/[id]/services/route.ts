@@ -25,16 +25,25 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (!serviceType || activate === undefined) {
       return NextResponse.json(
         { error: "serviceType and activate are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Validate serviceType
-    const validServiceTypes = ["COUNSELOR", "TEACHER", "CREATOR", "MARKETPLACE"];
+    const validServiceTypes = [
+      "COUNSELOR",
+      "TEACHER",
+      "CREATOR",
+      "MARKETPLACE",
+    ];
     if (!validServiceTypes.includes(serviceType)) {
       return NextResponse.json(
-        { error: "Invalid serviceType. Must be one of: " + validServiceTypes.join(", ") },
-        { status: 400 }
+        {
+          error:
+            "Invalid serviceType. Must be one of: " +
+            validServiceTypes.join(", "),
+        },
+        { status: 400 },
       );
     }
 
@@ -53,14 +62,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      let updatedUser = user;
-
+    await prisma.$transaction(async (tx) => {
       if (activate) {
         // Add role if not already present
         const currentRoles = Array.isArray(user.role) ? user.role : [user.role];
         if (!currentRoles.includes(serviceType as UserRole)) {
-          updatedUser = await tx.user.update({
+          await tx.user.update({
             where: { id },
             data: {
               role: {
@@ -94,7 +101,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         // Activate free plan if planCode provided
         if (planCode) {
           const plan = await tx.pricingPlan.findUnique({
-            where: { 
+            where: {
               planCode: planCode.toUpperCase(),
               active: true,
             },
@@ -118,9 +125,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             },
           });
 
-          if (!existingSubscription || existingSubscription.status !== "ACTIVE") {
+          if (
+            !existingSubscription ||
+            existingSubscription.status !== "ACTIVE"
+          ) {
             const now = new Date();
-            let periodEnd = new Date(now);
+            const periodEnd = new Date(now);
             periodEnd.setFullYear(periodEnd.getFullYear() + 10); // Far future for free plans
 
             await tx.userSubscription.upsert({
@@ -154,14 +164,14 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       } else {
         // Deactivate service - remove role
         const currentRoles = Array.isArray(user.role) ? user.role : [user.role];
-        const newRoles = currentRoles.filter(role => role !== serviceType);
-        
+        const newRoles = currentRoles.filter((role) => role !== serviceType);
+
         // Ensure USER role is always present
-        if (!newRoles.includes("USER")) {
-          newRoles.push("USER");
+        if (!newRoles.includes("USER" as UserRole)) {
+          newRoles.push("USER" as UserRole);
         }
 
-        updatedUser = await tx.user.update({
+        await tx.user.update({
           where: { id },
           data: {
             role: newRoles,
@@ -197,8 +207,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           }
         }
       }
-
-      return updatedUser;
     });
 
     // Fetch updated user with all relations
@@ -220,14 +228,13 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       },
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       user: finalUser,
-      message: activate 
-        ? `${serviceType} service activated successfully` 
-        : `${serviceType} service deactivated successfully`
+      message: activate
+        ? `${serviceType} service activated successfully`
+        : `${serviceType} service deactivated successfully`,
     });
-
   } catch (error: any) {
     console.error("Update user services error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
