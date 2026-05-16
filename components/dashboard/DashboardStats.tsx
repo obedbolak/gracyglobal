@@ -8,7 +8,8 @@ import {
   MessageSquare,
   Star,
   Users,
-  DollarSign
+  DollarSign,
+  Wrench
 } from "lucide-react";
 
 interface StatsProps {
@@ -16,6 +17,7 @@ interface StatsProps {
   orders: number;
   jobApplications: number;
   communityPosts: number;
+  serviceBookings?: number;
   counselorProfile?: {
     rating: number;
     reviews: number;
@@ -31,6 +33,7 @@ export default function DashboardStats({
   orders, 
   jobApplications, 
   communityPosts,
+  serviceBookings = 0,
   counselorProfile,
   affiliate 
 }: StatsProps) {
@@ -43,6 +46,13 @@ export default function DashboardStats({
       bgColor: "var(--info-bg)",
     },
     {
+      title: "Service Bookings",
+      value: serviceBookings,
+      icon: Wrench,
+      color: "var(--purple)",
+      bgColor: "var(--badge-purple-bg)",
+    },
+    {
       title: "Orders Placed",
       value: orders,
       icon: ShoppingBag,
@@ -53,13 +63,6 @@ export default function DashboardStats({
       title: "Job Applications",
       value: jobApplications,
       icon: Briefcase,
-      color: "var(--purple)",
-      bgColor: "var(--glass-bg-subtle)",
-    },
-    {
-      title: "Community Posts",
-      value: communityPosts,
-      icon: MessageSquare,
       color: "var(--scarlet)",
       bgColor: "var(--error-bg)",
     },

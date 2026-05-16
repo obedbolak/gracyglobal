@@ -94,6 +94,7 @@ export async function GET() {
             orders: true,
             communityPosts: true,
             jobApplications: true,
+            serviceBookings: true,
           },
         },
       },

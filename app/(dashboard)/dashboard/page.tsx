@@ -8,6 +8,8 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import SubscriptionStatus from "@/components/dashboard/SubscriptionStatus";
+import ServiceBookings from "@/components/dashboard/ServiceBookings";
+import UserOrders from "@/components/dashboard/UserOrders";
 import {
   Crown,
   Loader2,
@@ -99,6 +101,7 @@ interface UserProfile {
     orders: number;
     communityPosts: number;
     jobApplications: number;
+    serviceBookings: number;
   };
 }
 
@@ -680,7 +683,7 @@ export default function DashboardPage() {
           bookings={profile._count.bookings}
           orders={profile._count.orders}
           jobApplications={profile._count.jobApplications}
-          communityPosts={profile._count.communityPosts}
+          serviceBookings={profile._count.serviceBookings}
           counselorProfile={profile.counselorProfile}
           affiliate={profile.affiliate}
         />
@@ -703,6 +706,20 @@ export default function DashboardPage() {
               isCounselor={isCounselor}
             />
           </div>
+
+          {/* User Orders */}
+          {profile._count.orders > 0 && (
+            <div>
+              <UserOrders />
+            </div>
+          )}
+
+          {/* Service Bookings */}
+          {profile._count.serviceBookings > 0 && (
+            <div>
+              <ServiceBookings />
+            </div>
+          )}
 
           {/* Enrolled Courses */}
           {enrollments.length > 0 && (
