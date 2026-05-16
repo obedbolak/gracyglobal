@@ -13,22 +13,22 @@ interface UserServiceManagerProps {
 const SERVICE_CONFIGS = {
   COUNSELOR: {
     label: "Counselor Service",
-    freePlanCode: "C1", // Assuming C1 is the free counselor plan
+    freePlanCode: "C3", // Free counselor plan
     description: "Enable counseling services and create counselor profile",
   },
   TEACHER: {
     label: "Teacher Service", 
-    freePlanCode: "T1", // Assuming T1 is the free teacher plan
+    freePlanCode: "T3", // Free teacher plan
     description: "Enable course creation and teaching capabilities",
   },
   CREATOR: {
     label: "Service Creator",
-    freePlanCode: "S1", // Assuming S1 is the free service plan
+    freePlanCode: "S3", // Free service plan
     description: "Enable service creation and management",
   },
   MARKETPLACE: {
     label: "Marketplace Seller",
-    freePlanCode: "M1", // Assuming M1 is the free marketplace plan
+    freePlanCode: "S3", // Free service plan (same as creator)
     description: "Enable product selling in marketplace",
   },
 };
