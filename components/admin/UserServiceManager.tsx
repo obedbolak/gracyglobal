@@ -19,7 +19,7 @@ const SERVICE_CONFIGS = {
     border: "var(--info-border)",
   },
   TEACHER: {
-    label: "Teacher Service", 
+    label: "Teacher Service",
     freePlanCode: "T3",
     description: "Enable course creation and teaching capabilities",
     icon: "🎓",
@@ -38,7 +38,7 @@ const SERVICE_CONFIGS = {
   },
   MARKETPLACE: {
     label: "Marketplace Seller",
-    freePlanCode: "S3",
+    freePlanCode: "M3",
     description: "Enable product selling in marketplace",
     icon: "🛒",
     color: "var(--text-secondary)",
@@ -47,18 +47,19 @@ const SERVICE_CONFIGS = {
   },
 };
 
-export default function UserServiceManager({ 
-  userId, 
-  currentRoles, 
-  onUpdate 
+export default function UserServiceManager({
+  userId,
+  currentRoles,
+  onUpdate,
 }: UserServiceManagerProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
   const updateServiceState = async (serviceType: string, activate: boolean) => {
     setLoading(serviceType);
     try {
-      const config = SERVICE_CONFIGS[serviceType as keyof typeof SERVICE_CONFIGS];
-      
+      const config =
+        SERVICE_CONFIGS[serviceType as keyof typeof SERVICE_CONFIGS];
+
       const response = await fetch(`/api/admin/users/${userId}/services`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -70,7 +71,7 @@ export default function UserServiceManager({
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || "Failed to update service");
       }
@@ -106,18 +107,30 @@ export default function UserServiceManager({
             color: "var(--badge-purple-text)",
           }}
         >
-          {currentRoles.filter(role => Object.keys(SERVICE_CONFIGS).includes(role)).length} service{currentRoles.filter(role => Object.keys(SERVICE_CONFIGS).includes(role)).length !== 1 ? "s" : ""} active
+          {
+            currentRoles.filter((role) =>
+              Object.keys(SERVICE_CONFIGS).includes(role),
+            ).length
+          }{" "}
+          service
+          {currentRoles.filter((role) =>
+            Object.keys(SERVICE_CONFIGS).includes(role),
+          ).length !== 1
+            ? "s"
+            : ""}{" "}
+          active
         </span>
       </div>
       <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
-        Activate services to grant users access to specific platform features and automatically assign free plans.
+        Activate services to grant users access to specific platform features
+        and automatically assign free plans.
       </p>
 
       <div className="space-y-3">
         {Object.entries(SERVICE_CONFIGS).map(([serviceType, config]) => {
           const isActive = currentRoles.includes(serviceType);
           const isLoading = loading === serviceType;
-          
+
           return (
             <div
               key={serviceType}
@@ -138,9 +151,7 @@ export default function UserServiceManager({
                     background: isActive
                       ? `linear-gradient(135deg, ${config.color}, var(--purple))`
                       : "var(--glass-bg)",
-                    border: isActive
-                      ? "none"
-                      : "2px solid var(--glass-border)",
+                    border: isActive ? "none" : "2px solid var(--glass-border)",
                   }}
                 >
                   {isActive && (
@@ -176,39 +187,47 @@ export default function UserServiceManager({
                       <span
                         className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={{
-                          background: isActive ? "var(--success-bg)" : "var(--glass-bg)",
-                          color: isActive ? "var(--success-text)" : "var(--text-muted)",
+                          background: isActive
+                            ? "var(--success-bg)"
+                            : "var(--glass-bg)",
+                          color: isActive
+                            ? "var(--success-text)"
+                            : "var(--text-muted)",
                           border: `1px solid ${isActive ? "var(--success-border)" : "var(--glass-border)"}`,
                         }}
                       >
                         {isActive ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    
+
                     <button
                       onClick={() => updateServiceState(serviceType, !isActive)}
                       disabled={isLoading}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
                       style={{
-                        background: isActive 
-                          ? "var(--error-bg)" 
+                        background: isActive
+                          ? "var(--error-bg)"
                           : "linear-gradient(135deg, var(--purple), var(--blue))",
                         color: isActive ? "var(--error-text)" : "#fff",
-                        border: isActive ? "1px solid var(--error-border)" : "none",
-                        boxShadow: !isActive ? "0 2px 8px rgba(123,47,190,0.3)" : "none",
+                        border: isActive
+                          ? "1px solid var(--error-border)"
+                          : "none",
+                        boxShadow: !isActive
+                          ? "0 2px 8px rgba(123,47,190,0.3)"
+                          : "none",
                       }}
                     >
                       {isLoading ? "..." : isActive ? "Deactivate" : "Activate"}
                     </button>
                   </div>
-                  
+
                   <p
                     className="text-xs leading-relaxed mb-2"
                     style={{ color: "var(--text-muted)" }}
                   >
                     {config.description}
                   </p>
-                  
+
                   <div
                     className="text-xs flex items-center gap-1"
                     style={{ color: config.color }}
