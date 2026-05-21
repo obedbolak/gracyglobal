@@ -330,55 +330,42 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* ── Actions: Share + Qty + Add to Cart ── */}
-            <div className="flex flex-col gap-3 pt-2">
-              {/* Row 1: quantity stepper + share button side by side */}
-              <div className="flex items-center gap-3">
-                {/* Quantity stepper */}
-                <div
-                  className="flex items-center rounded-xl overflow-hidden shrink-0"
-                  style={{
-                    border: "1px solid var(--glass-border)",
-                    background: "var(--glass-bg)",
-                  }}
+            {/* ── Actions: Qty + Add to Cart + Share ── */}
+            <div className="flex items-center gap-3 pt-2">
+              {/* Quantity stepper */}
+              <div
+                className="flex items-center rounded-xl overflow-hidden shrink-0"
+                style={{
+                  border: "1px solid var(--glass-border)",
+                  background: "var(--glass-bg)",
+                }}
+              >
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
                 >
-                  <button
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span
-                    className="w-10 text-center text-sm font-bold"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {qty}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setQty((q) => Math.min(product.stock, q + 1))
-                    }
-                    className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-
-                {/* Share button — fills remaining space */}
-                <ShareButton
-                  href={`/marketplace/${product.id}`}
-                  title={product.name}
-                  text={product.description}
-                  className="flex-1"
-                />
+                  <Minus size={14} />
+                </button>
+                <span
+                  className="w-10 text-center text-sm font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {qty}
+                </span>
+                <button
+                  onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  <Plus size={14} />
+                </button>
               </div>
 
-              {/* Row 2: Add to Cart — full width */}
+              {/* Add to Cart — grows to fill space */}
               <button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: added
                     ? "linear-gradient(135deg, #10b981, #059669)"
@@ -396,6 +383,13 @@ export default function ProductDetailPage() {
                   </>
                 )}
               </button>
+
+              {/* Share — natural width */}
+              <ShareButton
+                href={`/marketplace/${product.id}`}
+                title={product.name}
+                text={product.description}
+              />
             </div>
 
             {/* Stock */}

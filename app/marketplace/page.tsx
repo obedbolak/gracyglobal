@@ -1178,11 +1178,11 @@ function MarketplacePageContent() {
                             </span>
                           </div>
 
-                          {/* Share + Add to Cart — each full width, stacked */}
-                          <div className="flex flex-col gap-2">
+                          {/* Share + Add to Cart — side by side */}
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleAddToCart(product)}
-                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
                               style={{
                                 background:
                                   addedId === product.id
@@ -1199,7 +1199,6 @@ function MarketplacePageContent() {
                             <ShareButton
                               href={`/marketplace/${product.id}`}
                               title={product.name}
-                              className="w-full"
                             />
                           </div>
                         </div>
