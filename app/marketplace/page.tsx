@@ -23,6 +23,7 @@ import { useCategories, type Category } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/UseProducts";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import ShareButton from "@/components/shared/ShareButton";
 
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest" | "rating";
 
@@ -51,7 +52,6 @@ function CategoryTabBar({
 }) {
   return (
     <div className="relative mb-6">
-      {/* fade edges */}
       <div
         className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10"
         style={{
@@ -71,7 +71,6 @@ function CategoryTabBar({
       >
         <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
-        {/* All tab */}
         <button
           onClick={() => onSelect(null)}
           className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
@@ -95,7 +94,6 @@ function CategoryTabBar({
 
         {categories.map((cat) => {
           const isActive = activeCategory === cat.name;
-          console.log(cat.name, isActive);
           return (
             <button
               key={cat.id}
@@ -646,26 +644,19 @@ function MarketplacePageContent() {
     const searchParam = searchParams.get("search");
     const sortParam = searchParams.get("sort") as SortOption;
 
-    // Handle categoryId parameter (from MarketplaceSection links)
     if (categoryIdParam && categories.length > 0) {
       const category = categories.find((c) => c.id === categoryIdParam);
-      if (category) {
-        setActiveCategory(category.name);
-      }
-    }
-    // Handle category name parameter (legacy or direct)
-    else if (categoryNameParam) {
+      if (category) setActiveCategory(category.name);
+    } else if (categoryNameParam) {
       setActiveCategory(categoryNameParam);
     }
 
     if (searchParam) setSearch(searchParam);
-
-    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam)) {
+    if (sortParam && Object.keys(SORT_LABELS).includes(sortParam))
       setSort(sortParam);
-    }
 
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [searchParams, categories]); // ✅ Adde
+  }, [searchParams, categories]);
 
   function handleAddToCart(product: (typeof products)[0]) {
     addToCart(product);
@@ -724,7 +715,7 @@ function MarketplacePageContent() {
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20"
         ref={topRef}
       >
-        {/* ── Hero Section ── */}
+        {/* ── Hero ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -732,7 +723,7 @@ function MarketplacePageContent() {
           className="text-center mb-12"
         >
           <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
             style={{ color: "var(--text-primary)" }}
           >
             Gracy Global Marketplace
@@ -767,7 +758,7 @@ function MarketplacePageContent() {
 
         {/* ── Search + mobile filter ── */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search
               size={15}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -827,7 +818,7 @@ function MarketplacePageContent() {
           </div>
         ) : categoriesLoading ? (
           <div className="mb-6 flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
             Loading categories...
           </div>
         ) : categories.length > 0 ? (
@@ -1069,9 +1060,10 @@ function MarketplacePageContent() {
                       transition={{ duration: 0.4, delay: i * 0.05 }}
                       className="glass flex flex-col overflow-hidden group"
                     >
+                      {/* Image */}
                       <Link
                         href={`/marketplace/${product.id}`}
-                        className="relative overflow-hidden"
+                        className="relative overflow-hidden flex-shrink-0"
                       >
                         <img
                           src={product.images[0]}
@@ -1096,7 +1088,6 @@ function MarketplacePageContent() {
                             {product.badge}
                           </span>
                         )}
-                        {/* ✅ Fixed: use category relation object */}
                         {product.category?.name && (
                           <span
                             className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full"
@@ -1113,11 +1104,13 @@ function MarketplacePageContent() {
                         )}
                       </Link>
 
-                      <div className="flex flex-col gap-3 p-5 flex-1">
+                      {/* Card body */}
+                      <div className="flex flex-col gap-3 p-4 flex-1">
+                        {/* Name + description */}
                         <div>
                           <Link href={`/marketplace/${product.id}`}>
                             <h3
-                              className="font-extrabold text-base mb-1 hover:opacity-80 transition-opacity"
+                              className="font-extrabold text-base mb-1 hover:opacity-80 transition-opacity line-clamp-1"
                               style={{ color: "var(--text-primary)" }}
                             >
                               {product.name}
@@ -1131,6 +1124,7 @@ function MarketplacePageContent() {
                           </p>
                         </div>
 
+                        {/* Rating */}
                         <div className="flex items-center gap-1.5">
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star
@@ -1157,11 +1151,13 @@ function MarketplacePageContent() {
                           </span>
                         </div>
 
+                        {/* Price + actions — pushed to bottom */}
                         <div
-                          className="flex items-center justify-between mt-auto pt-3"
+                          className="flex flex-col gap-2 mt-auto pt-3"
                           style={{ borderTop: "1px solid var(--divider)" }}
                         >
-                          <div className="flex flex-col">
+                          {/* Price */}
+                          <div className="flex items-baseline gap-2">
                             <span
                               className="text-lg font-extrabold"
                               style={{
@@ -1181,20 +1177,31 @@ function MarketplacePageContent() {
                               CFA {product.price.toLocaleString()}
                             </span>
                           </div>
-                          <button
-                            onClick={() => handleAddToCart(product)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
-                            style={{
-                              background:
-                                addedId === product.id
-                                  ? "linear-gradient(135deg, #10b981, #059669)"
-                                  : "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                              boxShadow: "0 4px 12px rgba(220,20,60,0.25)",
-                            }}
-                          >
-                            <ShoppingBag size={12} />
-                            {addedId === product.id ? "Added!" : "Add to Cart"}
-                          </button>
+
+                          {/* Share + Add to Cart — each full width, stacked */}
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                              style={{
+                                background:
+                                  addedId === product.id
+                                    ? "linear-gradient(135deg, #10b981, #059669)"
+                                    : "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                                boxShadow: "0 4px 12px rgba(220,20,60,0.25)",
+                              }}
+                            >
+                              <ShoppingBag size={12} />
+                              {addedId === product.id
+                                ? "Added!"
+                                : "Add to Cart"}
+                            </button>
+                            <ShareButton
+                              href={`/marketplace/${product.id}`}
+                              title={product.name}
+                              className="w-full"
+                            />
+                          </div>
                         </div>
                       </div>
                     </motion.div>

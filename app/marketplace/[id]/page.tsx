@@ -20,6 +20,7 @@ import { useProduct, useProducts } from "@/hooks/UseProducts";
 import { useCart } from "@/context/CartContext";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useCategories } from "@/hooks/useCategories";
+import ShareButton from "@/components/shared/ShareButton";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -110,22 +111,18 @@ export default function ProductDetailPage() {
 
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
 
-  // ── Fetch product from DB ──────────────────────────────────────────────────
   const { product, isLoading, error } = useProduct(id);
 
-  // ── Fetch related products (same category, excluding current) ──────────────
   const { products: related } = useProducts({
     category: product?.category as any,
     limit: 4,
   });
   const relatedFiltered = related.filter((p) => p.id !== id).slice(0, 3);
 
-  // ── Local UI state ─────────────────────────────────────────────────────────
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) return <ProductDetailSkeleton />;
 
   if (error || !product) {
@@ -185,7 +182,7 @@ export default function ProductDetailPage() {
               <img
                 src={product.images[activeImg]}
                 alt={product.name}
-                className="w-full h-80 sm:h-96 object-cover transition-all duration-500"
+                className="w-full h-72 sm:h-96 object-cover transition-all duration-500"
               />
             </div>
             {product.images.length > 1 && (
@@ -221,7 +218,7 @@ export default function ProductDetailPage() {
             className="flex flex-col gap-5"
           >
             {/* Badge + category */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
                 className="text-xs font-semibold px-3 py-1 rounded-full"
                 style={{
@@ -248,14 +245,14 @@ export default function ProductDetailPage() {
             {/* Name + price */}
             <div>
               <h1
-                className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2"
+                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight mb-2"
                 style={{ color: "var(--text-primary)" }}
               >
                 {product.name}
               </h1>
-              <div className="flex items-baseline gap-3">
+              <div className="flex flex-wrap items-baseline gap-3">
                 <span
-                  className="text-3xl font-extrabold"
+                  className="text-2xl sm:text-3xl font-extrabold"
                   style={{
                     background:
                       "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -276,7 +273,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Rating */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star
@@ -333,40 +330,55 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Quantity + Add to cart */}
-            <div className="flex items-center gap-4 pt-2">
-              <div
-                className="flex items-center rounded-xl overflow-hidden"
-                style={{
-                  border: "1px solid var(--glass-border)",
-                  background: "var(--glass-bg)",
-                }}
-              >
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
-                  style={{ color: "var(--text-secondary)" }}
+            {/* ── Actions: Share + Qty + Add to Cart ── */}
+            <div className="flex flex-col gap-3 pt-2">
+              {/* Row 1: quantity stepper + share button side by side */}
+              <div className="flex items-center gap-3">
+                {/* Quantity stepper */}
+                <div
+                  className="flex items-center rounded-xl overflow-hidden shrink-0"
+                  style={{
+                    border: "1px solid var(--glass-border)",
+                    background: "var(--glass-bg)",
+                  }}
                 >
-                  <Minus size={14} />
-                </button>
-                <span
-                  className="w-10 text-center text-sm font-bold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {qty}
-                </span>
-                <button
-                  onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-                  className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  <Plus size={14} />
-                </button>
+                  <button
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span
+                    className="w-10 text-center text-sm font-bold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {qty}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setQty((q) => Math.min(product.stock, q + 1))
+                    }
+                    className="w-10 h-10 flex items-center justify-center hover:opacity-70 transition-opacity"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+
+                {/* Share button — fills remaining space */}
+                <ShareButton
+                  href={`/marketplace/${product.id}`}
+                  title={product.name}
+                  text={product.description}
+                  className="flex-1"
+                />
               </div>
 
+              {/* Row 2: Add to Cart — full width */}
               <button
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01]"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: added
                     ? "linear-gradient(135deg, #10b981, #059669)"
@@ -403,7 +415,7 @@ export default function ProductDetailPage() {
 
             {/* Trust row */}
             <div
-              className="grid grid-cols-3 gap-3 pt-2"
+              className="grid grid-cols-3 gap-2 sm:gap-3 pt-2"
               style={{ borderTop: "1px solid var(--divider)" }}
             >
               {[
@@ -413,7 +425,7 @@ export default function ProductDetailPage() {
               ].map(({ icon: Icon, label, sub }) => (
                 <div
                   key={label}
-                  className="flex flex-col items-center gap-1 p-3 rounded-xl text-center"
+                  className="flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl text-center"
                   style={{
                     background: "var(--glass-bg-subtle)",
                     border: "1px solid var(--glass-border-subtle)",
@@ -479,7 +491,7 @@ export default function ProductDetailPage() {
             >
               You May Also Like
             </h2>
-            <div className="grid sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {relatedFiltered.map((p, i) => (
                 <motion.div
                   key={p.id}
