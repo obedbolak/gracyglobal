@@ -111,6 +111,7 @@ model VerificationOTP {
   id        String   @id @default(cuid())
   userId    String?
   email     String?
+  phone     String?
   code      String
   type      String
   data      Json?
