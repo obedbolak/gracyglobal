@@ -13,7 +13,10 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || null;
 
+  const [mode, setMode] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+237");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -30,16 +33,33 @@ export default function LoginForm() {
     setError("");
     setLoading(true);
 
+    const identifier =
+      mode === "email" ? email.trim() : `${countryCode}${phoneNumber.trim()}`;
+
+    if (mode === "phone") {
+      const normalizedNumber = phoneNumber.trim();
+      if (!normalizedNumber) {
+        setError("Phone number is required.");
+        setLoading(false);
+        return;
+      }
+      if (!/^\d{6,12}$/.test(normalizedNumber)) {
+        setError("Phone number must be 6–12 digits.");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const res = await signIn("credentials", {
-        email,
+        email: identifier,
         password,
         redirect: false,
       });
 
       if (res?.error) {
         setLoading(false);
-        setError("Invalid email or password. Please try again.");
+        setError("Invalid email/phone or password. Please try again.");
         return;
       }
 
@@ -261,7 +281,7 @@ export default function LoginForm() {
                 className="text-xs font-medium"
                 style={{ color: "var(--text-disabled)" }}
               >
-                or sign in with email
+                or sign in with email or phone
               </span>
               <div
                 className="flex-1 h-px"
@@ -374,21 +394,76 @@ export default function LoginForm() {
               onSubmit={handleSubmit}
               className="flex flex-col gap-4"
             >
-              <div className="relative">
-                <Mail
-                  size={15}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "var(--text-disabled)" }}
-                />
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="glass-input w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl"
-                />
+              <div className="flex gap-2 rounded-2xl overflow-hidden border border-[var(--input-border)] bg-[var(--input-bg)]">
+                <button
+                  type="button"
+                  onClick={() => setMode("email")}
+                  className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
+                    mode === "email"
+                      ? "bg-[var(--bg-base)] text-[var(--text-primary)]"
+                      : "text-[var(--text-muted)]"
+                  }`}
+                >
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("phone")}
+                  className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
+                    mode === "phone"
+                      ? "bg-[var(--bg-base)] text-[var(--text-primary)]"
+                      : "text-[var(--text-muted)]"
+                  }`}
+                >
+                  Phone
+                </button>
               </div>
+
+              {mode === "email" ? (
+                <div className="relative">
+                  <Mail
+                    size={15}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-disabled)" }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="glass-input w-full pl-11 pr-4 py-3.5 text-sm rounded-2xl"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-[110px_1fr] gap-3">
+                  <div className="relative">
+                    <label className="sr-only">Country code</label>
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="glass-input w-full pl-4 pr-3 py-3.5 text-sm rounded-2xl"
+                    >
+                      <option value="+237">+237</option>
+                      <option value="+1">+1</option>
+                      <option value="+44">+44</option>
+                      <option value="+234">+234</option>
+                      <option value="+250">+250</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <label className="sr-only">Phone number</label>
+                    <input
+                      type="tel"
+                      placeholder="Phone number"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      required
+                      className="glass-input w-full pl-4 pr-4 py-3.5 text-sm rounded-2xl"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="relative">
                 <Lock

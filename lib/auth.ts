@@ -46,16 +46,23 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or phone", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required");
+          throw new Error("Email or phone and password are required");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const identifier = credentials.email.trim();
+        const phoneCandidates = identifier.startsWith("+")
+          ? [identifier]
+          : [identifier, `+${identifier}`];
+
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [{ email: identifier }, { phone: { in: phoneCandidates } }],
+          },
           select: {
             id: true,
             name: true,
@@ -67,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user || !user.password) {
-          throw new Error("No account found with this email");
+          throw new Error("No account found with this email or phone");
         }
 
         const isValid = await bcrypt.compare(
