@@ -46,10 +46,6 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
   const [deleting, setDeleting] = useState(false);
 
   const { categories } = useCategories("service");
-  const SERVICE_CATEGORIES = categories.map((c) => c.name);
-  const SERVICE_GROUPS = Array.from(
-    new Set(categories.map((c) => c.name)),
-  ).filter((g) => g); // Filter out empty groups
 
   const [formData, setFormData] = useState({
     name: service.name,
@@ -334,21 +330,16 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Service Group *
               </label>
-              <select
+              <input
+                type="text"
                 required
                 value={formData.group}
                 onChange={(e) =>
                   setFormData({ ...formData, group: e.target.value })
                 }
                 className="glass-input w-full px-4 py-3"
-              >
-                <option value="">Select group</option>
-                {SERVICE_GROUPS.map((group) => (
-                  <option key={group} value={group}>
-                    {group}
-                  </option>
-                ))}
-              </select>
+                placeholder="e.g., Logistics"
+              />
             </div>
 
             <div>
@@ -364,9 +355,9 @@ export default function EditServiceForm({ service }: EditServiceFormProps) {
                 className="glass-input w-full px-4 py-3"
               >
                 <option value="">Select category</option>
-                {SERVICE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
