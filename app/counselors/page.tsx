@@ -10,10 +10,10 @@ import CounselorsCTA from "@/components/counselors/CounselorsCTA";
 export default function CounselorsPage() {
   return (
     <main className="min-h-screen">
+      <CounselorsList />
       <CounselorsHero />
       <CounselorsServices />
       <CounselorsHowItWorks />
-      <CounselorsList />
       <CounselorsCTA />
     </main>
   );

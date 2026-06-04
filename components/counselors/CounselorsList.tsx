@@ -1,11 +1,29 @@
 // components/counselors/CounselorsList.tsx
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Video, MessageCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Star, Video, MessageCircle, CheckCircle, Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { useCounselors } from "@/hooks/useCounselors";
 import { useCurrency } from "@/hooks/useCurrency";
+import ShareButton from "@/components/shared/ShareButton";
+
+const SPECIALTIES = [
+  "All",
+  "Relationship Counseling",
+  "Emotional Wellness",
+  "Life Coaching",
+  "Family Counseling",
+  "Career Counseling",
+  "Mental Health",
+  "Grief & Loss",
+  "Addiction Recovery",
+  "Stress Management",
+  "Self-Esteem & Confidence",
+  "Trauma & PTSD",
+  "Anxiety & Depression",
+];
 
 const specialtyColors: Record<string, string> = {
   "Relationship Counseling": "var(--badge-scarlet-bg)",
@@ -38,8 +56,13 @@ const specialtyText: Record<string, string> = {
 };
 
 export default function CounselorsList() {
+  const [search, setSearch] = useState("");
+  const [specialty, setSpecialty] = useState("All");
+
   const { counselors, loading: counselorsLoading } = useCounselors({
-    available: true, // Only show available counselors
+    available: true,
+    search: search || undefined,
+    specialty: specialty !== "All" ? specialty : undefined,
   });
   const { convert, loading: currencyLoading } = useCurrency();
 
@@ -91,6 +114,32 @@ export default function CounselorsList() {
           </p>
         </motion.div>
 
+        {/* Search + Filter */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-10 max-w-2xl mx-auto">
+          <div className="relative flex-1">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+              style={{ color: "var(--text-muted)" }}
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name…"
+              className="glass-input w-full pl-9 pr-4 py-2.5 text-sm"
+            />
+          </div>
+          <select
+            value={specialty}
+            onChange={(e) => setSpecialty(e.target.value)}
+            className="glass-input px-3 py-2.5 text-sm"
+          >
+            {SPECIALTIES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Loading State */}
         {counselorsLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -104,10 +153,10 @@ export default function CounselorsList() {
                 <span className="text-3xl">👤</span>
               </div>
               <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-                No Counselors Available
+                {search || specialty !== "All" ? "No Counselors Found" : "No Counselors Available"}
               </h3>
               <p className="text-sm text-[var(--text-muted)]">
-                Check back soon for new counselors.
+                {search || specialty !== "All" ? "Try adjusting your search or filter." : "Check back soon for new counselors."}
               </p>
             </div>
           </div>
@@ -264,24 +313,31 @@ export default function CounselorsList() {
                 </div>
 
                 {/* CTA */}
-                <Link
-                  href={`/counselors/${counselor.id}/book`}
-                  className="w-full text-center py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-105 mt-auto"
-                  style={{
-                    background: counselor.available
-                      ? "linear-gradient(135deg, var(--purple), var(--blue))"
-                      : "var(--badge-neutral-bg)",
-                    color: counselor.available
-                      ? "white"
-                      : "var(--text-disabled)",
-                    cursor: counselor.available ? "pointer" : "not-allowed",
-                    boxShadow: counselor.available
-                      ? "0 4px 14px rgba(123,47,190,0.3)"
-                      : "none",
-                  }}
-                >
-                  {counselor.available ? "Book Now" : "Currently Unavailable"}
-                </Link>
+                <div className="flex gap-2 mt-auto">
+                  <Link
+                    href={`/counselors/${counselor.id}/book`}
+                    className="flex-1 text-center py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-105"
+                    style={{
+                      background: counselor.available
+                        ? "linear-gradient(135deg, var(--purple), var(--blue))"
+                        : "var(--badge-neutral-bg)",
+                      color: counselor.available
+                        ? "white"
+                        : "var(--text-disabled)",
+                      cursor: counselor.available ? "pointer" : "not-allowed",
+                      boxShadow: counselor.available
+                        ? "0 4px 14px rgba(123,47,190,0.3)"
+                        : "none",
+                    }}
+                  >
+                    {counselor.available ? "Book Now" : "Currently Unavailable"}
+                  </Link>
+                  <ShareButton
+                    href={`/counselors/${counselor.id}/book`}
+                    title={`Book a session with ${counselor.user.name || "this counselor"}`}
+                    className="!px-3 !min-h-0 py-2.5"
+                  />
+                </div>
               </motion.div>
             ))}
           </div>
