@@ -18,6 +18,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
+import ShareButton from "@/components/shared/ShareButton";
 
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
@@ -726,16 +727,23 @@ function ServicesPageContent() {
                             {service.options.length !== 1 ? "s" : ""}
                           </span>
                         </div>
-                        <Link
-                          href={`/services/${service.id}`}
-                          className="w-full block text-center px-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, var(--purple), var(--blue))",
-                          }}
-                        >
-                          View & Book
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/services/${service.id}`}
+                            className="flex-1 block text-center px-4 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, var(--purple), var(--blue))",
+                            }}
+                          >
+                            View & Book
+                          </Link>
+                          <ShareButton
+                            href={`/services/${service.id}`}
+                            title={service.name}
+                            className="!px-3 !min-h-0 py-3"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
