@@ -27,7 +27,7 @@ interface TeacherDashboardData {
     title: string;
     description: string;
     thumbnail: string | null;
-    category: string;
+    category: { id: string; name: string } | null;
     level: string;
     price: number;
     isFree: boolean;
@@ -81,14 +81,7 @@ export default function TeacherDashboardPage() {
           totalLessons,
           completionRate: 0,
         },
-        // ✅ FIX: normalize category — extract .name if it's an object
-        recentCourses: courses.slice(0, 6).map((c: any) => ({
-          ...c,
-          category:
-            typeof c.category === "object" && c.category !== null
-              ? c.category.name
-              : (c.category ?? ""),
-        })),
+        recentCourses: courses.slice(0, 6),
       });
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard");
