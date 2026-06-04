@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
+import ShareButton from "@/components/shared/ShareButton";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1504,7 +1506,7 @@ function JobDetailPanel({
       </div>
 
       <div
-        className="flex-shrink-0 p-6"
+        className="flex-shrink-0 p-6 flex flex-col gap-2"
         style={{ borderTop: "1px solid var(--divider)" }}
       >
         {!isLoggedIn ? (
@@ -1533,6 +1535,11 @@ function JobDetailPanel({
             Apply Now →
           </button>
         )}
+        <ShareButton
+          href={`/jobs/${job.id}`}
+          title={`${job.title} at ${job.company}`}
+          className="w-full justify-center !min-h-0 py-2.5"
+        />
       </div>
     </div>
   );
@@ -1570,15 +1577,13 @@ interface JobCardProps {
 function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
   const formatSalary = useFormatSalary();
   const salary = formatSalary(job.salaryMin, job.salaryMax);
+  const router = useRouter();
 
   return (
-    <button
-      onClick={onClick}
-      className="glass w-full text-left p-5 flex flex-col gap-3 cursor-pointer transition-all hover:scale-[1.01]"
+    <div
+      className="glass w-full text-left p-5 flex flex-col gap-3 transition-all hover:scale-[1.01]"
       style={{
-        outline: isSelected ? "2px solid var(--purple-light)" : "none",
-        outlineOffset: "2px",
-        background: isSelected ? "var(--glass-bg-hover)" : "var(--glass-bg)",
+        background: "var(--glass-bg)",
       }}
     >
       <div className="flex items-start gap-3">
@@ -1661,7 +1666,15 @@ function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
           )}
         </div>
       )}
-    </button>
+      <Link
+        href={`/jobs/${job.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
+        style={{ color: "var(--accent-primary)", background: "var(--glass-bg-subtle)", border: "1px solid var(--glass-border)" }}
+      >
+        View Details →
+      </Link>
+    </div>
   );
 }
 
@@ -1675,8 +1688,6 @@ export default function JobsPage() {
   const [category, setCategory] = useState<JobCategory | "ALL">("ALL");
   const [type, setType] = useState<JobType | "ALL">("ALL");
   const [featuredOnly, setFeaturedOnly] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [applyTarget, setApplyTarget] = useState<Job | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
 
   // ── useJobs hook — single source of truth ──
@@ -1707,16 +1718,11 @@ export default function JobsPage() {
 
   // Clear selected job if it's no longer in filtered list
   useEffect(() => {
-    if (selectedJob && !filtered.find((j) => j.id === selectedJob.id)) {
-      setSelectedJob(null);
-    }
-  }, [filtered, selectedJob]);
+    if (successId) setTimeout(() => setSuccessId(null), 4000);
+  }, [successId]);
 
   function handleApplySuccess() {
-    if (!applyTarget) return;
-    setSuccessId(applyTarget.id);
-    setApplyTarget(null);
-    setTimeout(() => setSuccessId(null), 4000);
+    setSuccessId("applied");
   }
 
   function handlePostJobSuccess() {
@@ -1928,28 +1934,20 @@ export default function JobsPage() {
               </div>
             )}
 
-            {/* Jobs List + Detail Panel */}
+            {/* Jobs Grid */}
             <section className="px-4 pb-16 max-w-6xl mx-auto">
-              <div className="flex flex-col lg:flex-row gap-5 items-start">
-                {/* List */}
-                <div className="flex flex-col gap-3 w-full lg:w-[420px] lg:flex-shrink-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {jobsLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
+                    Array.from({ length: 6 }).map((_, i) => (
                       <JobCardSkeleton key={i} />
                     ))
                   ) : filtered.length === 0 ? (
-                    <div className="glass p-12 text-center">
+                    <div className="col-span-full glass p-12 text-center">
                       <div className="text-4xl mb-3">🔍</div>
-                      <p
-                        className="font-semibold mb-1"
-                        style={{ color: "var(--text-primary)" }}
-                      >
+                      <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
                         No jobs found
                       </p>
-                      <p
-                        className="text-sm"
-                        style={{ color: "var(--text-muted)" }}
-                      >
+                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                         Try adjusting your filters or search terms
                       </p>
                     </div>
@@ -1958,74 +1956,18 @@ export default function JobsPage() {
                       <JobCard
                         key={job.id}
                         job={job}
-                        isSelected={selectedJob?.id === job.id}
+                        isSelected={false}
                         hasApplied={appliedIds.has(job.id)}
-                        onClick={() => setSelectedJob(job)}
+                        onClick={() => {}}
                       />
                     ))
                   )}
-                </div>
-
-                {/* Detail panel — desktop */}
-                <div
-                  className="hidden lg:block flex-1 sticky top-24"
-                  style={{ minWidth: 0, maxHeight: "calc(100vh - 8rem)" }}
-                >
-                  {selectedJob && filtered.length > 0 ? (
-                    <JobDetailPanel
-                      job={selectedJob}
-                      onClose={() => setSelectedJob(null)}
-                      onApply={() => setApplyTarget(selectedJob)}
-                      hasApplied={appliedIds.has(selectedJob.id)}
-                      isLoggedIn={!!session?.user}
-                    />
-                  ) : (
-                    <EmptyDetailPanel />
-                  )}
-                </div>
               </div>
-
-              {/* Detail panel — mobile */}
-              {selectedJob && filtered.length > 0 && (
-                <div
-                  className="lg:hidden fixed inset-0 z-40 flex items-end"
-                  style={{ background: "var(--modal-backdrop)" }}
-                  onClick={(e) =>
-                    e.target === e.currentTarget && setSelectedJob(null)
-                  }
-                >
-                  <div
-                    className="w-full max-h-[85vh] flex flex-col"
-                    style={{
-                      borderRadius:
-                        "var(--card-radius-lg) var(--card-radius-lg) 0 0",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <JobDetailPanel
-                      job={selectedJob}
-                      onClose={() => setSelectedJob(null)}
-                      onApply={() => setApplyTarget(selectedJob)}
-                      hasApplied={appliedIds.has(selectedJob.id)}
-                      isLoggedIn={!!session?.user}
-                    />
-                  </div>
-                </div>
-              )}
             </section>
           </>
         )}
       </div>
 
-      {/* Apply modal */}
-      {applyTarget && (
-        <ApplyModal
-          job={applyTarget}
-          onClose={() => setApplyTarget(null)}
-          onSuccess={handleApplySuccess}
-          applyToJob={applyToJob}
-        />
-      )}
     </>
   );
 }
