@@ -11,7 +11,7 @@ interface TeacherCourse {
   title: string;
   description: string;
   thumbnail: string | null;
-  category: string;
+  category: { id: string; name: string } | null;
   level: string;
   price: number;
   isFree: boolean;

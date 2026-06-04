@@ -17,7 +17,7 @@ interface CourseCardProps {
     title: string;
     description: string;
     thumbnail: string | null;
-    category: string;
+    category: { id: string; name: string } | null;
     level: string;
     price: number;
     isFree: boolean;
@@ -97,7 +97,7 @@ export default function CourseCard({ course }: CourseCardProps) {
               color: "var(--badge-purple-text)",
             }}
           >
-            {course.category}
+            {course.category?.name}
           </span>
           <span
             className="px-2 py-0.5 rounded-full text-[10px] font-semibold"

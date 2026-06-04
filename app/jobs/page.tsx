@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import useSWR from "swr";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -343,12 +344,14 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-function formatSalary(min?: number, max?: number): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(0)}k` : `${n}`);
-  if (min && max) return `$${fmt(min)} – $${fmt(max)}`;
-  if (min) return `From $${fmt(min)}`;
-  return `Up to $${fmt(max!)}`;
+function useFormatSalary() {
+  const { convert } = useCurrency();
+  return (min?: number, max?: number): string | null => {
+    if (!min && !max) return null;
+    if (min && max) return `${convert(min)} – ${convert(max)}`;
+    if (min) return `From ${convert(min)}`;
+    return `Up to ${convert(max!)}`;
+  };
 }
 
 // ─── Shared Form Field ────────────────────────────────────────────────────────
@@ -1084,6 +1087,7 @@ function AppliedJobsView({
   applications,
   loading,
 }: AppliedJobsViewProps) {
+  const formatSalary = useFormatSalary();
   return (
     <div
       className="max-w-3xl mx-auto px-4 py-8"
@@ -1392,6 +1396,7 @@ function JobDetailPanel({
   hasApplied,
   isLoggedIn,
 }: JobDetailPanelProps) {
+  const formatSalary = useFormatSalary();
   const salary = formatSalary(job.salaryMin, job.salaryMax);
 
   return (
@@ -1563,6 +1568,7 @@ interface JobCardProps {
 }
 
 function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
+  const formatSalary = useFormatSalary();
   const salary = formatSalary(job.salaryMin, job.salaryMax);
 
   return (
