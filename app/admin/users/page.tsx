@@ -2,50 +2,25 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Users, Search, Shield, UserCheck } from "lucide-react";
-import { UserActions } from "./_component/UserActions";
+import UsersLiveTable from "@/components/admin/UsersLiveTable";
 
 export default async function UsersPage() {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: {
-          enrollments: true,
-          bookings: true,
-          orders: true,
-        },
-      },
-      subscriptions: {
-        where: {
-          status: {
-            in: ["ACTIVE", "TRIALING"],
-          },
-        },
-        include: { plan: true },
-        take: 1, // Get the most recent active subscription
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  // Server can still provide an initial dataset if desired — for now we'll
+  // render the client live table which fetches data itself.
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          User Management
+        </h1>
+        <p className="text-[var(--text-muted)] mt-1">
+          Manage all platform users
+        </p>
+      </div>
 
-  // Transform the data to have a single subscription field for easier access
-  const usersWithSubscription = users.map((user) => ({
-    ...user,
-    subscription: user.subscriptions[0] || null,
-  }));
-
-  const stats = {
-    total: usersWithSubscription.length,
-    admins: usersWithSubscription.filter((u) => u.role.includes("ADMIN"))
-      .length,
-    counselors: usersWithSubscription.filter((u) =>
-      u.role.includes("COUNSELOR"),
-    ).length,
-    volunteers: usersWithSubscription.filter((u) =>
-      u.role.includes("VOLUNTEER"),
-    ).length,
-    users: usersWithSubscription.filter((u) => u.role.includes("USER")).length,
-  };
+      <UsersLiveTable />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -116,19 +91,19 @@ export default async function UsersPage() {
 
       {/* Filters */}
       <div className="glass p-4 rounded-xl">
-        <div className="flex flex-wrap gap-4">
+        <form method="get" className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                className="glass-input w-full pl-10 pr-4 py-2.5"
-              />
+              <UsersSearch defaultValue={search} />
             </div>
           </div>
 
-          <select className="glass-input px-4 py-2.5">
+          <select
+            name="role"
+            defaultValue={role}
+            className="glass-input px-4 py-2.5"
+          >
             <option value="">All Roles</option>
             <option value="ADMIN">Admin</option>
             <option value="COUNSELOR">Counselor</option>
@@ -136,12 +111,22 @@ export default async function UsersPage() {
             <option value="USER">User</option>
           </select>
 
-          <select className="glass-input px-4 py-2.5">
+          <select
+            name="status"
+            defaultValue={status}
+            className="glass-input px-4 py-2.5"
+          >
             <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-        </div>
+
+          <div className="ml-auto">
+            <button type="submit" className="btn-primary px-4 py-2.5">
+              Apply
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Users Table */}

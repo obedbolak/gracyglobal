@@ -48,7 +48,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || (!hasRole(session.user.role, "ADMIN") && !hasRole(session.user.role, "COUNSELOR"))) {
+    if (
+      !session?.user ||
+      (!hasRole(session.user.role, "ADMIN") &&
+        !hasRole(session.user.role, "COUNSELOR"))
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -56,7 +60,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const { name, phone, country, image, role } = await req.json();
 
     // Counselors can only update basic user info, not roles
-    const isCounselor = hasRole(session.user.role, "COUNSELOR") && !hasRole(session.user.role, "ADMIN");
+    const isCounselor =
+      hasRole(session.user.role, "COUNSELOR") &&
+      !hasRole(session.user.role, "ADMIN");
     if (isCounselor && role !== undefined) {
       return NextResponse.json(
         { error: "Counselors cannot modify user roles" },
@@ -109,6 +115,20 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         { error: "You cannot delete your own account" },
         { status: 400 },
       );
+    }
+
+    // Delete any orders (and their items) belonging to the user first to
+    // avoid foreign key constraint errors.
+    const userOrders = await prisma.order.findMany({
+      where: { userId: id },
+      select: { id: true },
+    });
+    if (userOrders.length > 0) {
+      const orderIds = userOrders.map((o) => o.id);
+      await prisma.$transaction([
+        prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
+        prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
+      ]);
     }
 
     await prisma.user.delete({ where: { id } });
