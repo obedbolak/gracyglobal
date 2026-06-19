@@ -17,7 +17,11 @@ import {
   ChevronLeft,
   ChevronRight,
   PanelLeft,
+  Store, // <-- Add this
+  Wrench, // <-- Add this
+  Lock,
 } from "lucide-react";
+import { useSubscription } from "@/context/SubscriptionContext";
 
 // ── Menu Items ────────────────────────────────────────────────────────────────
 
@@ -76,7 +80,9 @@ function MyStoreNavItem({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Store className="w-5 h-5 flex-shrink-0" />
         <span className="font-medium truncate flex-1">My Store</span>
-        {!hasMerchantSub && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />}
+        {!hasMerchantSub && (
+          <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
+        )}
       </Link>
 
       <Link
@@ -93,7 +99,9 @@ function MyStoreNavItem({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Wrench className="w-5 h-5 flex-shrink-0" />
         <span className="font-medium truncate flex-1">My Services</span>
-        {!hasMerchantSub && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />}
+        {!hasMerchantSub && (
+          <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
+        )}
       </Link>
     </div>
   );
