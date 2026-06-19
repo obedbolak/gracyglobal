@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateOTP, sendOTPVerificationEmail } from "@/lib/emailService";
 import { sendOtp as sendTwilioOtp } from "@/lib/twilio";
+import { checkOtpRateLimit } from "@/lib/rateLimiter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,6 +76,23 @@ export async function POST(req: NextRequest) {
         ...(phone ? { phone } : {}),
       },
     });
+
+    // ── Rate limit: max 3 sends per 10 minutes per identifier ──
+    const identifier = phone ?? email ?? "";
+    const { limited, retryAfterMinutes } = await checkOtpRateLimit({
+      identifier,
+      maxRequests: 3,
+      windowMinutes: 10,
+    });
+
+    if (limited) {
+      return NextResponse.json(
+        {
+          error: `Too many OTP requests. Please wait ${retryAfterMinutes} minutes before trying again.`,
+        },
+        { status: 429 },
+      );
+    }
 
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes

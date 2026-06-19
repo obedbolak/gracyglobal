@@ -9,6 +9,8 @@ import {
   Shield,
   GraduationCap,
   Heart,
+  Store,
+  Wrench,
 } from "lucide-react";
 
 interface DashboardOption {
@@ -46,6 +48,20 @@ const dashboards: DashboardOption[] = [
     href: "/counselor",
     icon: Heart,
     role: "COUNSELOR",
+    color: "var(--green)",
+  },
+  {
+    label: "My Store",
+    href: "/store",
+    icon: Store,
+    role: "CREATOR",
+    color: "var(--yellow, #f59e0b)",
+  },
+  {
+    label: "My Services",
+    href: "/services-dashboard",
+    icon: Wrench,
+    role: "MARKETPLACE",
     color: "var(--green)",
   },
 ];

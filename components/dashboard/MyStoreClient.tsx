@@ -63,6 +63,7 @@ interface Props {
   hasServiceSub: boolean;
   products: Product[];
   services: Service[];
+  defaultTab?: Tab;
 }
 
 type Tab = "products" | "services";
@@ -256,21 +257,17 @@ export default function MyStoreClient({
   hasServiceSub,
   products,
   services,
+  defaultTab,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ── Derive initial tab from URL param ──────────────────────────────────────
   const getTabFromParams = (): Tab => {
     const param = searchParams.get("tab");
     if (param === "services") return "services";
     if (param === "products") return "products";
-    // No param — default to whichever plan they have
-    return hasMarketplaceSub
-      ? "products"
-      : hasServiceSub
-        ? "services"
-        : "products";
+    if (defaultTab) return defaultTab;
+    return hasMarketplaceSub ? "products" : hasServiceSub ? "services" : "products";
   };
 
   const [activeTab, setActiveTab] = useState<Tab>(getTabFromParams);

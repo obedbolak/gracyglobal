@@ -17,10 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   PanelLeft,
-  Store,
-  Lock,
 } from "lucide-react";
-import { useSubscription } from "@/hooks/useSubscription";
 
 // ── Menu Items ────────────────────────────────────────────────────────────────
 
@@ -45,19 +42,18 @@ function MyStoreNavItem({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { subscription, loading } = useSubscription();
 
-  const isActive = pathname.startsWith("/dashboard/creator");
+  const isStoreActive = pathname.startsWith("/dashboard/store");
+  const isServicesActive = pathname.startsWith("/dashboard/services");
 
   const hasMerchantSub =
     subscription?.status === "ACTIVE" &&
     (subscription.plan.category === "MARKETPLACE" ||
       subscription.plan.category === "SERVICE");
 
-  // Don't render anything while loading to avoid layout shift
   if (loading) return null;
 
   return (
     <div className="px-3 mt-1">
-      {/* Divider + label */}
       <div className="flex items-center gap-2 px-4 py-2">
         <div className="flex-1 h-px bg-[var(--divider)]" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)] opacity-60">
@@ -66,41 +62,39 @@ function MyStoreNavItem({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex-1 h-px bg-[var(--divider)]" />
       </div>
 
-      {hasMerchantSub ? (
-        <Link
-          href="/dashboard/creator"
-          onClick={onNavigate}
-          className={`
-            flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-            ${
-              isActive
-                ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
-            }
-          `}
-        >
-          <Store className="w-5 h-5 flex-shrink-0" />
-          <span className="font-medium truncate">My Store</span>
-        </Link>
-      ) : (
-        /* Locked — still navigates to /dashboard/creator which shows upgrade UI */
-        <Link
-          href="/dashboard/creator"
-          onClick={onNavigate}
-          className={`
-            flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-            ${
-              isActive
-                ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
-            }
-          `}
-        >
-          <Store className="w-5 h-5 flex-shrink-0" />
-          <span className="font-medium truncate flex-1">My Store</span>
-          <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
-        </Link>
-      )}
+      <Link
+        href="/dashboard/store"
+        onClick={onNavigate}
+        className={`
+          flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+          ${
+            isStoreActive
+              ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+          }
+        `}
+      >
+        <Store className="w-5 h-5 flex-shrink-0" />
+        <span className="font-medium truncate flex-1">My Store</span>
+        {!hasMerchantSub && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />}
+      </Link>
+
+      <Link
+        href="/dashboard/services"
+        onClick={onNavigate}
+        className={`
+          flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+          ${
+            isServicesActive
+              ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+          }
+        `}
+      >
+        <Wrench className="w-5 h-5 flex-shrink-0" />
+        <span className="font-medium truncate flex-1">My Services</span>
+        {!hasMerchantSub && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />}
+      </Link>
     </div>
   );
 }
@@ -108,24 +102,39 @@ function MyStoreNavItem({ onNavigate }: { onNavigate?: () => void }) {
 // Collapsed version — icon only
 function CollapsedMyStoreItem() {
   const pathname = usePathname();
-  const isActive = pathname.startsWith("/dashboard/creator");
+  const isStoreActive = pathname.startsWith("/dashboard/store");
+  const isServicesActive = pathname.startsWith("/dashboard/services");
 
   return (
     <div className="px-3 mt-1">
       <div className="w-full h-px bg-[var(--divider)] mb-1" />
       <Link
-        href="/dashboard/creator"
+        href="/dashboard/store"
         title="My Store"
         className={`
           flex items-center justify-center px-4 py-3 rounded-lg transition-all
           ${
-            isActive
+            isStoreActive
               ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
               : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
           }
         `}
       >
         <Store className="w-5 h-5" />
+      </Link>
+      <Link
+        href="/dashboard/services"
+        title="My Services"
+        className={`
+          flex items-center justify-center px-4 py-3 rounded-lg transition-all
+          ${
+            isServicesActive
+              ? "bg-[var(--sidebar-item-active)] text-[var(--purple)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
+          }
+        `}
+      >
+        <Wrench className="w-5 h-5" />
       </Link>
     </div>
   );
@@ -136,19 +145,18 @@ function CollapsedMyStoreItem() {
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <>
-      <nav className="px-3 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`
+    <nav className="px-3 space-y-1">
+      {menuItems.map((item) => {
+        const Icon = item.icon;
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`
                 flex items-center gap-3 px-4 py-3 rounded-lg transition-all
                 ${
                   isActive
@@ -156,36 +164,31 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                     : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
                 }
               `}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium truncate">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* My Store always rendered below main nav */}
-      <MyStoreNavItem onNavigate={onNavigate} />
-    </>
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
 function CollapsedNavItems() {
   const pathname = usePathname();
   return (
-    <>
-      <nav className="px-3 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={`
+    <nav className="px-3 space-y-1">
+      {menuItems.map((item) => {
+        const Icon = item.icon;
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            title={item.label}
+            className={`
                 flex items-center justify-center px-4 py-3 rounded-lg transition-all
                 ${
                   isActive
@@ -193,15 +196,12 @@ function CollapsedNavItems() {
                     : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)]"
                 }
               `}
-            >
-              <Icon className="w-5 h-5" />
-            </Link>
-          );
-        })}
-      </nav>
-
-      <CollapsedMyStoreItem />
-    </>
+          >
+            <Icon className="w-5 h-5" />
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
