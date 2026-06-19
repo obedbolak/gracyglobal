@@ -34,6 +34,7 @@ import {
   Check,
 } from "lucide-react";
 import PlansModal from "@/components/dashboard/PlansModal";
+import { useSubscription } from "@/hooks/useSubscription";
 
 // ─── UPDATED Types ─────────────────────────────────────────────────────────────
 
@@ -174,54 +175,58 @@ const FEATURES = [
   {
     key: "TEACHER",
     title: "Teach Courses",
-    description:
-      "Create and publish e-learning courses, earn from students worldwide.",
+    description: "Create and publish e-learning courses, earn from students worldwide.",
     icon: GraduationCap,
     color: "var(--purple)",
     bg: "rgba(99,74,221,0.08)",
     href: "/teacher",
-    type: "role" as const, // ← needs role check → show plans modal if locked
+    type: "role" as const,
     requiredRole: "TEACHER",
     category: "TEACHER",
+    dashboardHref: "/teacher",
+    subCategory: null,
   },
   {
     key: "COUNSELOR",
     title: "Offer Counseling",
-    description:
-      "Provide professional counseling sessions and grow your client base.",
+    description: "Provide professional counseling sessions and grow your client base.",
     icon: HeartHandshake,
     color: "var(--blue)",
     bg: "rgba(59,130,246,0.08)",
     href: "/counselor",
-    type: "role" as const, // ← needs role check → show plans modal if locked
+    type: "role" as const,
     requiredRole: "COUNSELOR",
     category: "COUNSELLOR",
+    dashboardHref: "/counselor",
+    subCategory: null,
   },
   {
     key: "SERVICE",
     title: "Sell Services",
-    description:
-      "List your skills and services on the marketplace for clients to book.",
+    description: "List your skills and services on the marketplace for clients to book.",
     icon: Wrench,
     color: "var(--green)",
     bg: "rgba(34,197,94,0.08)",
-    href: "/dashboard/creator?tab=services",
-    type: "link" as const, // ← always navigates, My Store page handles the lock
+    href: "/services-dashboard",
+    type: "sub" as const,
     requiredRole: null,
     category: "SERVICE",
+    dashboardHref: "/services-dashboard",
+    subCategory: "SERVICE" as const,
   },
   {
     key: "PRODUCT",
     title: "List Products",
-    description:
-      "Sell physical or digital products to customers across the platform.",
+    description: "Sell physical or digital products to customers across the platform.",
     icon: Package,
     color: "var(--yellow, #f59e0b)",
     bg: "rgba(245,158,11,0.08)",
-    href: "/dashboard/creator?tab=products",
-    type: "link" as const, // ← always navigates, My Store page handles the lock
+    href: "/store",
+    type: "sub" as const,
     requiredRole: null,
     category: "MARKETPLACE",
+    dashboardHref: "/store",
+    subCategory: "MARKETPLACE" as const,
   },
 ];
 
@@ -229,9 +234,38 @@ function FeatureCards({ roles, sessionRoles }: FeatureCardsProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
+  const { getSubscriptionByCategory } = useSubscription();
 
-  // Use session roles immediately, profile roles as backup
   const effectiveRoles = sessionRoles || roles;
+
+  const handleFeatureClick = (feature: typeof FEATURES[0]) => {
+    if (feature.type === "role") {
+      // Has the role → go to dashboard
+      const hasAccess = effectiveRoles.includes("ADMIN") ||
+        (feature.requiredRole !== null && effectiveRoles.includes(feature.requiredRole));
+      if (hasAccess) {
+        window.location.href = feature.dashboardHref;
+      } else {
+        setActiveFeature(feature.title);
+        setActiveCategory(feature.category);
+        setModalOpen(true);
+      }
+      return;
+    }
+
+    if (feature.type === "sub") {
+      // Has active subscription → go to their dashboard
+      const sub = getSubscriptionByCategory(feature.subCategory as any);
+      if (sub && sub.status === "ACTIVE") {
+        window.location.href = feature.dashboardHref;
+      } else {
+        // No subscription → show plans modal
+        setActiveFeature(feature.title);
+        setActiveCategory(feature.category);
+        setModalOpen(true);
+      }
+    }
+  };
 
   return (
     <>
@@ -267,110 +301,69 @@ function FeatureCards({ roles, sessionRoles }: FeatureCardsProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;
+            const effectiveRolesCheck = sessionRoles || roles;
 
-            // "link" type features are always accessible — My Store handles the subscription lock internally
-            const hasAccess =
-              feature.type === "link" ||
-              effectiveRoles.includes("ADMIN") ||
-              (feature.requiredRole !== null &&
-                effectiveRoles.includes(feature.requiredRole));
-
-            const CardContent = () => (
-              <div
-                className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
-                style={{
-                  background: hasAccess ? feature.bg : "var(--glass-bg-subtle)",
-                  border: "1px solid var(--divider)",
-                  opacity: hasAccess ? 1 : 0.75,
-                }}
-              >
-                <div
-                  className="p-2 rounded-lg flex-shrink-0"
-                  style={{ background: "var(--glass-bg)" }}
-                >
-                  <Icon
-                    className="w-5 h-5"
-                    style={{
-                      color: hasAccess ? feature.color : "var(--text-muted)",
-                    }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p
-                      className="font-semibold text-sm"
-                      style={{
-                        color: hasAccess
-                          ? "var(--text-primary)"
-                          : "var(--text-secondary)",
-                      }}
-                    >
-                      {feature.title}
-                    </p>
-                    {hasAccess ? (
-                      <CheckCircle
-                        className="w-3.5 h-3.5 flex-shrink-0"
-                        style={{ color: "var(--green)" }}
-                      />
-                    ) : (
-                      <Lock
-                        className="w-3 h-3 flex-shrink-0"
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                    )}
-                  </div>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {feature.description}
-                  </p>
-                </div>
-                {hasAccess ? (
-                  <ChevronRight
-                    className="w-4 h-4 mt-0.5 flex-shrink-0"
-                    style={{ color: "var(--text-muted)" }}
-                  />
-                ) : (
-                  <span
-                    className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold mt-0.5"
-                    style={{
-                      background: "var(--warning-bg)",
-                      color: "var(--yellow)",
-                    }}
-                  >
-                    View Pricing
-                  </span>
-                )}
-              </div>
-            );
-
-            // "link" type — always a Link, regardless of subscription
-            if (feature.type === "link") {
-              return (
-                <Link key={feature.key} href={feature.href}>
-                  <CardContent />
-                </Link>
-              );
+            let hasAccess = false;
+            if (feature.type === "role") {
+              hasAccess = effectiveRolesCheck.includes("ADMIN") ||
+                (feature.requiredRole !== null && effectiveRolesCheck.includes(feature.requiredRole));
+            } else if (feature.type === "sub") {
+              const sub = getSubscriptionByCategory(feature.subCategory as any);
+              hasAccess = !!(sub && sub.status === "ACTIVE");
             }
 
-            // "role" type — Link if they have the role, button to show plans modal if not
-            return hasAccess ? (
-              <div
-                key={feature.key}
-                onClick={() => (window.location.href = feature.href)}
-                className="cursor-pointer"
-              >
-                <CardContent />
-              </div>
-            ) : (
+            return (
               <button
                 key={feature.key}
-                onClick={() => {
-                  setActiveFeature(feature.title);
-                  setActiveCategory(feature.category);
-                  setModalOpen(true);
-                }}
+                onClick={() => handleFeatureClick(feature)}
                 className="text-left w-full"
               >
-                <CardContent />
+                <div
+                  className="p-4 rounded-xl flex items-start gap-3 transition-all hover:scale-[1.02] cursor-pointer"
+                  style={{
+                    background: hasAccess ? feature.bg : "var(--glass-bg-subtle)",
+                    border: "1px solid var(--divider)",
+                    opacity: hasAccess ? 1 : 0.75,
+                  }}
+                >
+                  <div
+                    className="p-2 rounded-lg flex-shrink-0"
+                    style={{ background: "var(--glass-bg)" }}
+                  >
+                    <Icon
+                      className="w-5 h-5"
+                      style={{ color: hasAccess ? feature.color : "var(--text-muted)" }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p
+                        className="font-semibold text-sm"
+                        style={{ color: hasAccess ? "var(--text-primary)" : "var(--text-secondary)" }}
+                      >
+                        {feature.title}
+                      </p>
+                      {hasAccess ? (
+                        <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--green)" }} />
+                      ) : (
+                        <Lock className="w-3 h-3 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
+                      )}
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {feature.description}
+                    </p>
+                  </div>
+                  {hasAccess ? (
+                    <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
+                  ) : (
+                    <span
+                      className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold mt-0.5"
+                      style={{ background: "var(--warning-bg)", color: "var(--yellow)" }}
+                    >
+                      {feature.type === "sub" ? "Subscribe" : "View Pricing"}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -379,9 +372,7 @@ function FeatureCards({ roles, sessionRoles }: FeatureCardsProps) {
       <PlansModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        filterCategory={
-          activeCategory as "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER"
-        }
+        filterCategory={activeCategory as "COUNSELLOR" | "MARKETPLACE" | "SERVICE" | "TEACHER"}
         featureName={activeFeature}
       />
     </>
