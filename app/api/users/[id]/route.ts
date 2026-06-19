@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const { name, phone, country, image, role } = await req.json();
+    const { name, phone, country, image, role, newPassword } = await req.json();
 
     // Counselors can only update basic user info, not roles
     const isCounselor =
@@ -66,6 +66,14 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (isCounselor && role !== undefined) {
       return NextResponse.json(
         { error: "Counselors cannot modify user roles" },
+        { status: 403 },
+      );
+    }
+
+    // Only admins can change passwords
+    if (newPassword !== undefined && !hasRole(session.user.role, "ADMIN")) {
+      return NextResponse.json(
+        { error: "Only admins can change user passwords" },
         { status: 403 },
       );
     }
@@ -86,6 +94,18 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         );
       }
       updateData.role = roleArray;
+    }
+
+    // Hash and set new password if provided
+    if (newPassword) {
+      if (newPassword.length < 8) {
+        return NextResponse.json(
+          { error: "Password must be at least 8 characters" },
+          { status: 400 },
+        );
+      }
+      const bcrypt = await import("bcryptjs");
+      updateData.password = await bcrypt.hash(newPassword, 12);
     }
 
     const user = await prisma.user.update({

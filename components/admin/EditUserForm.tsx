@@ -23,6 +23,9 @@ import {
   ShoppingBag,
   MessageSquare,
   X,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 import { User, UserRole } from "@prisma/client";
@@ -131,6 +134,12 @@ export default function EditUserForm({ user }: EditUserFormProps) {
     Array.isArray(user.role) ? user.role : [user.role as UserRole],
   );
 
+  // Password state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
   const initialRoles = Array.isArray(user.role)
     ? user.role
     : [user.role as UserRole];
@@ -167,6 +176,18 @@ export default function EditUserForm({ user }: EditUserFormProps) {
     if (!email.trim()) {
       setError("Email is required");
       return;
+    }
+
+    // Password validation
+    if (newPassword) {
+      if (newPassword.length < 8) {
+        setError("New password must be at least 8 characters");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
     }
 
     // Warn if removing admin
@@ -209,6 +230,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
           country: country.trim() || null,
           image: image || null,
           role: roles,
+          ...(newPassword ? { newPassword } : {}),
         }),
       });
 
@@ -237,6 +259,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
     phone !== (user.phone || "") ||
     country !== (user.country || "") ||
     image !== (user.image || "") ||
+    !!newPassword ||
     JSON.stringify(roles.sort()) !== JSON.stringify([...initialRoles].sort());
 
   const addedRoles = roles.filter((r) => !initialRoles.includes(r));
@@ -245,7 +268,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-1xl mx-auto space-y-1">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
@@ -466,6 +489,110 @@ export default function EditUserForm({ user }: EditUserFormProps) {
           </div>
         </div>
 
+        {/* ── Change Password ── */}
+        <div
+          className="p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <KeyRound className="w-5 h-5" style={{ color: "var(--purple)" }} />
+            <h2
+              className="text-lg font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Change Password
+            </h2>
+          </div>
+          <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+            Leave blank to keep the current password. Minimum 8 characters.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="flex items-center gap-1.5 text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPass ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full p-3 pr-10 rounded-xl glass-input text-sm"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {showNewPass ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label
+                className="flex items-center gap-1.5 text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPass ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password"
+                  className="w-full p-3 pr-10 rounded-xl glass-input text-sm"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {showConfirmPass ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+          {newPassword &&
+            confirmPassword &&
+            newPassword !== confirmPassword && (
+              <p
+                className="mt-2 text-xs flex items-center gap-1"
+                style={{ color: "var(--error-text)" }}
+              >
+                <AlertTriangle className="w-3 h-3" /> Passwords do not match
+              </p>
+            )}
+          {newPassword &&
+            confirmPassword &&
+            newPassword === confirmPassword && (
+              <p
+                className="mt-2 text-xs flex items-center gap-1"
+                style={{ color: "var(--success-text)" }}
+              >
+                <CheckCircle className="w-3 h-3" /> Passwords match
+              </p>
+            )}
+        </div>
+
         {/* ── Roles ── */}
         <div
           className="p-6 rounded-2xl"
@@ -678,7 +805,7 @@ export default function EditUserForm({ user }: EditUserFormProps) {
         </div>
 
         {/* ── Service Management ── */}
-        <UserServiceManager 
+        <UserServiceManager
           userId={user.id}
           currentRoles={roles}
           onUpdate={() => {
@@ -707,6 +834,17 @@ export default function EditUserForm({ user }: EditUserFormProps) {
               className="space-y-1.5 text-xs"
               style={{ color: "var(--text-secondary)" }}
             >
+              {newPassword && (
+                <p>
+                  Password:{" "}
+                  <span
+                    className="font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Will be updated
+                  </span>
+                </p>
+              )}
               {name !== (user.name || "") && (
                 <p>
                   Name:{" "}
