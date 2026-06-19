@@ -1131,6 +1131,8 @@ model ServiceBooking {
 model Store {
   id           String   @id @default(cuid())
   userId       String   @unique
+    slug         String?  @unique          // ← ADD
+
   businessName String
   businessType String?   // e.g. "Electronics", "Fashion", "Food"
   image        String?
@@ -1147,5 +1149,7 @@ model Store {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+    @@index([slug])                        // ← ADD
+
   @@map("stores")
 }

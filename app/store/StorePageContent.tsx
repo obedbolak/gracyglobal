@@ -15,6 +15,8 @@ import {
   Star,
   Search,
   AlertCircle,
+  ExternalLink,
+  Copy,
   Save,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -648,6 +650,70 @@ function EarningsView({
   );
 }
 
+function PublicPageBanner({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  // Build absolute URL on the client; falls back to relative path during SSR.
+  const url =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/stores/${slug}`
+      : `/stores/${slug}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard may be unavailable; ignore
+    }
+  };
+
+  return (
+    <div
+      className="glass flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl"
+      style={{ border: "1px solid var(--glass-border)" }}
+    >
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Your public storefront
+        </p>
+        <p
+          className="text-xs truncate mt-0.5"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          {url}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={copy}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[var(--sidebar-item-hover)] transition-colors"
+          style={{
+            border: "1px solid var(--glass-border)",
+            color: "var(--text-primary)",
+          }}
+        >
+          <Copy className="w-3.5 h-3.5" /> {copied ? "Copied!" : "Copy link"}
+        </button>
+        <a
+          href={`/stores/${slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white hover:opacity-90 transition-opacity"
+          style={{
+            background: "linear-gradient(135deg, var(--purple), var(--blue))",
+          }}
+        >
+          <ExternalLink className="w-3.5 h-3.5" /> View page
+        </a>
+      </div>
+    </div>
+  );
+}
+
 // ── Settings View ─────────────────────────────────────────────────────────────
 
 function StoreSettings({
@@ -721,7 +787,7 @@ function StoreSettings({
       >
         Store Settings
       </h1>
-
+      {store?.slug && <PublicPageBanner slug={store.slug} />}
       {incomplete && (
         <div
           className="glass flex items-start gap-3 p-4 rounded-xl"

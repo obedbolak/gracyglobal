@@ -297,6 +297,69 @@ export default function ProductDetailPage() {
                 ({product.reviews} reviews)
               </span>
             </div>
+            {product.seller?.store?.slug && product.seller.store.active && (
+              <Link
+                href={`/stores/${product.seller.store.slug}`}
+                className="glass flex items-center gap-3 p-3 rounded-xl hover:scale-[1.01] transition-transform"
+                style={{ border: "1px solid var(--glass-border)" }}
+              >
+                <div
+                  className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0"
+                  style={{ background: "var(--glass-bg-subtle)" }}
+                >
+                  {product.seller.store.image ? (
+                    <img
+                      src={product.seller.store.image}
+                      alt={product.seller.store.businessName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ShoppingBag
+                        size={18}
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[10px] uppercase tracking-wider"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Sold by
+                  </p>
+                  <p
+                    className="font-bold text-sm truncate"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {product.seller.store.businessName}
+                  </p>
+                  {[
+                    product.seller.store.quarter,
+                    product.seller.store.location,
+                  ].filter(Boolean).length > 0 && (
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {[
+                        product.seller.store.quarter,
+                        product.seller.store.location,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className="text-xs font-semibold flex-shrink-0"
+                  style={{ color: "var(--accent-primary)" }}
+                >
+                  Visit store →
+                </span>
+              </Link>
+            )}
 
             {/* Description */}
             <p

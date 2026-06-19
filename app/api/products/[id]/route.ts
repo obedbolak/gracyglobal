@@ -20,6 +20,23 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         category: {
           select: { id: true, name: true, icon: true, color: true },
         },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            store: {
+              select: {
+                slug: true,
+                businessName: true,
+                image: true,
+                location: true,
+                quarter: true,
+                businessType: true,
+                active: true,
+              },
+            },
+          },
+        },
       },
     });
 

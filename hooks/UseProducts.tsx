@@ -40,6 +40,19 @@ export interface ProductItem {
   benefits: string[];
   ingredients: string[];
   sellerId: string | null;
+  seller?: {
+    id: string;
+    name: string | null;
+    store: {
+      slug: string | null;
+      businessName: string;
+      image: string | null;
+      location: string | null;
+      quarter: string | null;
+      businessType: string | null;
+      active: boolean;
+    } | null;
+  } | null;
   createdAt: string;
 }
 

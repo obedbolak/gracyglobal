@@ -9,6 +9,8 @@ import StorePageContent from "@/app/store/StorePageContent";
 
 export interface StoreProfile {
   id: string;
+  slug?: string | null; // ← ADD
+
   businessName: string;
   businessType?: string | null;
   image?: string | null;
