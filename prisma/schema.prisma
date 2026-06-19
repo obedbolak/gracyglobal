@@ -26,6 +26,7 @@ model User {
 
   postedJobs       Job[]            @relation("PostedJobs") // ← ADD
 jobSeekerProfile JobSeeker?       // ← ADD
+ store  Store?
 
   // Relations
   accounts         Account[]
@@ -1125,3 +1126,26 @@ model ServiceBooking {
 }
 
 // Update User model - add this relation:
+// ─── STORE (Marketplace Seller Profile) ──────────────────────────────────────
+
+model Store {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  businessName String
+  businessType String?   // e.g. "Electronics", "Fashion", "Food"
+  image        String?
+  location     String?   // e.g. city/town
+  quarter      String?   // e.g. neighborhood
+  openingHours String?   // e.g. "Mon–Sat, 8am–6pm"
+  description  String?   @db.Text
+  phone        String?
+  whatsapp     String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("stores")
+}
