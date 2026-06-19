@@ -74,12 +74,12 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
             {service.rating.toFixed(1)} ({service.reviews})
           </div>
           {service.availability && (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{service.availability}</span>
+            <span className="text-xs truncate max-w-[100px]" style={{ color: "var(--text-muted)" }}>{service.availability}</span>
           )}
         </div>
         <div className="flex items-center justify-between pt-3" style={{ borderTop: "1px solid var(--divider)" }}>
           <span className="text-xs" style={{ color: "var(--text-muted)" }}>{service.includes?.length ?? 0} includes</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button onClick={onEdit} className="flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--purple)" }}>
               <Pencil className="w-3 h-3" /> Edit
             </button>
@@ -131,7 +131,7 @@ function Overview({ services, bookings, onViewChange, convert }: { services: Ser
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {services.slice(0, 6).map((s) => (
-              <ServiceCard key={s.id} service={s} onEdit={() => onViewChange("services")} onDelete={() => {}} />
+              <ServiceCard key={s.id} service={s} onEdit={() => { onViewChange("services"); }} onDelete={() => {}} />
             ))}
           </div>
         )}
@@ -163,7 +163,9 @@ function ServicesList({ services, onAdd, onEdit, onDelete }: { services: Service
       {filtered.length === 0 ? (
         <div className="glass p-12 rounded-2xl text-center" style={{ border: "1px solid var(--glass-border)" }}>
           <Wrench className="w-14 h-14 mx-auto mb-3" style={{ color: "var(--text-disabled)" }} />
-          <p className="font-semibold mb-4" style={{ color: "var(--text-muted)" }}>{search ? `No services matching "${search}"` : "No services yet"}</p>
+          <p className="font-semibold mb-4" style={{ color: "var(--text-muted)" }}>
+            {search ? `No services matching "${search}"` : "No services yet"}
+          </p>
           {!search && <button onClick={onAdd} className="btn-primary px-6 py-2.5 text-sm font-semibold rounded-xl">Add your first service</button>}
         </div>
       ) : (
@@ -230,7 +232,9 @@ function BookingsView({ bookings, convert }: { bookings: any[]; convert: (n: num
 function EarningsView({ bookings, convert }: { bookings: any[]; convert: (n: number) => string }) {
   const completed = bookings.filter((b) => b.status === "COMPLETED");
   const total = completed.reduce((a, b) => a + (b.totalPrice ?? 0), 0);
-  const thisMonth = completed.filter((b) => new Date(b.createdAt).getMonth() === new Date().getMonth()).reduce((a, b) => a + (b.totalPrice ?? 0), 0);
+  const thisMonth = completed
+    .filter((b) => new Date(b.createdAt).getMonth() === new Date().getMonth())
+    .reduce((a, b) => a + (b.totalPrice ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -262,7 +266,7 @@ function EarningsView({ bookings, convert }: { bookings: any[]; convert: (n: num
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Content ──────────────────────────────────────────────────────────────
 
 export default function ServicesDashPageContent({ view, setView }: { view: ServicesView; setView: (v: ServicesView) => void }) {
   const { data: session } = useSession();

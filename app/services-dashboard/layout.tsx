@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import ServicesDashShell from "@/components/services-dashboard/ServicesDashShell";
 
+export const metadata = { title: "My Services | GracyGlobal" };
+
 export default async function ServicesDashLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login?callbackUrl=/services-dashboard");
@@ -12,5 +14,5 @@ export default async function ServicesDashLayout({ children }: { children: React
     redirect("/dashboard");
   }
 
-  return <ServicesDashShell session={session}>{children}</ServicesDashShell>;
+  return <ServicesDashShell session={session} />;
 }
