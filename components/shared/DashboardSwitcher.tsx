@@ -54,14 +54,14 @@ const dashboards: DashboardOption[] = [
     label: "My Store",
     href: "/store",
     icon: Store,
-    role: "CREATOR",
+    role: "MARKETPLACE",
     color: "var(--yellow, #f59e0b)",
   },
   {
     label: "My Services",
     href: "/services-dashboard",
     icon: Wrench,
-    role: "MARKETPLACE",
+    role: "CREATOR",
     color: "var(--green)",
   },
 ];
