@@ -37,3 +37,42 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { name, slug, description, category, image } = await req.json();
+
+    if (!name || !slug || !description || !category) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Check slug uniqueness
+    const existing = await prisma.community.findUnique({ where: { slug } });
+    if (existing) {
+      return NextResponse.json({ error: "Slug already taken" }, { status: 409 });
+    }
+
+    const community = await prisma.community.create({
+      data: {
+        name,
+        slug,
+        description,
+        category,
+        image: image || null,
+        members: {
+          create: { userId: session.user.id, role: "ADMIN" },
+        },
+      },
+    });
+
+    return NextResponse.json(community, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/communities error:", error);
+    return NextResponse.json({ error: "Failed to create community" }, { status: 500 });
+  }
+}

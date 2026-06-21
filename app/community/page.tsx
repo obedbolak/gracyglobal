@@ -1,11 +1,22 @@
+// app/community/page.tsx
+
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import {
+  Pencil,
+  Loader2,
+  ImageIcon,
+  Check,
+  X,
+  Search,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 
-import CommunityHero from "@/components/community/CommunityHero";
 import MyCommunityBar from "@/components/community/MyCommunityBar";
 import CommunityTabs, {
   type TabId,
@@ -19,6 +30,28 @@ import {
 } from "@/components/community/CommunityContent";
 import { useCommunityMembership } from "@/context/CommunityMembershipContext";
 
+const CATEGORIES = [
+  "Health & Environment",
+  "Education & Knowledge",
+  "Governance & Law",
+  "Economic Empowerment",
+  "Youth Empowerment",
+  "Women Empowerment",
+  "Other",
+];
+
+// Used only as a fallback when a community has no image of its own.
+const FALLBACK_CARD_IMAGE =
+  "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80";
+
+interface CommunitySummary {
+  slug: string;
+  name: string;
+  description: string;
+  memberCount?: number;
+  image?: string;
+}
+
 function CommunityPageContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -28,17 +61,47 @@ function CommunityPageContent() {
     isAnyMember,
     loading: membershipLoading,
     selectedSlug,
+    setSelectedSlug,
     selectedCommunity,
+    memberships,
+    isMember,
+    refresh,
   } = useCommunityMembership();
 
+  const [view, setView] = useState<"browse" | "community">("browse");
   const [activeTab, setActiveTab] = useState<TabId>("feed");
-  const [stats, setStats] = useState({
-    members: 0,
-    posts: 0,
-    countries: 0,
-    communities: 0,
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    category: "",
+    image: "",
   });
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const isAdmin = memberships.some(
+    (m) => m.community.slug === selectedSlug && m.role === "ADMIN",
+  );
+
+  useEffect(() => {
+    if (selectedCommunity) {
+      setEditForm({
+        name: selectedCommunity.name,
+        description: selectedCommunity.description,
+        category: selectedCommunity.category,
+        image: selectedCommunity.image ?? "",
+      });
+      setEditing(false);
+      setEditError(null);
+    }
+  }, [selectedSlug]);
+
+  const [communities, setCommunities] = useState<CommunitySummary[]>([]);
+  const [communitiesLoading, setCommunitiesLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [joining, setJoining] = useState(false);
   const [joinMessage, setJoinMessage] = useState<{
     type: "success" | "error" | "info";
@@ -48,11 +111,86 @@ function CommunityPageContent() {
   const isLoggedIn = !!session;
 
   useEffect(() => {
-    fetch("/api/community/stats")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setStats(d))
-      .finally(() => setStatsLoading(false));
+    fetch("/api/communities")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) =>
+        setCommunities(Array.isArray(d) ? d : (d?.communities ?? [])),
+      )
+      .catch(() => setCommunities([]))
+      .finally(() => setCommunitiesLoading(false));
   }, []);
+
+  const filteredCommunities = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return communities;
+    return communities.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q),
+    );
+  }, [communities, searchQuery]);
+
+  function resetEditForm() {
+    if (selectedCommunity) {
+      setEditForm({
+        name: selectedCommunity.name,
+        description: selectedCommunity.description,
+        category: selectedCommunity.category,
+        image: selectedCommunity.image ?? "",
+      });
+    }
+    setEditError(null);
+  }
+
+  function openCommunity(slug: string) {
+    setSelectedSlug(slug);
+    setView("community");
+  }
+
+  function goBackToBrowse() {
+    setView("browse");
+  }
+
+  async function handleEditImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setEditError(null);
+    try {
+      const fd = new FormData();
+      fd.append("files", file);
+      fd.append("folder", "communities");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setEditForm((f) => ({ ...f, image: data.uploads.url }));
+    } catch (err: any) {
+      setEditError(err.message || "Image upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleEditSave() {
+    if (!selectedSlug) return;
+    setSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/communities/${selectedSlug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      refresh();
+      setEditing(false);
+    } catch (err: any) {
+      setEditError(err.message || "Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleJoin(slug: string, communityName: string) {
     if (!isLoggedIn) {
@@ -74,6 +212,8 @@ function CommunityPageContent() {
           ? `✅ You've joined ${communityName}!`
           : `You're already a member of ${communityName}.`,
       });
+      refresh();
+      openCommunity(slug);
     } catch (err: any) {
       setJoinMessage({
         type: "error",
@@ -84,6 +224,15 @@ function CommunityPageContent() {
       setTimeout(() => setJoinMessage(null), 4000);
     }
   }
+
+  // Read ?slug= param and sync it into context
+  useEffect(() => {
+    const slugParam = searchParams.get("slug");
+    if (slugParam && memberships.length > 0) {
+      const match = memberships.find((m) => m.community.slug === slugParam);
+      if (match) setSelectedSlug(slugParam);
+    }
+  }, [searchParams, memberships]);
 
   // Reset tab when community changes
   useEffect(() => {
@@ -116,83 +265,588 @@ function CommunityPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Hero: only for guests or non-members */}
-      {!membershipLoading && !isAnyMember && (
-        <CommunityHero stats={stats} onJoin={handleJoin} joining={joining} />
+      {view === "browse" && (
+        <>
+          {/* Search — for members and guests alike */}
+          <section className="max-w-7xl mx-auto px-4 pt-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-xl">
+              <CommunitySearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+              />
+            </div>
+          </section>
+
+          {/* Browse all communities */}
+          <CommunityBrowser
+            communities={filteredCommunities}
+            communitiesLoading={communitiesLoading}
+            isMember={isMember}
+            onJoin={handleJoin}
+            onOpen={openCommunity}
+            joining={joining}
+            isLoggedIn={isLoggedIn}
+            hasQuery={searchQuery.trim().length > 0}
+          />
+        </>
       )}
 
-      {/* Member view */}
-      {!membershipLoading && isAnyMember && isLoggedIn && (
+      {/* Member dashboard for the currently selected community — full takeover */}
+      {view === "community" && isLoggedIn && (
         <section
           id="community-hub"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12"
         >
-          {/* Persistent community switcher */}
-          <MyCommunityBar />
+          <button
+            onClick={goBackToBrowse}
+            className="mb-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors hover:bg-black/5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to communities
+          </button>
 
-          {/* Selected community header */}
-          {selectedCommunity && (
-            <div className="mb-6">
-              <h2
-                className="text-xl font-bold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {selectedCommunity.name}
-              </h2>
-              <p
-                className="text-sm mt-1"
+          {membershipLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2
+                className="h-6 w-6 animate-spin"
                 style={{ color: "var(--text-muted)" }}
-              >
-                {selectedCommunity.description}
-              </p>
+              />
             </div>
-          )}
-
-          {/* Tabs */}
-          <div className="mb-8">
-            <CommunityTabs active={activeTab} onChange={setActiveTab} />
-          </div>
-
-          {/* Tab content — driven by selectedSlug from context */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${selectedSlug}-${activeTab}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.25 }}
+          ) : !isAnyMember ? (
+            <div
+              className="rounded-2xl border px-6 py-16 text-center text-sm"
+              style={{
+                borderColor: "var(--border-color, rgba(0,0,0,0.08))",
+                color: "var(--text-muted)",
+              }}
             >
-              {activeTab === "feed" && selectedSlug && (
-                <CommunityFeed communitySlug={selectedSlug} />
+              You're not a member of this community yet.
+            </div>
+          ) : (
+            <>
+              {/* Persistent community switcher */}
+              <MyCommunityBar />
+
+              {/* Selected community header — view mode or edit mode */}
+              {selectedCommunity && (
+                <div className="mb-6">
+                  {!editing ? (
+                    <div className="lg:flex lg:items-end lg:justify-between lg:gap-3">
+                      <div className="lg:flex lg:flex-1 lg:items-end lg:gap-3">
+                        <h2
+                          className="text-xl font-bold tracking-tight lg:text-2xl lg:shrink-0"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {selectedCommunity.name}
+                        </h2>
+                        <p
+                          className="mt-1 text-sm leading-relaxed lg:mt-0 lg:flex-1 lg:text-base"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {selectedCommunity.description}
+                        </p>
+                      </div>
+
+                      {isAdmin && (
+                        <button
+                          onClick={() => setEditing(true)}
+                          className="mt-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors lg:mt-0"
+                          style={{
+                            borderColor:
+                              "var(--border-color, rgba(0,0,0,0.12))",
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit community
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <CommunityEditForm
+                      editForm={editForm}
+                      setEditForm={setEditForm}
+                      onCancel={() => {
+                        setEditing(false);
+                        resetEditForm();
+                      }}
+                      onSave={handleEditSave}
+                      onImageChange={handleEditImage}
+                      uploading={uploading}
+                      saving={saving}
+                      error={editError}
+                    />
+                  )}
+                </div>
               )}
-              {activeTab === "projects" && selectedSlug && (
-                <CommunityProjects communitySlug={selectedSlug} />
-              )}
-              {activeTab === "events" && selectedSlug && (
-                <CommunityEvents communitySlug={selectedSlug} />
-              )}
-              {activeTab === "resources" && selectedSlug && (
-                <CommunityResources communitySlug={selectedSlug} />
-              )}
-              {activeTab === "members" && selectedSlug && (
-                <CommunityMembers communitySlug={selectedSlug} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+
+              {/* Tabs */}
+              <div className="mb-8">
+                <CommunityTabs active={activeTab} onChange={setActiveTab} />
+              </div>
+
+              {/* Tab content — driven by selectedSlug from context */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${selectedSlug}-${activeTab}`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {activeTab === "feed" && selectedSlug && (
+                    <CommunityFeed communitySlug={selectedSlug} />
+                  )}
+                  {activeTab === "projects" && selectedSlug && (
+                    <CommunityProjects communitySlug={selectedSlug} />
+                  )}
+                  {activeTab === "events" && selectedSlug && (
+                    <CommunityEvents communitySlug={selectedSlug} />
+                  )}
+                  {activeTab === "resources" && selectedSlug && (
+                    <CommunityResources communitySlug={selectedSlug} />
+                  )}
+                  {activeTab === "members" && selectedSlug && (
+                    <CommunityMembers communitySlug={selectedSlug} />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </>
+          )}
         </section>
       )}
     </main>
   );
 }
 
+/* ----------------------------------------------------------------- */
+/* Search bar                                                         */
+/* ----------------------------------------------------------------- */
+
+function CommunitySearchBar({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <Search
+        className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2"
+        style={{ color: "var(--text-muted)" }}
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search communities by name or topic"
+        className="w-full rounded-xl border py-3 pl-11 pr-10 text-sm outline-none transition-colors"
+        style={{
+          borderColor: "var(--border-color, rgba(0,0,0,0.12))",
+          color: "var(--text-primary)",
+          background: "var(--card-bg, var(--bg-primary, #ffffff))",
+        }}
+      />
+      {value && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors hover:bg-black/5"
+          aria-label="Clear search"
+        >
+          <X className="h-3.5 w-3.5" style={{ color: "var(--text-muted)" }} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------- */
+/* Admin inline edit form — same page, driven entirely by `editing`  */
+/* ----------------------------------------------------------------- */
+
+function CommunityEditForm({
+  editForm,
+  setEditForm,
+  onCancel,
+  onSave,
+  onImageChange,
+  uploading,
+  saving,
+  error,
+}: {
+  editForm: {
+    name: string;
+    description: string;
+    category: string;
+    image: string;
+  };
+  setEditForm: React.Dispatch<
+    React.SetStateAction<{
+      name: string;
+      description: string;
+      category: string;
+      image: string;
+    }>
+  >;
+  onCancel: () => void;
+  onSave: () => void;
+  onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  uploading: boolean;
+  saving: boolean;
+  error: string | null;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border p-5"
+      style={{
+        borderColor: "var(--border-color, rgba(0,0,0,0.1))",
+        background: "var(--card-bg, var(--bg-primary, #ffffff))",
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <h3
+          className="text-sm font-bold uppercase tracking-wide"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Edit community
+        </h3>
+        <button
+          onClick={onCancel}
+          className="rounded-lg p-1.5 transition-colors hover:bg-black/5"
+          aria-label="Cancel editing"
+        >
+          <X className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[160px_1fr]">
+        {/* Image */}
+        <div>
+          <label
+            className="mb-1.5 block text-xs font-semibold"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Image
+          </label>
+          <label
+            className="relative flex h-32 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border lg:w-40"
+            style={{ borderColor: "var(--border-color, rgba(0,0,0,0.12))" }}
+          >
+            {editForm.image ? (
+              <img
+                src={editForm.image}
+                alt="Community"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <ImageIcon
+                className="h-6 w-6"
+                style={{ color: "var(--text-muted)" }}
+              />
+            )}
+            {uploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onImageChange}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-3">
+          <div>
+            <label
+              className="mb-1 block text-xs font-semibold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Name
+            </label>
+            <input
+              type="text"
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, name: e.target.value }))
+              }
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+              style={{
+                borderColor: "var(--border-color, rgba(0,0,0,0.12))",
+                color: "var(--text-primary)",
+                background: "var(--bg-primary, #ffffff)",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              className="mb-1 block text-xs font-semibold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Description
+            </label>
+            <textarea
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, description: e.target.value }))
+              }
+              rows={3}
+              className="w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none"
+              style={{
+                borderColor: "var(--border-color, rgba(0,0,0,0.12))",
+                color: "var(--text-primary)",
+                background: "var(--bg-primary, #ffffff)",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              className="mb-1 block text-xs font-semibold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Category
+            </label>
+            <select
+              value={editForm.category}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, category: e.target.value }))
+              }
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+              style={{
+                borderColor: "var(--border-color, rgba(0,0,0,0.12))",
+                color: "var(--text-primary)",
+                background: "var(--bg-primary, #ffffff)",
+              }}
+            >
+              <option value="">Select a category</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>
+      )}
+
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          style={{
+            borderColor: "var(--border-color, rgba(0,0,0,0.12))",
+            color: "var(--text-primary)",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSave}
+          disabled={saving || uploading}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ----------------------------------------------------------------- */
+/* Browse grid — every card is its own image, text overlaid           */
+/* ----------------------------------------------------------------- */
+
+function CommunityBrowser({
+  communities,
+  communitiesLoading,
+  isMember,
+  onJoin,
+  onOpen,
+  joining,
+  isLoggedIn,
+  hasQuery,
+}: {
+  communities: CommunitySummary[];
+  communitiesLoading: boolean;
+  isMember: (slug: string) => boolean;
+  onJoin: (slug: string, name: string) => void;
+  onOpen: (slug: string) => void;
+  joining: boolean;
+  isLoggedIn: boolean;
+  hasQuery: boolean;
+}) {
+  return (
+    <section className="max-w-7xl mx-auto px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+      {communitiesLoading ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="aspect-[4/3] animate-pulse rounded-2xl"
+              style={{ background: "var(--card-bg, rgba(0,0,0,0.06))" }}
+            />
+          ))}
+        </div>
+      ) : communities.length === 0 ? (
+        <div
+          className="rounded-2xl border px-6 py-16 text-center text-sm"
+          style={{
+            borderColor: "var(--border-color, rgba(0,0,0,0.08))",
+            color: "var(--text-muted)",
+          }}
+        >
+          {hasQuery
+            ? "No communities match your search."
+            : "No communities are open right now. Check back soon."}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {communities.map((community, i) => (
+            <CommunityCard
+              key={community.slug}
+              community={community}
+              index={i}
+              isMember={isMember(community.slug)}
+              onJoin={onJoin}
+              onOpen={onOpen}
+              joining={joining}
+              isLoggedIn={isLoggedIn}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CommunityCard({
+  community,
+  index,
+  isMember,
+  onJoin,
+  onOpen,
+  joining,
+  isLoggedIn,
+}: {
+  community: CommunitySummary;
+  index: number;
+  isMember: boolean;
+  onJoin: (slug: string, name: string) => void;
+  onOpen: (slug: string) => void;
+  joining: boolean;
+  isLoggedIn: boolean;
+}) {
+  const backgroundImage = community.image || FALLBACK_CARD_IMAGE;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: Math.min(index, 7) * 0.05 }}
+      role={isMember ? "button" : undefined}
+      tabIndex={isMember ? 0 : undefined}
+      onClick={isMember ? () => onOpen(community.slug) : undefined}
+      onKeyDown={
+        isMember
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") onOpen(community.slug);
+            }
+          : undefined
+      }
+      className={`group relative aspect-[4/3] overflow-hidden rounded-2xl outline-none ${
+        isMember ? "cursor-pointer" : ""
+      }`}
+    >
+      {/* Static background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-105"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
+      {/* Gradient so text stays legible over any photo */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5" />
+
+      <div className="absolute left-3 top-3 flex gap-2">
+        {isMember && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-neutral-900">
+            <Check className="h-3 w-3" />
+            Member
+          </span>
+        )}
+      </div>
+
+      {typeof community.memberCount === "number" && (
+        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+          {community.memberCount.toLocaleString()} members
+        </span>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+        <h3 className="text-base font-bold leading-snug text-white sm:text-lg">
+          {community.name}
+        </h3>
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/80 sm:text-sm">
+          {community.description}
+        </p>
+
+        {isMember ? (
+          <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white">
+            Open community
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onJoin(community.slug, community.name);
+            }}
+            disabled={joining}
+            className="mt-3 w-full rounded-xl bg-white/95 py-2 text-sm font-semibold text-neutral-900 backdrop-blur transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {joining
+              ? "Joining…"
+              : isLoggedIn
+                ? "Join community"
+                : "Sign in to join"}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ----------------------------------------------------------------- */
+
 function CommunityLoading() {
   return (
     <main className="min-h-screen">
       <div className="animate-pulse">
-        <div className="h-96 bg-gray-200" />
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="h-20 bg-gray-200 rounded mb-6" />
-          <div className="h-96 bg-gray-200 rounded" />
+          <div className="mb-6 h-12 max-w-xl rounded-xl bg-gray-200" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-[4/3] rounded-2xl bg-gray-200" />
+            ))}
+          </div>
         </div>
       </div>
     </main>

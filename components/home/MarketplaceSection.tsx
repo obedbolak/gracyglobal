@@ -112,9 +112,7 @@ export default function MarketplaceSection() {
             // ✅ Only use color from database
             const categoryColor = category.color || DEFAULT_COLOR;
 
-            // Generate gradients based on DB color
             const background = `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}20)`;
-            const overlay = `linear-gradient(135deg, ${categoryColor}DD, ${categoryColor}EE)`;
 
             // Check if category has an image
             const hasImage = category.image && category.image.trim() !== "";
@@ -177,16 +175,9 @@ export default function MarketplaceSection() {
 
                     {/* Hover overlay */}
                     <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ background: overlay }}
+                      className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-300"
+                      style={{ background: "#ffffff" }}
                     />
-
-                    {/* Category icon overlay on hover */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="text-5xl drop-shadow-lg text-white">
-                        {category.icon || "📦"}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Info section */}

@@ -1,34 +1,29 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SYSTEMS } from "@/data/community";
 
-// System images from Unsplash
-const SYSTEM_IMAGES: Record<string, string> = {
-  "human-flourishing":
-    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop",
-  "knowledge-skills":
-    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=400&fit=crop",
-  "economic-empowerment":
-    "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=400&fit=crop",
-  "civic-leadership":
-    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=400&fit=crop",
-  "media-narrative":
-    "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=400&fit=crop",
-  "creativity-culture":
-    "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=400&fit=crop",
-  "technology-intelligence":
-    "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop",
-};
-
 export default function CommunitySection() {
   return (
-    <section className="py-16">
+    <section className="py-16 relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "var(--glass-bg-subtle)" }}
+      />
+      <div
+        className="absolute top-0 left-0 w-96 h-96 rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(220,20,60,0.08) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+      />
+      <div
+        className="absolute bottom-0 right-0 w-72 h-72 rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(123,47,190,0.08) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
       />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,8 +34,7 @@ export default function CommunitySection() {
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{
-                  background:
-                    "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                  background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
                 }}
               >
                 <Heart size={14} className="text-white" />
@@ -61,53 +55,51 @@ export default function CommunitySection() {
           </Button>
         </div>
 
-        {/* Seven Systems Cards - 4 per row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {SYSTEMS.map((system) => {
-            const imageUrl =
-              SYSTEM_IMAGES[system.id] ||
-              "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop";
-
-            return (
-              <Link
-                key={system.id}
-                href={`/community?tab=${system.id}`}
-                className="block group"
-              >
+        {/* System cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {SYSTEMS.map((system) => (
+            <Link
+              key={system.id}
+              href={`/community?tab=${system.id}`}
+              className="block group"
+            >
                 <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
-                  {/* Image section with gradient overlay */}
+                  {/* Image section */}
                   <div className="relative aspect-square overflow-hidden">
                     <img
-                      src={imageUrl}
+                      src={system.image}
                       alt={system.label}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     />
-                    {/* Gradient overlay */}
+
+                    {/* Hover overlay */}
                     <div
-                      className="absolute inset-0"
-                      style={{ background: system.gradient, opacity: 0.75 }}
+                      className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-300"
+                      style={{ background: "#ffffff" }}
                     />
-                    {/* Icon overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-4xl drop-shadow-lg transition-transform duration-300 group-hover:scale-110">
-                        {system.icon}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Info section */}
                   <CardContent className="p-3">
                     <div
-                      className="text-sm font-bold text-center mb-1 line-clamp-2 min-h-[40px]"
+                      className="font-bold text-sm mb-1 text-center line-clamp-2 min-h-[40px]"
                       style={{ color: "var(--text-primary)" }}
                     >
                       {system.label}
                     </div>
+
+                    <div className="flex items-center justify-center gap-1 text-xs font-medium group-hover:gap-1.5 transition-all duration-200">
+                      <span style={{ color: "var(--text-muted)" }}>Explore</span>
+                      <ArrowRight
+                        size={12}
+                        className="transition-transform duration-200 group-hover:translate-x-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
-              </Link>
-            );
-          })}
+            </Link>
+          ))}
         </div>
       </div>
     </section>
