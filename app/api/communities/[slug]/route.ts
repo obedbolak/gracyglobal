@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function isSiteAdmin(session: any) {
+  return Array.isArray(session?.user?.role) && session.user.role.includes("ADMIN");
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
@@ -11,12 +15,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const membership = await prisma.communityMember.findFirst({
-      where: { userId: session.user.id, community: { slug }, role: "ADMIN" },
-    });
-
-    if (!membership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Allow site admins OR community admins
+    if (!isSiteAdmin(session)) {
+      const membership = await prisma.communityMember.findFirst({
+        where: { userId: session.user.id, community: { slug }, role: "ADMIN" },
+      });
+      if (!membership) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const { name, description, category, image } = await req.json();
@@ -44,6 +50,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ s
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Allow site admins OR community admins
+    if (!isSiteAdmin(session)) {
+      const membership = await prisma.communityMember.findFirst({
+        where: { userId: session.user.id, community: { slug }, role: "ADMIN" },
+      });
+      if (!membership) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     await prisma.community.delete({ where: { slug } });
