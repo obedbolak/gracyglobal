@@ -37,3 +37,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
     return NextResponse.json({ error: "Failed to update community" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  try {
+    const { slug } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await prisma.community.delete({ where: { slug } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/communities/[slug] error:", error);
+    return NextResponse.json({ error: "Failed to delete community" }, { status: 500 });
+  }
+}

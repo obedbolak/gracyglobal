@@ -11,7 +11,7 @@ import {
   Briefcase,
   Users,
   GraduationCap,
-  Video,
+  Globe,
   FileText,
   Settings,
   Package,
@@ -30,7 +30,7 @@ const menuItems = [
   { label: "Jobs", href: "/admin/jobs", icon: FileText },
   { label: "Counselors", href: "/admin/counselors", icon: Users },
   { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Live Sessions", href: "/admin/live-sessions", icon: Video },
+  { label: "Community", href: "/admin/communities", icon: Globe },
   { label: "Orders", href: "/admin/orders", icon: Package },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
