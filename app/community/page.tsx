@@ -230,7 +230,10 @@ function CommunityPageContent() {
     const slugParam = searchParams.get("slug");
     if (slugParam && memberships.length > 0) {
       const match = memberships.find((m) => m.community.slug === slugParam);
-      if (match) setSelectedSlug(slugParam);
+      if (match) {
+        setSelectedSlug(slugParam);
+        setView("community");
+      }
     }
   }, [searchParams, memberships]);
 
