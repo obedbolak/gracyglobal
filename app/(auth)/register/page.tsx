@@ -141,7 +141,6 @@ function AffiliateRefCapture() {
   }, [searchParams]);
   return null;
 }
-
 // ── Mode toggle ───────────────────────────────────────────────────────────────
 function ModeToggle({
   mode,
@@ -264,8 +263,9 @@ function PhoneInput({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [mode, setMode] = useState<RegisterMode>("email");
   const [step, setStep] = useState<"form" | "otp">("form");
@@ -436,7 +436,8 @@ export default function RegisterPage() {
           password,
           redirect: false,
         });
-        router.push("/dashboard");
+        const callbackUrl = searchParams.get("callbackUrl");
+        router.push(callbackUrl || "/dashboard");
       } catch {
         setError("Network error. Please check your connection.");
       }
@@ -558,7 +559,7 @@ export default function RegisterPage() {
                 <>
                   Already have one?{" "}
                   <Link
-                    href="/login"
+                    href={`/login${searchParams.get("callbackUrl") ? `?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}` : ""}`}
                     className="font-semibold"
                     style={{ color: "var(--accent-primary)" }}
                   >
@@ -953,5 +954,13 @@ export default function RegisterPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" style={{ background: "var(--bg-base)" }} />}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

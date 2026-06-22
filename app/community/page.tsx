@@ -194,7 +194,8 @@ function CommunityPageContent() {
 
   async function handleJoin(slug: string, communityName: string) {
     if (!isLoggedIn) {
-      router.push(`/login?callbackUrl=/community`);
+      const dest = encodeURIComponent(`/community?slug=${slug}&autoJoin=${slug}`);
+      router.push(`/login?callbackUrl=${dest}`);
       return;
     }
     if (joining) return;
@@ -236,6 +237,17 @@ function CommunityPageContent() {
       }
     }
   }, [searchParams, memberships]);
+
+  // Auto-join after login/register callback
+  useEffect(() => {
+    const autoJoin = searchParams.get("autoJoin");
+    if (!autoJoin || !isLoggedIn || membershipLoading) return;
+    if (isMember(autoJoin)) {
+      openCommunity(autoJoin);
+      return;
+    }
+    handleJoin(autoJoin, autoJoin);
+  }, [searchParams, isLoggedIn, membershipLoading]);
 
   // Reset tab when community changes
   useEffect(() => {
@@ -335,8 +347,8 @@ function CommunityPageContent() {
               {selectedCommunity && (
                 <div className="mb-6">
                   {!editing ? (
-                    <div className="lg:flex lg:items-end lg:justify-between lg:gap-3">
-                      <div className="lg:flex lg:flex-1 lg:items-end lg:gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+                      <div className="flex flex-col sm:flex-row sm:flex-1 sm:items-end sm:gap-3">
                         <h2
                           className="text-xl font-bold tracking-tight lg:text-2xl lg:shrink-0"
                           style={{ color: "var(--text-primary)" }}

@@ -238,7 +238,7 @@ export default function LoginForm() {
                 <>
                   Don't have an account?{" "}
                   <Link
-                    href="/register"
+                    href={`/register${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
                     className="font-semibold transition-colors duration-200"
                     style={{ color: "var(--accent-primary)" }}
                   >
