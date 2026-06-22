@@ -17,11 +17,9 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-import MyCommunityBar from "@/components/community/MyCommunityBar";
-import CommunityTabs, {
-  type TabId,
-} from "@/components/community/CommunityTabs";
 import CommunityFeed from "@/components/community/CommunityFeed";
+
+type TabId = "feed" | "projects" | "events" | "resources" | "members";
 import {
   CommunityProjects,
   CommunityEvents,
@@ -306,128 +304,189 @@ function CommunityPageContent() {
         </>
       )}
 
-      {/* Member dashboard for the currently selected community — full takeover */}
+      {/* Member hub — sidebar + content */}
       {view === "community" && isLoggedIn && (
-        <section
-          id="community-hub"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12"
-        >
-          <button
-            onClick={goBackToBrowse}
-            className="mb-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors hover:bg-black/5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to communities
-          </button>
-
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
           {membershipLoading ? (
             <div className="flex items-center justify-center py-24">
-              <Loader2
-                className="h-6 w-6 animate-spin"
-                style={{ color: "var(--text-muted)" }}
-              />
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--text-muted)" }} />
             </div>
           ) : !isAnyMember ? (
-            <div
-              className="rounded-2xl border px-6 py-16 text-center text-sm"
-              style={{
-                borderColor: "var(--border-color, rgba(0,0,0,0.08))",
-                color: "var(--text-muted)",
-              }}
-            >
+            <div className="rounded-2xl border px-6 py-16 text-center text-sm" style={{ borderColor: "var(--border-color, rgba(0,0,0,0.08))", color: "var(--text-muted)" }}>
               You're not a member of this community yet.
             </div>
           ) : (
-            <>
-              {/* Persistent community switcher */}
-              <MyCommunityBar />
+            <div className="flex gap-6 items-start">
 
-              {/* Selected community header — view mode or edit mode */}
-              {selectedCommunity && (
-                <div className="mb-6">
-                  {!editing ? (
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-                      <div className="flex flex-col sm:flex-row sm:flex-1 sm:items-end sm:gap-3">
-                        <h2
-                          className="text-xl font-bold tracking-tight lg:text-2xl lg:shrink-0"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {selectedCommunity.name}
-                        </h2>
-                        <p
-                          className="mt-1 text-sm leading-relaxed lg:mt-0 lg:flex-1 lg:text-base"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {selectedCommunity.description}
-                        </p>
+              {/* ── Sidebar ── */}
+              <aside className="hidden lg:flex flex-col gap-4 w-72 flex-shrink-0 sticky top-20">
+
+                {/* Back button */}
+                <button
+                  onClick={goBackToBrowse}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-70 self-start"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+
+                {/* Selected community card */}
+                {selectedCommunity && (
+                  <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--glass-border)" }}>
+                    {/* Cover image */}
+                    <div className="h-24 w-full relative" style={{ background: "linear-gradient(135deg, var(--scarlet), var(--purple))" }}>
+                      {selectedCommunity.image && (
+                        <img src={selectedCommunity.image} alt={selectedCommunity.name} className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    <div className="p-4" style={{ background: "var(--glass-bg)" }}>
+                      <h2 className="font-extrabold text-base leading-tight" style={{ color: "var(--text-primary)" }}>
+                        {selectedCommunity.name}
+                      </h2>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                        {selectedCommunity.description}
+                      </p>
+                      <div className="flex items-center gap-3 mt-3">
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {selectedCommunity.memberCount} members
+                        </span>
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {selectedCommunity.postCount} posts
+                        </span>
                       </div>
-
-                      {isAdmin && (
+                      {isAdmin && !editing && (
                         <button
                           onClick={() => setEditing(true)}
-                          className="mt-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors lg:mt-0"
-                          style={{
-                            borderColor:
-                              "var(--border-color, rgba(0,0,0,0.12))",
-                            color: "var(--text-primary)",
-                          }}
+                          className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
+                          style={{ borderColor: "var(--glass-border)", color: "var(--text-secondary)" }}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit community
+                          <Pencil className="h-3 w-3" /> Edit community
                         </button>
                       )}
                     </div>
-                  ) : (
+                  </div>
+                )}
+
+                {/* My other communities */}
+                {memberships.filter((m) => m.community.slug !== selectedSlug).length > 0 && (
+                  <div className="rounded-2xl p-4" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>My Communities</p>
+                    <div className="space-y-2">
+                      {memberships
+                        .filter((m) => m.community.slug !== selectedSlug)
+                        .map(({ community, role }) => (
+                          <button
+                            key={community.id}
+                            onClick={() => { setSelectedSlug(community.slug); setActiveTab("feed"); }}
+                            className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-all hover:scale-[1.01]"
+                            style={{ background: "var(--glass-bg-subtle)", border: "1px solid var(--glass-border)" }}
+                          >
+                            {community.image ? (
+                              <img src={community.image} alt={community.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white" style={{ background: "linear-gradient(135deg, var(--scarlet), var(--purple))" }}>
+                                {community.name[0]}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>{community.name}</p>
+                              <p className="text-[10px] capitalize" style={{ color: "var(--text-muted)" }}>{role.toLowerCase()}</p>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tabs as nav */}
+                <nav className="rounded-2xl overflow-hidden" style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
+                  {(["feed", "projects", "events", "resources", "members"] as TabId[]).map((tab) => {
+                    const labels: Record<TabId, string> = { feed: "Discussions", projects: "Projects", events: "Events", resources: "Resources", members: "Members" };
+                    const icons: Record<TabId, React.ReactNode> = {
+                      feed: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+                      projects: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>,
+                      events: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+                      resources: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+                      members: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                    };
+                    const isActive = activeTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-left transition-all"
+                        style={{
+                          background: isActive ? "linear-gradient(135deg, var(--purple), var(--scarlet))" : "transparent",
+                          color: isActive ? "#fff" : "var(--text-secondary)",
+                          borderBottom: "1px solid var(--glass-border)",
+                        }}
+                      >
+                        {icons[tab]}
+                        {labels[tab]}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </aside>
+
+              {/* ── Main content ── */}
+              <div className="flex-1 min-w-0">
+                {/* Mobile back + tabs */}
+                <div className="lg:hidden mb-4">
+                  <button onClick={goBackToBrowse} className="inline-flex items-center gap-1.5 text-sm font-semibold mb-3" style={{ color: "var(--text-muted)" }}>
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </button>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                    {(["feed", "projects", "events", "resources", "members"] as TabId[]).map((tab) => {
+                      const labels: Record<TabId, string> = { feed: "Discussions", projects: "Projects", events: "Events", resources: "Resources", members: "Members" };
+                      return (
+                        <button key={tab} onClick={() => setActiveTab(tab)}
+                          className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                          style={{
+                            background: activeTab === tab ? "linear-gradient(135deg, var(--purple), var(--scarlet))" : "var(--glass-bg)",
+                            color: activeTab === tab ? "#fff" : "var(--text-secondary)",
+                            border: activeTab === tab ? "none" : "1px solid var(--glass-border)",
+                          }}
+                        >{labels[tab]}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Edit form */}
+                {editing && (
+                  <div className="mb-6">
                     <CommunityEditForm
                       editForm={editForm}
                       setEditForm={setEditForm}
-                      onCancel={() => {
-                        setEditing(false);
-                        resetEditForm();
-                      }}
+                      onCancel={() => { setEditing(false); resetEditForm(); }}
                       onSave={handleEditSave}
                       onImageChange={handleEditImage}
                       uploading={uploading}
                       saving={saving}
                       error={editError}
                     />
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Tabs */}
-              <div className="mb-8">
-                <CommunityTabs active={activeTab} onChange={setActiveTab} />
+                {/* Tab content */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`${selectedSlug}-${activeTab}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    {activeTab === "feed" && selectedSlug && <CommunityFeed communitySlug={selectedSlug} />}
+                    {activeTab === "projects" && selectedSlug && <CommunityProjects communitySlug={selectedSlug} />}
+                    {activeTab === "events" && selectedSlug && <CommunityEvents communitySlug={selectedSlug} />}
+                    {activeTab === "resources" && selectedSlug && <CommunityResources communitySlug={selectedSlug} />}
+                    {activeTab === "members" && selectedSlug && <CommunityMembers communitySlug={selectedSlug} />}
+                  </motion.div>
+                </AnimatePresence>
               </div>
-
-              {/* Tab content — driven by selectedSlug from context */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${selectedSlug}-${activeTab}`}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  {activeTab === "feed" && selectedSlug && (
-                    <CommunityFeed communitySlug={selectedSlug} />
-                  )}
-                  {activeTab === "projects" && selectedSlug && (
-                    <CommunityProjects communitySlug={selectedSlug} />
-                  )}
-                  {activeTab === "events" && selectedSlug && (
-                    <CommunityEvents communitySlug={selectedSlug} />
-                  )}
-                  {activeTab === "resources" && selectedSlug && (
-                    <CommunityResources communitySlug={selectedSlug} />
-                  )}
-                  {activeTab === "members" && selectedSlug && (
-                    <CommunityMembers communitySlug={selectedSlug} />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </>
+            </div>
           )}
         </section>
       )}
