@@ -167,7 +167,13 @@ export function useCommunityFeed(options: UseCommunityFeedOptions) {
   const { data, error, isLoading, mutate } = useSWR<CommunityPost[]>(
     key,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 15_000 },
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5_000,
+      refreshInterval: 8_000,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+    },
   );
 
   return {
@@ -281,7 +287,13 @@ export function usePostComments(postId: string) {
   const { data, error, isLoading, mutate } = useSWR<PostComment[]>(
     postId ? `/api/posts/${postId}/comments` : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 10_000 },
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5_000,
+      refreshInterval: 10_000,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+    },
   );
 
   return {
