@@ -511,7 +511,8 @@ body {
 
 /* Float animation for background images */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -520,4 +521,13 @@ body {
 }
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+/* Utility: hide scrollbars while preserving scroll behavior */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit */
 }

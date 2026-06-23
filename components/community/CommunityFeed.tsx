@@ -12,13 +12,19 @@ import {
   Mic,
   Heart,
   MessageCircle,
-  ThumbsUp,
   X,
   Loader2,
   Plus,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface CommentData {
+  id: string;
+  content: string;
+  user: { id: string; name: string | null; image: string | null };
+  createdAt: string;
+}
 
 interface PostData {
   id: string;
@@ -52,17 +58,28 @@ function timeAgo(dateStr: string) {
   });
 }
 
-function Avatar({ user }: { user: PostData["user"] }) {
+function Avatar({
+  user,
+  size = 8,
+}: {
+  user: { name: string | null; image: string | null };
+  size?: number;
+}) {
+  const px = `${size * 4}px`;
   return user.image ? (
     <img
       src={user.image}
       alt={user.name ?? ""}
-      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+      className="rounded-full object-cover flex-shrink-0"
+      style={{ width: px, height: px }}
     />
   ) : (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
+      className="rounded-full flex items-center justify-center font-bold flex-shrink-0 text-white"
       style={{
+        width: px,
+        height: px,
+        fontSize: size <= 7 ? "10px" : "12px",
         background: "linear-gradient(135deg, var(--purple), var(--scarlet))",
       }}
     >
@@ -71,10 +88,192 @@ function Avatar({ user }: { user: PostData["user"] }) {
   );
 }
 
+// ── Comment thread ──────────────────────────────────────────────────────────
+
+function CommentThread({
+  postId,
+  isLoggedIn,
+  onNewComment,
+}: {
+  postId: string;
+  isLoggedIn: boolean;
+  onNewComment: () => void;
+}) {
+  const [comments, setComments] = useState<CommentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/posts/${postId}/comments`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setComments(Array.isArray(data) ? data : (data?.comments ?? []));
+        }
+      } catch {
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [postId]);
+
+  async function submitComment() {
+    if (!text.trim() || sending) return;
+    setSending(true);
+    const body = text.trim();
+    setText("");
+    try {
+      const res = await fetch(`/api/posts/${postId}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: body }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setComments((prev) => [...prev, data]);
+        onNewComment();
+      }
+    } catch {
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      className="overflow-hidden w-full"
+    >
+      <div
+        className="mt-2 rounded-2xl p-3 flex flex-col gap-3"
+        style={{
+          background: "var(--glass-bg-subtle)",
+          border: "1px solid var(--glass-border)",
+        }}
+      >
+        {loading ? (
+          <div className="flex justify-center py-3">
+            <Loader2
+              size={16}
+              className="animate-spin"
+              style={{ color: "var(--text-muted)" }}
+            />
+          </div>
+        ) : comments.length === 0 ? (
+          <p
+            className="text-xs text-center py-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            No comments yet.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {comments.map((c) => {
+              const firstName = c.user.name
+                ? c.user.name.split(" ")[0]
+                : "User";
+              return (
+                <div key={c.id} className="flex items-start gap-2">
+                  <Avatar user={c.user} size={6} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[11px] font-semibold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {firstName}
+                      </span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {timeAgo(c.createdAt)}
+                      </span>
+                    </div>
+                    <p
+                      className="text-xs leading-relaxed whitespace-pre-wrap break-words"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {c.content}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {isLoggedIn && (
+          <div className="flex items-center gap-2">
+            <input
+              className="flex-1 rounded-xl px-3 py-2 text-xs"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-primary)",
+                outline: "none",
+              }}
+              placeholder="Write a comment..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submitComment();
+                }
+              }}
+            />
+            <button
+              onClick={submitComment}
+              disabled={!text.trim() || sending}
+              aria-label="Send comment"
+              className="p-2 rounded-xl flex-shrink-0 transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                color: "#fff",
+              }}
+            >
+              {sending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Post bubble ───────────────────────────────────────────────────────────────
 
-function PostBubble({ post, isOwn }: { post: PostData; isOwn: boolean }) {
+function PostBubble({
+  post,
+  isOwn,
+  isLoggedIn,
+  onLike,
+  onDelete,
+}: {
+  post: PostData;
+  isOwn: boolean;
+  isLoggedIn: boolean;
+  onLike: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
   const liked = post.reactions?.some((r) => r.type === "LIKE") ?? false;
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(post._count.comments);
+  const firstName = post.user.name ? post.user.name.split(" ")[0] : "User";
 
   return (
     <motion.div
@@ -87,14 +286,12 @@ function PostBubble({ post, isOwn }: { post: PostData; isOwn: boolean }) {
       <div
         className={`max-w-[75%] flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}
       >
-        {!isOwn && (
-          <span
-            className="text-[11px] font-semibold px-1"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {post.user.name}
-          </span>
-        )}
+        <span
+          className="text-[11px] font-semibold px-1"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {firstName}
+        </span>
 
         <div
           className="rounded-2xl overflow-hidden"
@@ -178,7 +375,7 @@ function PostBubble({ post, isOwn }: { post: PostData; isOwn: boolean }) {
                 </p>
               )}
               <p
-                className="text-sm leading-relaxed whitespace-pre-wrap"
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words"
                 style={{
                   color: isOwn
                     ? "rgba(255,255,255,0.95)"
@@ -218,20 +415,52 @@ function PostBubble({ post, isOwn }: { post: PostData; isOwn: boolean }) {
           <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
             {timeAgo(post.createdAt)}
           </span>
-          <span
-            className="flex items-center gap-0.5 text-[10px]"
+          <button
+            onClick={() => onLike(post.id)}
+            disabled={!isLoggedIn}
+            aria-label={liked ? "Unlike post" : "Like post"}
+            className="flex items-center gap-0.5 text-[10px] transition-transform hover:scale-110 disabled:cursor-not-allowed"
             style={{ color: liked ? "var(--scarlet)" : "var(--text-muted)" }}
           >
             <Heart size={10} className={liked ? "fill-current" : ""} />{" "}
             {post._count.reactions}
-          </span>
-          <span
-            className="flex items-center gap-0.5 text-[10px]"
-            style={{ color: "var(--text-muted)" }}
+          </button>
+          <button
+            onClick={() => setShowComments((v) => !v)}
+            aria-label="Toggle comments"
+            aria-expanded={showComments}
+            className="flex items-center gap-0.5 text-[10px] transition-transform hover:scale-110"
+            style={{
+              color: showComments ? "var(--purple)" : "var(--text-muted)",
+            }}
           >
-            <MessageCircle size={10} /> {post._count.comments}
-          </span>
+            <MessageCircle size={10} /> {commentCount}
+          </button>
+          {isOwn && (
+            <button
+              onClick={async () => {
+                if (!confirm("Delete this message?")) return;
+                onDelete(post.id);
+              }}
+              aria-label="Delete post"
+              className="ml-1 p-1 text-[10px] rounded-md hover:bg-black/5"
+              style={{ color: "var(--scarlet)" }}
+            >
+              <X size={12} />
+            </button>
+          )}
         </div>
+
+        {/* Inline comment thread */}
+        <AnimatePresence>
+          {showComments && (
+            <CommentThread
+              postId={post.id}
+              isLoggedIn={isLoggedIn}
+              onNewComment={() => setCommentCount((c) => c + 1)}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -243,15 +472,15 @@ export default function CommunityFeed({
   communitySlug,
 }: {
   communitySlug: string;
-  selectedSystem?: string;
 }) {
   const { data: session } = useSession();
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   const [posts, setPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reactingId, setReactingId] = useState<string | null>(null);
 
   // composer state
   const [mode, setMode] = useState<InputMode>("text");
@@ -292,10 +521,63 @@ export default function CommunityFeed({
     fetchPosts();
   }, [communitySlug]);
 
-  // scroll to bottom when posts load
+  // scroll messages container to bottom when posts change
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesRef.current;
+    if (!el) return;
+    try {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    } catch {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [posts.length]);
+
+  // ── Like / react ──────────────────────────────────────────────────────────
+
+  async function toggleLike(postId: string) {
+    if (!session || reactingId) return;
+    setReactingId(postId);
+    // optimistic update
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        const liked = p.reactions?.some((r) => r.type === "LIKE");
+        return {
+          ...p,
+          reactions: liked ? [] : [{ type: "LIKE" }],
+          _count: {
+            ...p._count,
+            reactions: p._count.reactions + (liked ? -1 : 1),
+          },
+        };
+      }),
+    );
+    try {
+      const res = await fetch(`/api/posts/${postId}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "LIKE" }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      fetchPosts(); // revert on failure
+    } finally {
+      setReactingId(null);
+    }
+  }
+
+  // ── Delete post (own posts) ──────────────────────────────────────────────
+  async function handleDelete(postId: string) {
+    // optimistic remove
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+    } catch {
+      // revert by refetching
+      fetchPosts();
+    }
+  }
 
   // ── Upload media ─────────────────────────────────────────────────────────────
 
@@ -407,14 +689,16 @@ export default function CommunityFeed({
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}
-    >
+    <div className="flex flex-col">
       {/* Messages area */}
       <div
-        className="flex-1 overflow-y-auto px-2 py-4 space-y-4"
-        style={{ scrollbarWidth: "none" }}
+        ref={messagesRef}
+        className="overflow-y-auto px-2 py-4 space-y-4"
+        style={{
+          height: "575px",
+          scrollbarWidth: "none",
+          paddingBottom: "1rem",
+        }}
       >
         {loading ? (
           <div className="flex justify-center py-12">
@@ -444,10 +728,13 @@ export default function CommunityFeed({
                 key={post.id}
                 post={post}
                 isOwn={post.user.id === session?.user?.id}
+                isLoggedIn={!!session}
+                onLike={toggleLike}
+                onDelete={handleDelete}
               />
             ))
         )}
-        <div ref={bottomRef} />
+        <div />
       </div>
 
       {/* Composer */}
@@ -481,6 +768,7 @@ export default function CommunityFeed({
                         setMediaType("");
                         setLinkUrl("");
                       }}
+                      aria-label="Cancel media post"
                       style={{ color: "var(--text-muted)" }}
                     >
                       <X size={14} />
@@ -620,6 +908,7 @@ export default function CommunityFeed({
                 <button
                   onClick={() => setMode("image")}
                   title="Image"
+                  aria-label="Add image"
                   className="p-2 rounded-xl transition-all hover:scale-110"
                   style={{
                     background:
@@ -636,6 +925,7 @@ export default function CommunityFeed({
                 <button
                   onClick={() => setMode("video")}
                   title="Video"
+                  aria-label="Add video"
                   className="p-2 rounded-xl transition-all hover:scale-110"
                   style={{
                     background:
@@ -652,6 +942,7 @@ export default function CommunityFeed({
                 <button
                   onClick={() => setMode("document")}
                   title="Document"
+                  aria-label="Add document"
                   className="p-2 rounded-xl transition-all hover:scale-110"
                   style={{
                     background:
@@ -670,6 +961,7 @@ export default function CommunityFeed({
                 <button
                   onClick={() => setMode("link")}
                   title="Link"
+                  aria-label="Add link"
                   className="p-2 rounded-xl transition-all hover:scale-110"
                   style={{
                     background:
@@ -685,6 +977,8 @@ export default function CommunityFeed({
                 </button>
                 <button
                   title="Audio (coming soon)"
+                  aria-label="Audio (coming soon)"
+                  disabled
                   className="p-2 rounded-xl opacity-40 cursor-not-allowed"
                   style={{
                     background: "var(--glass-bg)",
@@ -700,6 +994,8 @@ export default function CommunityFeed({
               <div className="sm:hidden relative" ref={dropupRef}>
                 <button
                   onClick={() => setDropupOpen((v) => !v)}
+                  aria-label="Add attachment"
+                  aria-expanded={dropupOpen}
                   className="p-2 rounded-xl transition-all hover:scale-110"
                   style={{
                     background: dropupOpen
@@ -783,24 +1079,18 @@ export default function CommunityFeed({
 
             {/* Text input */}
             <textarea
-              className="flex-1 rounded-2xl px-4 py-2.5 text-sm resize-none"
+              className="flex-1 rounded-2xl px-4 py-2.5 text-sm resize-none max-h-[120px] overflow-y-auto"
               style={{
                 background: "var(--glass-bg)",
                 border: "1px solid var(--glass-border)",
                 color: "var(--text-primary)",
                 outline: "none",
-                maxHeight: "120px",
-                minHeight: "44px",
+                height: "44px",
               }}
               placeholder="Write a message..."
               value={text}
               rows={1}
-              onChange={(e) => {
-                setText(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height =
-                  Math.min(e.target.scrollHeight, 120) + "px";
-              }}
+              onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -809,9 +1099,11 @@ export default function CommunityFeed({
               }}
             />
 
-            {/* Audio button — always visible */}
+            {/* Audio button — mobile only */}
             <button
               title="Audio (coming soon)"
+              aria-label="Audio (coming soon)"
+              disabled
               className="p-2.5 rounded-2xl flex-shrink-0 opacity-40 cursor-not-allowed sm:hidden"
               style={{
                 background: "var(--glass-bg)",
@@ -826,6 +1118,7 @@ export default function CommunityFeed({
             <button
               onClick={handleSend}
               disabled={!canSend}
+              aria-label="Send message"
               className="p-2.5 rounded-2xl flex-shrink-0 transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 background:
