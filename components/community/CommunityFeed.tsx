@@ -16,34 +16,16 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface CommentData {
-  id: string;
-  content: string;
-  user: { id: string; name: string | null; image: string | null };
-  createdAt: string;
-}
-
-interface PostData {
-  id: string;
-  title: string | null;
-  content: string | null;
-  type: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "LINK";
-  mediaUrl: string | null;
-  mediaType: string | null;
-  linkUrl: string | null;
-  tags: string[];
-  user: { id: string; name: string | null; image: string | null };
-  _count: { comments: number; reactions: number };
-  reactions?: Array<{ type: string }>;
-  createdAt: string;
-}
+import {
+  useCommunityFeed,
+  usePostComments,
+  type CommunityPost,
+  type PostComment,
+} from "@/hooks/useCommunity";
 
 type InputMode = "text" | "image" | "video" | "document" | "link";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -88,58 +70,58 @@ function Avatar({
   );
 }
 
-// ── Comment thread ──────────────────────────────────────────────────────────
+// ── Comment thread (SWR + optimistic) ────────────────────────────────────────
 
 function CommentThread({
   postId,
   isLoggedIn,
-  onNewComment,
 }: {
   postId: string;
   isLoggedIn: boolean;
-  onNewComment: () => void;
 }) {
-  const [comments, setComments] = useState<CommentData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { comments, loading, mutate } = usePostComments(postId);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await fetch(`/api/posts/${postId}/comments`);
-        if (res.ok && active) {
-          const data = await res.json();
-          setComments(Array.isArray(data) ? data : (data?.comments ?? []));
-        }
-      } catch {
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [postId]);
 
   async function submitComment() {
     if (!text.trim() || sending) return;
     setSending(true);
     const body = text.trim();
     setText("");
+
+    // optimistic comment
+    const optimistic: PostComment = {
+      id: `temp-${Date.now()}`,
+      postId,
+      userId: "me",
+      content: body,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      user: { id: "me", name: "You", image: null },
+    };
+
     try {
-      const res = await fetch(`/api/posts/${postId}/comment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: body }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setComments((prev) => [...prev, data]);
-        onNewComment();
-      }
+      await mutate(
+        async () => {
+          const res = await fetch(`/api/posts/${postId}/comment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: body }),
+          });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          const saved: PostComment = data.comment ?? data;
+          // replace optimistic with real, keep others
+          return [...comments.filter((c) => c.id !== optimistic.id), saved];
+        },
+        {
+          optimisticData: [...comments, optimistic],
+          rollbackOnError: true,
+          revalidate: false,
+        },
+      );
     } catch {
+      setText(body); // restore on failure
     } finally {
       setSending(false);
     }
@@ -255,7 +237,7 @@ function CommentThread({
   );
 }
 
-// ── Post bubble ───────────────────────────────────────────────────────────────
+// ── Post bubble ──────────────────────────────────────────────────────────────
 
 function PostBubble({
   post,
@@ -264,7 +246,7 @@ function PostBubble({
   onLike,
   onDelete,
 }: {
-  post: PostData;
+  post: CommunityPost;
   isOwn: boolean;
   isLoggedIn: boolean;
   onLike: (id: string) => void;
@@ -272,7 +254,6 @@ function PostBubble({
 }) {
   const liked = post.reactions?.some((r) => r.type === "LIKE") ?? false;
   const [showComments, setShowComments] = useState(false);
-  const [commentCount, setCommentCount] = useState(post._count.comments);
   const firstName = post.user.name ? post.user.name.split(" ")[0] : "User";
 
   return (
@@ -282,7 +263,6 @@ function PostBubble({
       className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
     >
       {!isOwn && <Avatar user={post.user} />}
-
       <div
         className={`max-w-[75%] flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}
       >
@@ -292,7 +272,6 @@ function PostBubble({
         >
           {firstName}
         </span>
-
         <div
           className="rounded-2xl overflow-hidden"
           style={{
@@ -304,7 +283,6 @@ function PostBubble({
             borderBottomLeftRadius: isOwn ? "16px" : "4px",
           }}
         >
-          {/* Media */}
           {post.type === "IMAGE" && post.mediaUrl && (
             <img
               src={post.mediaUrl}
@@ -312,7 +290,6 @@ function PostBubble({
               className="max-w-xs w-full object-cover max-h-64 block"
             />
           )}
-
           {post.type === "VIDEO" && post.mediaUrl && (
             <div className="relative max-w-xs">
               <video
@@ -322,7 +299,6 @@ function PostBubble({
               />
             </div>
           )}
-
           {post.type === "DOCUMENT" && post.mediaUrl && (
             <a
               href={post.mediaUrl}
@@ -349,7 +325,6 @@ function PostBubble({
               </div>
             </a>
           )}
-
           {post.type === "LINK" && post.linkUrl && (
             <a
               href={post.linkUrl}
@@ -362,8 +337,6 @@ function PostBubble({
               <span className="text-xs truncate">{post.linkUrl}</span>
             </a>
           )}
-
-          {/* Text content */}
           {post.content && (
             <div className="px-3 py-2.5">
               {post.title && (
@@ -386,8 +359,6 @@ function PostBubble({
               </p>
             </div>
           )}
-
-          {/* Tags */}
           {post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 px-3 pb-2.5">
               {post.tags.map((t) => (
@@ -408,7 +379,6 @@ function PostBubble({
           )}
         </div>
 
-        {/* Meta */}
         <div
           className={`flex items-center gap-3 px-1 ${isOwn ? "flex-row-reverse" : ""}`}
         >
@@ -434,13 +404,12 @@ function PostBubble({
               color: showComments ? "var(--purple)" : "var(--text-muted)",
             }}
           >
-            <MessageCircle size={10} /> {commentCount}
+            <MessageCircle size={10} /> {post._count.comments}
           </button>
           {isOwn && (
             <button
-              onClick={async () => {
-                if (!confirm("Delete this message?")) return;
-                onDelete(post.id);
+              onClick={() => {
+                if (confirm("Delete this message?")) onDelete(post.id);
               }}
               aria-label="Delete post"
               className="ml-1 p-1 text-[10px] rounded-md hover:bg-black/5"
@@ -451,14 +420,9 @@ function PostBubble({
           )}
         </div>
 
-        {/* Inline comment thread */}
         <AnimatePresence>
           {showComments && (
-            <CommentThread
-              postId={post.id}
-              isLoggedIn={isLoggedIn}
-              onNewComment={() => setCommentCount((c) => c + 1)}
-            />
+            <CommentThread postId={post.id} isLoggedIn={isLoggedIn} />
           )}
         </AnimatePresence>
       </div>
@@ -466,7 +430,7 @@ function PostBubble({
   );
 }
 
-// ── Main Feed ─────────────────────────────────────────────────────────────────
+// ── Main Feed (SWR-backed) ────────────────────────────────────────────────────
 
 export default function CommunityFeed({
   communitySlug,
@@ -475,14 +439,14 @@ export default function CommunityFeed({
 }) {
   const { data: session } = useSession();
   const messagesRef = useRef<HTMLDivElement>(null);
+  const lastPostIdRef = useRef<string | null>(null);
 
-  const [posts, setPosts] = useState<PostData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { posts, loading, mutate } = useCommunityFeed({ slug: communitySlug });
+
   const [posting, setPosting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reactingId, setReactingId] = useState<string | null>(null);
 
-  // composer state
   const [mode, setMode] = useState<InputMode>("text");
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
@@ -497,89 +461,87 @@ export default function CommunityFeed({
   useEffect(() => {
     if (!dropupOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (dropupRef.current && !dropupRef.current.contains(e.target as Node)) {
+      if (dropupRef.current && !dropupRef.current.contains(e.target as Node))
         setDropupOpen(false);
-      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropupOpen]);
 
-  // ── Fetch posts ─────────────────────────────────────────────────────────────
-
-  async function fetchPosts() {
-    try {
-      const res = await fetch(`/api/communities/${communitySlug}/posts`);
-      if (res.ok) setPosts(await res.json());
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  // auto-scroll only when the newest post actually changes
   useEffect(() => {
-    fetchPosts();
-  }, [communitySlug]);
-
-  // scroll messages container to bottom when posts change
-  useEffect(() => {
-    const el = messagesRef.current;
-    if (!el) return;
-    try {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    } catch {
-      el.scrollTop = el.scrollHeight;
+    const newestId = posts[0]?.id ?? null;
+    if (newestId && newestId !== lastPostIdRef.current) {
+      lastPostIdRef.current = newestId;
+      const el = messagesRef.current;
+      if (el) {
+        try {
+          el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        } catch {
+          el.scrollTop = el.scrollHeight;
+        }
+      }
     }
-  }, [posts.length]);
+  }, [posts]);
 
-  // ── Like / react ──────────────────────────────────────────────────────────
-
+  // ── Like (optimistic via mutate) ──
   async function toggleLike(postId: string) {
     if (!session || reactingId) return;
     setReactingId(postId);
-    // optimistic update
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-        const liked = p.reactions?.some((r) => r.type === "LIKE");
-        return {
-          ...p,
-          reactions: liked ? [] : [{ type: "LIKE" }],
-          _count: {
-            ...p._count,
-            reactions: p._count.reactions + (liked ? -1 : 1),
-          },
-        };
-      }),
-    );
     try {
-      const res = await fetch(`/api/posts/${postId}/react`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "LIKE" }),
-      });
-      if (!res.ok) throw new Error();
+      await mutate(
+        async () => {
+          const res = await fetch(`/api/posts/${postId}/react`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "LIKE" }),
+          });
+          if (!res.ok) throw new Error();
+          return undefined; // fall through to revalidate
+        },
+        {
+          optimisticData: posts.map((p) => {
+            if (p.id !== postId) return p;
+            const liked = p.reactions?.some((r) => r.type === "LIKE");
+            return {
+              ...p,
+              reactions: liked ? [] : [{ type: "LIKE" }],
+              _count: {
+                ...p._count,
+                reactions: p._count.reactions + (liked ? -1 : 1),
+              },
+            };
+          }),
+          rollbackOnError: true,
+          revalidate: true,
+        },
+      );
     } catch {
-      fetchPosts(); // revert on failure
+      /* rolled back automatically */
     } finally {
       setReactingId(null);
     }
   }
 
-  // ── Delete post (own posts) ──────────────────────────────────────────────
+  // ── Delete (optimistic) ──
   async function handleDelete(postId: string) {
-    // optimistic remove
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
     try {
-      const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await mutate(
+        async () => {
+          const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+          if (!res.ok) throw new Error();
+          return posts.filter((p) => p.id !== postId);
+        },
+        {
+          optimisticData: posts.filter((p) => p.id !== postId),
+          rollbackOnError: true,
+          revalidate: false,
+        },
+      );
     } catch {
-      // revert by refetching
-      fetchPosts();
+      /* rolled back */
     }
   }
-
-  // ── Upload media ─────────────────────────────────────────────────────────────
 
   async function handleMediaUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -602,20 +564,18 @@ export default function CommunityFeed({
     }
   }
 
-  // ── Submit post ──────────────────────────────────────────────────────────────
-
+  // ── Submit post (optimistic) ──
   async function handleSend() {
     if (!session) return;
     setError(null);
 
-    const typeMap: Record<InputMode, string> = {
+    const typeMap: Record<InputMode, CommunityPost["type"]> = {
       text: "TEXT",
       image: "IMAGE",
       video: "VIDEO",
       document: "DOCUMENT",
       link: "LINK",
     };
-
     const payload: any = {
       type: typeMap[mode],
       content: text.trim() || null,
@@ -625,7 +585,6 @@ export default function CommunityFeed({
         .map((t) => t.trim())
         .filter(Boolean),
     };
-
     if (mode === "image" || mode === "video" || mode === "document") {
       if (!mediaUrl) {
         setError("Please upload a file first.");
@@ -634,7 +593,6 @@ export default function CommunityFeed({
       payload.mediaUrl = mediaUrl;
       payload.mediaType = mediaType;
     }
-
     if (mode === "link") {
       if (!linkUrl.trim()) {
         setError("Please enter a URL.");
@@ -642,29 +600,60 @@ export default function CommunityFeed({
       }
       payload.linkUrl = linkUrl.trim();
     }
-
     if (mode === "text" && !text.trim()) {
       setError("Please write something.");
       return;
     }
 
+    const optimistic: CommunityPost = {
+      id: `temp-${Date.now()}`,
+      userId: session.user?.id ?? "me",
+      communityId: "",
+      title: payload.title,
+      content: payload.content,
+      category: null,
+      type: payload.type,
+      mediaUrl: payload.mediaUrl ?? null,
+      mediaType: payload.mediaType ?? null,
+      linkUrl: payload.linkUrl ?? null,
+      linkPreview: null,
+      tags: payload.tags,
+      published: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      user: {
+        id: session.user?.id ?? "me",
+        name: session.user?.name ?? "You",
+        image: session.user?.image ?? null,
+      },
+      _count: { comments: 0, reactions: 0 },
+      reactions: [],
+    };
+
     setPosting(true);
     try {
-      const res = await fetch(`/api/communities/${communitySlug}/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      // ensure _count exists on optimistic post
-      const newPost = {
-        _count: { comments: 0, reactions: 0 },
-        reactions: [],
-        ...data,
-      };
-      setPosts((prev) => [newPost, ...prev]);
-      // reset
+      await mutate(
+        async () => {
+          const res = await fetch(`/api/communities/${communitySlug}/posts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          const saved: CommunityPost = {
+            _count: { comments: 0, reactions: 0 },
+            reactions: [],
+            ...data,
+          };
+          return [saved, ...posts];
+        },
+        {
+          optimisticData: [optimistic, ...posts],
+          rollbackOnError: true,
+          revalidate: false,
+        },
+      );
       setText("");
       setTitle("");
       setMediaUrl("");
@@ -686,11 +675,8 @@ export default function CommunityFeed({
       (["image", "video", "document"].includes(mode) && mediaUrl) ||
       (mode === "link" && linkUrl.trim()));
 
-  // ── Render ────────────────────────────────────────────────────────────────────
-
   return (
     <div className="flex flex-col">
-      {/* Messages area */}
       <div
         ref={messagesRef}
         className="overflow-y-auto px-2 py-4 space-y-4"
@@ -737,13 +723,11 @@ export default function CommunityFeed({
         <div />
       </div>
 
-      {/* Composer */}
       {session && (
         <div
           className="flex-shrink-0 border-t pt-3"
           style={{ borderColor: "var(--glass-border)" }}
         >
-          {/* Mode-specific input area */}
           <AnimatePresence mode="wait">
             {mode !== "text" && (
               <motion.div
@@ -774,8 +758,6 @@ export default function CommunityFeed({
                       <X size={14} />
                     </button>
                   </div>
-
-                  {/* Title field for non-text posts */}
                   <input
                     className="w-full rounded-xl px-3 py-2 text-sm"
                     style={{
@@ -788,8 +770,6 @@ export default function CommunityFeed({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
-
-                  {/* File upload */}
                   {(mode === "image" ||
                     mode === "video" ||
                     mode === "document") && (
@@ -855,8 +835,6 @@ export default function CommunityFeed({
                       />
                     </label>
                   )}
-
-                  {/* Link URL */}
                   {mode === "link" && (
                     <input
                       className="w-full rounded-xl px-3 py-2 text-sm"
@@ -871,8 +849,6 @@ export default function CommunityFeed({
                       onChange={(e) => setLinkUrl(e.target.value)}
                     />
                   )}
-
-                  {/* Tags */}
                   <input
                     className="w-full rounded-xl px-3 py-2 text-sm"
                     style={{
@@ -899,82 +875,35 @@ export default function CommunityFeed({
             </p>
           )}
 
-          {/* Bottom bar */}
           <div className="flex items-end gap-2">
-            {/* Desktop: all type buttons inline | Mobile: + dropup */}
             <div className="flex items-center gap-1 flex-shrink-0 relative">
-              {/* Desktop buttons — hidden on mobile */}
               <div className="hidden sm:flex items-center gap-1">
-                <button
-                  onClick={() => setMode("image")}
-                  title="Image"
-                  aria-label="Add image"
-                  className="p-2 rounded-xl transition-all hover:scale-110"
-                  style={{
-                    background:
-                      mode === "image"
-                        ? "var(--purple-bg, rgba(123,47,190,0.15))"
-                        : "var(--glass-bg)",
-                    color:
-                      mode === "image" ? "var(--purple)" : "var(--text-muted)",
-                    border: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <ImageIcon size={16} />
-                </button>
-                <button
-                  onClick={() => setMode("video")}
-                  title="Video"
-                  aria-label="Add video"
-                  className="p-2 rounded-xl transition-all hover:scale-110"
-                  style={{
-                    background:
-                      mode === "video"
-                        ? "var(--purple-bg, rgba(123,47,190,0.15))"
-                        : "var(--glass-bg)",
-                    color:
-                      mode === "video" ? "var(--purple)" : "var(--text-muted)",
-                    border: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <Video size={16} />
-                </button>
-                <button
-                  onClick={() => setMode("document")}
-                  title="Document"
-                  aria-label="Add document"
-                  className="p-2 rounded-xl transition-all hover:scale-110"
-                  style={{
-                    background:
-                      mode === "document"
-                        ? "var(--purple-bg, rgba(123,47,190,0.15))"
-                        : "var(--glass-bg)",
-                    color:
-                      mode === "document"
-                        ? "var(--purple)"
-                        : "var(--text-muted)",
-                    border: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <FileText size={16} />
-                </button>
-                <button
-                  onClick={() => setMode("link")}
-                  title="Link"
-                  aria-label="Add link"
-                  className="p-2 rounded-xl transition-all hover:scale-110"
-                  style={{
-                    background:
-                      mode === "link"
-                        ? "var(--purple-bg, rgba(123,47,190,0.15))"
-                        : "var(--glass-bg)",
-                    color:
-                      mode === "link" ? "var(--purple)" : "var(--text-muted)",
-                    border: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <LinkIcon size={16} />
-                </button>
+                {(
+                  [
+                    { m: "image", icon: <ImageIcon size={16} /> },
+                    { m: "video", icon: <Video size={16} /> },
+                    { m: "document", icon: <FileText size={16} /> },
+                    { m: "link", icon: <LinkIcon size={16} /> },
+                  ] as { m: InputMode; icon: React.ReactNode }[]
+                ).map(({ m, icon }) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    title={m}
+                    aria-label={`Add ${m}`}
+                    className="p-2 rounded-xl transition-all hover:scale-110"
+                    style={{
+                      background:
+                        mode === m
+                          ? "var(--purple-bg, rgba(123,47,190,0.15))"
+                          : "var(--glass-bg)",
+                      color: mode === m ? "var(--purple)" : "var(--text-muted)",
+                      border: "1px solid var(--glass-border)",
+                    }}
+                  >
+                    {icon}
+                  </button>
+                ))}
                 <button
                   title="Audio (coming soon)"
                   aria-label="Audio (coming soon)"
@@ -990,7 +919,6 @@ export default function CommunityFeed({
                 </button>
               </div>
 
-              {/* Mobile: + dropup button */}
               <div className="sm:hidden relative" ref={dropupRef}>
                 <button
                   onClick={() => setDropupOpen((v) => !v)}
@@ -1012,7 +940,6 @@ export default function CommunityFeed({
                     <Plus size={18} />
                   </motion.div>
                 </button>
-
                 <AnimatePresence>
                   {dropupOpen && (
                     <motion.div
@@ -1077,7 +1004,6 @@ export default function CommunityFeed({
               </div>
             </div>
 
-            {/* Text input */}
             <textarea
               className="flex-1 rounded-2xl px-4 py-2.5 text-sm resize-none max-h-[120px] overflow-y-auto"
               style={{
@@ -1099,7 +1025,6 @@ export default function CommunityFeed({
               }}
             />
 
-            {/* Audio button — mobile only */}
             <button
               title="Audio (coming soon)"
               aria-label="Audio (coming soon)"
@@ -1114,7 +1039,6 @@ export default function CommunityFeed({
               <Mic size={18} />
             </button>
 
-            {/* Send button */}
             <button
               onClick={handleSend}
               disabled={!canSend}
@@ -1136,7 +1060,6 @@ export default function CommunityFeed({
         </div>
       )}
 
-      {/* Not logged in */}
       {!session && (
         <div
           className="flex-shrink-0 border-t pt-3 text-center text-sm"
