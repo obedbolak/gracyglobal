@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ShoppingBag, User, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Menu, X, ShoppingBag, User, LogOut, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -20,9 +21,12 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const { count } = useCart();
   const { isAuthenticated, user } = useAuth();
 
@@ -35,9 +39,6 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // data-profile-menu must be on the wrapper that contains BOTH
-      // the toggle button AND the dropdown div — so clicks inside either
-      // are correctly ignored and links/buttons inside can fire.
       if (!target.closest("[data-profile-menu]")) {
         setShowProfileMenu(false);
       }
@@ -45,6 +46,16 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  function submitSearch(e?: React.FormEvent) {
+    e?.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+    setOpen(false);
+    setQuery("");
+  }
 
   return (
     <nav
@@ -60,11 +71,14 @@ export default function Navbar() {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-2">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 group flex-shrink-0"
+          >
             <span
-              className="font-extrabold tracking-tight text-lg"
+              className="font-extrabold tracking-tight text-base sm:text-lg"
               style={{
                 background:
                   "linear-gradient(135deg, var(--purple), var(--blue-light))",
@@ -77,13 +91,13 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-0.5">
+          {/* Desktop links — only at lg+ (8 links need room) */}
+          <div className="hidden lg:flex items-center gap-0.5">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-3.5 py-2 text-sm font-medium rounded-xl transition-all duration-200"
+                className="px-3 py-2 text-sm font-medium rounded-xl transition-all duration-200 whitespace-nowrap"
                 style={{ color: "var(--text-secondary)" }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background =
@@ -103,8 +117,49 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA + Theme toggle + Cart + Profile */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* Desktop right cluster (lg+): search + theme + cart + profile */}
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+            {/* Expandable search */}
+            <div className="flex items-center">
+              {searchOpen ? (
+                <form onSubmit={submitSearch} className="relative">
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onBlur={() => {
+                      if (!query) setSearchOpen(false);
+                    }}
+                    placeholder="Search everything…"
+                    className="w-48 xl:w-56 2xl:w-72 rounded-xl py-2 pl-9 pr-3 text-sm outline-none transition-all"
+                    style={{
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  />
+                </form>
+              ) : (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Open search"
+                  className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <Search size={18} />
+                </button>
+              )}
+            </div>
+
             <ThemeToggle size="sm" />
 
             {/* Cart icon */}
@@ -132,7 +187,7 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* ✅ FIX: data-profile-menu wraps BOTH the button AND the dropdown */}
+            {/* Profile menu */}
             <div className="relative" data-profile-menu>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -279,11 +334,24 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Mobile toggle */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile / tablet cluster (< lg): search icon + theme + cart + hamburger */}
+          <div className="flex lg:hidden items-center gap-2 flex-shrink-0">
+            {/* md+ gets a search icon in the bar too; phones use the in-menu search */}
+            <button
+              onClick={() => setOpen(true)}
+              aria-label="Open search"
+              className="hidden md:flex p-2 rounded-xl transition-all duration-200"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <Search size={18} />
+            </button>
+
             <ThemeToggle size="sm" />
 
-            {/* Mobile cart */}
             <Link
               href="/marketplace/cart"
               className="relative p-2 rounded-xl transition-all duration-200"
@@ -309,6 +377,7 @@ export default function Navbar() {
 
             <button
               onClick={() => setOpen(!open)}
+              aria-label="Toggle menu"
               className="p-2 rounded-xl transition-all duration-200"
               style={{
                 background: "var(--glass-bg)",
@@ -322,10 +391,10 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile / tablet menu (< lg) */}
       {open && (
         <div
-          className="md:hidden px-4 pb-5 pt-2"
+          className="lg:hidden px-4 pb-5 pt-2"
           style={{
             background: "var(--navbar-bg)",
             backdropFilter: "var(--navbar-blur)",
@@ -333,6 +402,26 @@ export default function Navbar() {
             borderTop: "1px solid var(--glass-border-subtle)",
           }}
         >
+          {/* Search (full width, top of menu) */}
+          <form onSubmit={submitSearch} className="relative mb-4 mt-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: "var(--text-muted)" }}
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search everything…"
+              className="w-full rounded-xl py-3 pl-9 pr-3 text-sm outline-none"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+          </form>
+
           <div className="space-y-0.5 mb-4">
             {navLinks.map((link) => (
               <Link
@@ -358,6 +447,7 @@ export default function Navbar() {
               </Link>
             ))}
           </div>
+
           <div
             className="flex flex-col gap-2.5 pt-3"
             style={{ borderTop: "1px solid var(--divider)" }}
