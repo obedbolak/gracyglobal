@@ -334,21 +334,47 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Mobile / tablet cluster (< lg): search icon + theme + cart + hamburger */}
+          {/* Mobile / tablet cluster (< lg): inline expandable search + theme + cart + hamburger */}
           <div className="flex lg:hidden items-center gap-2 flex-shrink-0">
-            {/* md+ gets a search icon in the bar too; phones use the in-menu search */}
-            <button
-              onClick={() => setOpen(true)}
-              aria-label="Open search"
-              className="hidden md:flex p-2 rounded-xl transition-all duration-200"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <Search size={18} />
-            </button>
+            <div className="flex items-center">
+              {searchOpen ? (
+                <form onSubmit={submitSearch} className="relative">
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onBlur={() => {
+                      if (!query) setSearchOpen(false);
+                    }}
+                    placeholder="Search…"
+                    className="w-36 rounded-xl py-2 pl-9 pr-3 text-sm outline-none"
+                    style={{
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  />
+                </form>
+              ) : (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Open search"
+                  className="p-2 rounded-xl transition-all duration-200"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <Search size={18} />
+                </button>
+              )}
+            </div>
 
             <ThemeToggle size="sm" />
 
@@ -402,25 +428,6 @@ export default function Navbar() {
             borderTop: "1px solid var(--glass-border-subtle)",
           }}
         >
-          {/* Search (full width, top of menu) */}
-          <form onSubmit={submitSearch} className="relative mb-4 mt-1">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--text-muted)" }}
-            />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search everything…"
-              className="w-full rounded-xl py-3 pl-9 pr-3 text-sm outline-none"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </form>
 
           <div className="space-y-0.5 mb-4">
             {navLinks.map((link) => (
