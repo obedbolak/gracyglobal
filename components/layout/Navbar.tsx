@@ -428,7 +428,6 @@ export default function Navbar() {
             borderTop: "1px solid var(--glass-border-subtle)",
           }}
         >
-
           <div className="space-y-0.5 mb-4">
             {navLinks.map((link) => (
               <Link
