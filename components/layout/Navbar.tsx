@@ -482,12 +482,13 @@ export default function Navbar() {
             top: "4rem",
             background: "transparent",
             borderTop: "1px solid var(--glass-border-subtle)",
-            backdropFilter: "var(--navbar-blur)",
-            WebkitBackdropFilter: "var(--navbar-blur)",
+            backdropFilter: "var(--var-bg)",
+
             zIndex: 760,
+            overflowX: "hidden",
           }}
         >
-          <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+          <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8">
             <form onSubmit={submitSearch} className="py-2">
               <div className="relative">
                 <Search
@@ -500,13 +501,28 @@ export default function Navbar() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search everything…"
-                  className="w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none"
+                  className="w-full rounded-xl py-3 pl-10 pr-12 text-sm outline-none"
                   style={{
                     background: "var(--glass-bg)",
                     border: "1px solid var(--glass-border)",
                     color: "var(--text-primary)",
+                    boxSizing: "border-box",
+                    maxWidth: "100%",
                   }}
                 />
+
+                <button
+                  type="submit"
+                  aria-label="Submit search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <Search size={18} />
+                </button>
               </div>
             </form>
           </div>
