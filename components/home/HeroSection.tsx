@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageCircle,
@@ -12,14 +12,18 @@ import {
   ChevronRight,
   Star,
   ArrowRight,
+  ShoppingCart,
+  Users,
+  BookOpen,
+  MapPin,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { useCounselors } from "@/hooks/useCounselors";
 import { useCourses } from "@/hooks/useCourses";
 import { useFeaturedProducts } from "@/hooks/UseProducts";
 import { useCommunities } from "@/hooks/useCommunity";
 import { useJobs } from "@/hooks/useJobs";
-
-// ─── Slide shell (no preview items — those come from hooks) ────────────────────
 
 const slides = [
   {
@@ -108,7 +112,885 @@ const slides = [
   },
 ];
 
-// ─── Preview renderers ─────────────────────────────────────────────────────────
+type ShowcaseMode = "products" | "communities" | "jobs" | "courses";
+const SHOWCASE_CYCLE: ShowcaseMode[] = [
+  "products",
+  "communities",
+  "jobs",
+  "courses",
+];
+const SHOWCASE_INTERVAL = 10 * 60 * 1000;
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl ${className}`}
+      style={{ background: "var(--glass-bg-subtle)" }}
+    />
+  );
+}
+
+// ─── SHOWCASE: Products ────────────────────────────────────────────────────────
+
+function ProductsShowcase({
+  products,
+  loading,
+}: {
+  products: any[];
+  loading: boolean;
+}) {
+  const [cardIdx, setCardIdx] = useState(0);
+  const [imgIdx, setImgIdx] = useState(0);
+  const items = products.slice(0, 8);
+
+  const prevCard = () => {
+    setCardIdx((i) => (i - 1 + items.length) % items.length);
+    setImgIdx(0);
+  };
+  const nextCard = () => {
+    setCardIdx((i) => (i + 1) % items.length);
+    setImgIdx(0);
+  };
+  const visible = [items[cardIdx], items[(cardIdx + 1) % items.length]].filter(
+    Boolean,
+  );
+
+  if (loading)
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-3">
+          <ShoppingCart size={13} style={{ color: "var(--text-on-glass)" }} />
+          <span
+            className="text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: "var(--text-on-glass)" }}
+          >
+            Featured Products
+          </span>
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ border: "1px solid var(--glass-border)" }}
+        >
+          <Skeleton className="h-48 w-full rounded-none" />
+          <div
+            className="p-4 space-y-2"
+            style={{ background: "var(--glass-bg)" }}
+          >
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-7 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+
+  if (!items.length) return null;
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <ShoppingCart size={13} style={{ color: "var(--text-on-glass)" }} />
+        <span
+          className="text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: "var(--text-on-glass)" }}
+        >
+          Featured Products
+        </span>
+        <span
+          className="ml-auto text-[10px]"
+          style={{ color: "var(--text-on-glass)", opacity: 0.5 }}
+        >
+          {cardIdx + 1} / {items.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+        {visible.map((p, vi) => {
+          const imgs: string[] = p.images?.length
+            ? p.images
+            : [
+                "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=600&q=80",
+              ];
+          const curImg = vi === 0 ? imgIdx : 0;
+          return (
+            <motion.div
+              key={p.id ?? vi}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="rounded-2xl overflow-hidden"
+              style={{ border: "1px solid var(--glass-border)" }}
+            >
+              <div className="relative h-44 overflow-hidden group">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={curImg}
+                    src={imgs[curImg]}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                </AnimatePresence>
+                {p.category?.name && (
+                  <div
+                    className="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: "rgba(123,47,190,0.85)",
+                      color: "#fff",
+                    }}
+                  >
+                    {p.category.icon ? `${p.category.icon} ` : ""}
+                    {p.category.name}
+                  </div>
+                )}
+                {vi === 0 && imgs.length > 1 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setImgIdx((n) => (n - 1 + imgs.length) % imgs.length)
+                      }
+                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ background: "rgba(0,0,0,0.45)" }}
+                    >
+                      <ChevronLeft size={13} color="#fff" />
+                    </button>
+                    <button
+                      onClick={() => setImgIdx((n) => (n + 1) % imgs.length)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ background: "rgba(0,0,0,0.45)" }}
+                    >
+                      <ChevronRight size={13} color="#fff" />
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                      {imgs.map((_, s) => (
+                        <button
+                          key={s}
+                          onClick={() => setImgIdx(s)}
+                          style={{
+                            width: s === curImg ? 14 : 5,
+                            height: 5,
+                            borderRadius: 99,
+                            background:
+                              s === curImg ? "#fff" : "rgba(255,255,255,0.5)",
+                            transition: "all 0.2s",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="p-3" style={{ background: "var(--glass-bg)" }}>
+                <p
+                  className="text-[12px] font-bold truncate mb-1"
+                  style={{ color: "var(--text-on-glass)" }}
+                >
+                  {p.name}
+                </p>
+                {p.rating > 0 && (
+                  <div className="flex items-center gap-0.5 mb-1.5">
+                    {Array.from({ length: 5 }).map((_, s) => (
+                      <Star
+                        key={s}
+                        size={9}
+                        className={
+                          s < Math.round(p.rating)
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }
+                      />
+                    ))}
+                    <span
+                      className="text-[9px] ml-1"
+                      style={{ color: "var(--text-on-glass)", opacity: 0.6 }}
+                    >
+                      {p.rating}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-[13px] font-extrabold"
+                    style={{ color: "var(--scarlet, #dc143c)" }}
+                  >
+                    CFA {(p.price ?? 0).toLocaleString()}
+                  </span>
+                  <button
+                    className="px-3 py-1 rounded-lg text-[10px] font-bold"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                      color: "#fff",
+                    }}
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {items.length > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <button
+            onClick={prevCard}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronLeft size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setCardIdx(i);
+                  setImgIdx(0);
+                }}
+                style={{
+                  width: i === cardIdx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 99,
+                  background:
+                    i === cardIdx
+                      ? "var(--accent-primary)"
+                      : "var(--glass-border)",
+                  transition: "all 0.25s",
+                }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={nextCard}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronRight size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SHOWCASE: Communities ─────────────────────────────────────────────────────
+
+function CommunitiesShowcase({
+  communities,
+  loading,
+}: {
+  communities: any[];
+  loading: boolean;
+}) {
+  const [idx, setIdx] = useState(0);
+  const items = communities.slice(0, 8);
+  const visible = [items[idx], items[(idx + 1) % items.length]].filter(Boolean);
+
+  if (loading)
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-3">
+          <Users size={13} style={{ color: "var(--text-on-glass)" }} />
+          <span
+            className="text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: "var(--text-on-glass)" }}
+          >
+            Active Communities
+          </span>
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ border: "1px solid var(--glass-border)" }}
+        >
+          <Skeleton className="h-40 w-full rounded-none" />
+          <div
+            className="p-4 space-y-2"
+            style={{ background: "var(--glass-bg)" }}
+          >
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-2.5 w-full" />
+            <Skeleton className="h-2.5 w-3/4" />
+          </div>
+        </div>
+      </div>
+    );
+
+  if (!items.length) return null;
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <Users size={13} style={{ color: "var(--text-on-glass)" }} />
+        <span
+          className="text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: "var(--text-on-glass)" }}
+        >
+          Active Communities
+        </span>
+        <span
+          className="ml-auto text-[10px]"
+          style={{ color: "var(--text-on-glass)", opacity: 0.5 }}
+        >
+          {idx + 1} / {items.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+        {visible.map((c, vi) => (
+          <motion.div
+            key={c.id ?? vi}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-2xl overflow-hidden cursor-pointer"
+            style={{ border: "1px solid var(--glass-border)" }}
+          >
+            <div className="relative h-36 overflow-hidden">
+              {c.image ? (
+                <img
+                  src={c.image}
+                  alt={c.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--purple), var(--blue))",
+                  }}
+                />
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0,0,0,0.65), transparent)",
+                }}
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <p className="text-[13px] font-bold text-white truncate">
+                  {c.name}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-white/70">
+                    {c.memberCount ?? 0} members
+                  </span>
+                  <span
+                    className="text-[9px] px-2 py-0.5 rounded-full font-semibold"
+                    style={{
+                      background: "rgba(123,47,190,0.75)",
+                      color: "#fff",
+                    }}
+                  >
+                    {c.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="p-3" style={{ background: "var(--glass-bg)" }}>
+              <p
+                className="text-[10px] line-clamp-2 leading-relaxed mb-2"
+                style={{ color: "var(--text-on-glass)", opacity: 0.75 }}
+              >
+                {c.description}
+              </p>
+              <div className="flex items-center justify-between">
+                <span
+                  className="text-[9px]"
+                  style={{ color: "var(--text-on-glass)", opacity: 0.55 }}
+                >
+                  {c.postCount ?? 0} posts
+                </span>
+                <button
+                  className="px-3 py-1 rounded-lg text-[10px] font-bold"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--purple), var(--blue))",
+                    color: "#fff",
+                  }}
+                >
+                  Join
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {items.length > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <button
+            onClick={() => setIdx((i) => (i - 1 + items.length) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronLeft size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                style={{
+                  width: i === idx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 99,
+                  background:
+                    i === idx ? "var(--accent-primary)" : "var(--glass-border)",
+                  transition: "all 0.25s",
+                }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setIdx((i) => (i + 1) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronRight size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SHOWCASE: Jobs ────────────────────────────────────────────────────────────
+
+function JobsShowcase({ jobs, loading }: { jobs: any[]; loading: boolean }) {
+  const [idx, setIdx] = useState(0);
+  const items = jobs.slice(0, 8);
+  const visible = [items[idx], items[(idx + 1) % items.length]].filter(Boolean);
+
+  const categoryColors: Record<string, string> = {
+    TECH: "rgba(26,58,219,0.15)",
+    DESIGN: "rgba(123,47,190,0.15)",
+    MARKETING: "rgba(220,20,60,0.15)",
+    FINANCE: "rgba(16,185,129,0.15)",
+    EDUCATION: "rgba(245,158,11,0.15)",
+    HEALTH: "rgba(239,68,68,0.15)",
+    OTHER: "rgba(107,114,128,0.15)",
+  };
+
+  if (loading)
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase size={13} style={{ color: "var(--text-on-glass)" }} />
+          <span
+            className="text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: "var(--text-on-glass)" }}
+          >
+            Latest Remote Jobs
+          </span>
+        </div>
+        <div
+          className="rounded-2xl p-4 space-y-3"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-12 h-12 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-2.5 w-1/2" />
+            </div>
+          </div>
+          <Skeleton className="h-2 w-full" />
+          <Skeleton className="h-2 w-3/4" />
+        </div>
+      </div>
+    );
+
+  if (!items.length) return null;
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <Briefcase size={13} style={{ color: "var(--text-on-glass)" }} />
+        <span
+          className="text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: "var(--text-on-glass)" }}
+        >
+          Latest Remote Jobs
+        </span>
+        <span
+          className="ml-auto text-[10px]"
+          style={{ color: "var(--text-on-glass)", opacity: 0.5 }}
+        >
+          {idx + 1} / {items.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+        {visible.map((job, vi) => (
+          <motion.div
+            key={job.id ?? vi}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-2xl p-4 cursor-pointer transition-all hover:scale-[1.01]"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0 overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                }}
+              >
+                {job.companyLogo ? (
+                  <img
+                    src={job.companyLogo}
+                    alt={job.company}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  job.company?.[0]?.toUpperCase()
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-[13px] font-bold truncate"
+                  style={{ color: "var(--text-on-glass)" }}
+                >
+                  {job.title}
+                </p>
+                <p
+                  className="text-[11px] truncate"
+                  style={{ color: "var(--text-on-glass)", opacity: 0.7 }}
+                >
+                  {job.company}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              <span
+                className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background:
+                    categoryColors[job.category] ?? categoryColors.OTHER,
+                  color: "var(--text-on-glass)",
+                }}
+              >
+                {job.type?.replace("_", " ")}
+              </span>
+              {job.location && (
+                <span
+                  className="flex items-center gap-0.5 text-[9px]"
+                  style={{ color: "var(--text-on-glass)", opacity: 0.65 }}
+                >
+                  <MapPin size={8} /> {job.location}
+                </span>
+              )}
+              {job.salary && (
+                <span
+                  className="text-[9px] font-bold ml-auto"
+                  style={{ color: "var(--scarlet, #dc143c)" }}
+                >
+                  {job.salary}
+                </span>
+              )}
+            </div>
+            {job.description && (
+              <p
+                className="text-[10px] line-clamp-2 leading-relaxed mb-3"
+                style={{ color: "var(--text-on-glass)", opacity: 0.6 }}
+              >
+                {job.description}
+              </p>
+            )}
+            <button
+              className="w-full py-1.5 rounded-xl text-[10px] font-bold"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                color: "#fff",
+              }}
+            >
+              Apply now
+            </button>
+          </motion.div>
+        ))}
+      </div>
+
+      {items.length > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <button
+            onClick={() => setIdx((i) => (i - 1 + items.length) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronLeft size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                style={{
+                  width: i === idx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 99,
+                  background:
+                    i === idx ? "var(--accent-primary)" : "var(--glass-border)",
+                  transition: "all 0.25s",
+                }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setIdx((i) => (i + 1) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronRight size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SHOWCASE: Courses ─────────────────────────────────────────────────────────
+
+function CoursesShowcase({
+  courses,
+  loading,
+}: {
+  courses: any[];
+  loading: boolean;
+}) {
+  const [idx, setIdx] = useState(0);
+  const items = courses.slice(0, 8);
+  const visible = [items[idx], items[(idx + 1) % items.length]].filter(Boolean);
+
+  const levelColor: Record<string, string> = {
+    BEGINNER: "rgba(16,185,129,0.2)",
+    INTERMEDIATE: "rgba(245,158,11,0.2)",
+    ADVANCED: "rgba(220,20,60,0.2)",
+  };
+
+  if (loading)
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-3">
+          <BookOpen size={13} style={{ color: "var(--text-on-glass)" }} />
+          <span
+            className="text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: "var(--text-on-glass)" }}
+          >
+            E-Learning Courses
+          </span>
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ border: "1px solid var(--glass-border)" }}
+        >
+          <Skeleton className="h-44 w-full rounded-none" />
+          <div
+            className="p-3 space-y-2"
+            style={{ background: "var(--glass-bg)" }}
+          >
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-2.5 w-1/2" />
+          </div>
+        </div>
+      </div>
+    );
+
+  if (!items.length) return null;
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <BookOpen size={13} style={{ color: "var(--text-on-glass)" }} />
+        <span
+          className="text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: "var(--text-on-glass)" }}
+        >
+          E-Learning Courses
+        </span>
+        <span
+          className="ml-auto text-[10px]"
+          style={{ color: "var(--text-on-glass)", opacity: 0.5 }}
+        >
+          {idx + 1} / {items.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+        {visible.map((course, vi) => {
+          const totalLessons =
+            course.sections?.reduce(
+              (acc: number, s: any) => acc + (s.lessons?.length ?? 0),
+              0,
+            ) ?? 0;
+          return (
+            <motion.div
+              key={course.id ?? vi}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="rounded-2xl overflow-hidden cursor-pointer group"
+              style={{ border: "1px solid var(--glass-border)" }}
+            >
+              <div className="h-44 relative overflow-hidden">
+                {course.thumbnail ? (
+                  <img
+                    src={course.thumbnail}
+                    alt={course.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--purple), var(--blue))",
+                    }}
+                  >
+                    <BookOpen size={32} color="rgba(255,255,255,0.4)" />
+                  </div>
+                )}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.55), transparent)",
+                  }}
+                />
+                {course.level && (
+                  <span
+                    className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background:
+                        levelColor[course.level] ?? levelColor.BEGINNER,
+                      color: "#fff",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  >
+                    {course.level}
+                  </span>
+                )}
+                {course.featured && (
+                  <span
+                    className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
+                    style={{
+                      background: "rgba(245,158,11,0.9)",
+                      color: "#fff",
+                    }}
+                  >
+                    <Zap size={7} /> Featured
+                  </span>
+                )}
+              </div>
+              <div className="p-3" style={{ background: "var(--glass-bg)" }}>
+                <p
+                  className="text-[12px] font-bold line-clamp-2 leading-tight mb-2"
+                  style={{ color: "var(--text-on-glass)" }}
+                >
+                  {course.title}
+                </p>
+                <div className="flex items-center justify-between">
+                  {totalLessons > 0 && (
+                    <span
+                      className="flex items-center gap-1 text-[10px]"
+                      style={{ color: "var(--text-on-glass)", opacity: 0.65 }}
+                    >
+                      <Clock size={9} /> {totalLessons} lessons
+                    </span>
+                  )}
+                  <span
+                    className="text-[12px] font-extrabold ml-auto"
+                    style={{ color: "var(--scarlet, #dc143c)" }}
+                  >
+                    {course.price === 0
+                      ? "Free"
+                      : `CFA ${(course.price ?? 0).toLocaleString()}`}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {items.length > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <button
+            onClick={() => setIdx((i) => (i - 1 + items.length) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronLeft size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                style={{
+                  width: i === idx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 99,
+                  background:
+                    i === idx ? "var(--accent-primary)" : "var(--glass-border)",
+                  transition: "all 0.25s",
+                }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setIdx((i) => (i + 1) % items.length)}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <ChevronRight size={13} className="text-[var(--text-on-glass)]" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Counselor preview ────────────────────────────────────────────────────────
 
 function CounselorPreview({ counselors }: { counselors: any[] }) {
   const items = counselors.slice(0, 4);
@@ -181,164 +1063,6 @@ function CounselorPreview({ counselors }: { counselors: any[] }) {
   );
 }
 
-function CommunityPreview({ communities }: { communities: any[] }) {
-  const items = communities.slice(0, 6);
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {items.map((c, i) => (
-        <motion.div
-          key={c.id ?? i}
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
-          className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid var(--glass-border)" }}
-        >
-          <div
-            className="h-20 bg-cover bg-center"
-            style={{
-              backgroundImage: c.image
-                ? `url(${c.image})`
-                : "linear-gradient(135deg, var(--purple), var(--blue))",
-            }}
-          />
-          <div className="p-2" style={{ background: "var(--glass-bg-subtle)" }}>
-            <div
-              className="text-[10px] font-bold leading-tight truncate"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {c.name}
-            </div>
-            <div
-              className="text-[9px] mt-0.5"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {c.category}
-            </div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-function MarketplacePreview({ products }: { products: any[] }) {
-  const items = products.slice(0, 6);
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {items.map((p, i) => {
-        // ✅ Safely extract category name
-        const categoryName = p.category?.name || p.group || "Product";
-        const categoryIcon = p.category?.icon || "";
-
-        return (
-          <motion.div
-            key={p.id ?? i}
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
-            className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid var(--glass-border)" }}
-          >
-            <div className="h-20 relative overflow-hidden">
-              <img
-                src={
-                  p.images?.[0] ??
-                  "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
-                }
-                alt={p.name}
-                className="w-full h-full object-cover"
-              />
-              <div
-                className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{
-                  background: "var(--badge-purple-bg)",
-                  color: "var(--badge-purple-text)",
-                }}
-              >
-                {categoryIcon && `${categoryIcon} `}
-                {categoryName}
-              </div>
-            </div>
-            <div
-              className="p-2"
-              style={{ background: "var(--glass-bg-subtle)" }}
-            >
-              <div
-                className="text-[10px] font-bold truncate"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {p.name}
-              </div>
-              <div
-                className="text-[9px]"
-                style={{ color: "var(--text-muted)" }}
-              >
-                CFA {(p.price ?? 0).toLocaleString()}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-function JobsPreview({ jobs }: { jobs: any[] }) {
-  const items = jobs.slice(0, 4);
-  return (
-    <div className="space-y-3">
-      {items.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          No live remote jobs available right now.
-        </p>
-      ) : (
-        items.map((job, index) => (
-          <motion.div
-            key={job.id ?? index}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + index * 0.08, duration: 0.35 }}
-            className="rounded-2xl p-4"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-            }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p
-                  className="text-sm font-semibold truncate"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {job.title}
-                </p>
-                <p
-                  className="text-xs truncate"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {job.company}
-                  {job.location ? ` · ${job.location}` : ""}
-                </p>
-              </div>
-              <span
-                className="text-[10px] font-semibold uppercase tracking-[0.18em] px-2 py-1 rounded-full"
-                style={{
-                  background: "var(--glass-bg-subtle)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                {job.category?.replace("_", " ")}
-              </span>
-            </div>
-          </motion.div>
-        ))
-      )}
-    </div>
-  );
-}
-
-// Skeleton for when data is loading
 function PreviewSkeleton({ type }: { type: string }) {
   if (type === "counselors") {
     return (
@@ -402,8 +1126,6 @@ function PreviewSkeleton({ type }: { type: string }) {
   );
 }
 
-// ─── Slide variants ────────────────────────────────────────────────────────────
-
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -416,6 +1138,20 @@ const textVariants = {
   exit: { y: -24, opacity: 0 },
 };
 
+const SHOWCASE_LABELS: Record<ShowcaseMode, string> = {
+  products: "Products",
+  communities: "Communities",
+  jobs: "Jobs",
+  courses: "Courses",
+};
+
+const SHOWCASE_ICONS: Record<ShowcaseMode, React.ReactNode> = {
+  products: <ShoppingCart size={12} />,
+  communities: <Users size={12} />,
+  jobs: <Briefcase size={12} />,
+  courses: <BookOpen size={12} />,
+};
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function HeroSection() {
@@ -423,7 +1159,10 @@ export default function HeroSection() {
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
 
-  // Typing effect states
+  const [showcaseIndex, setShowcaseIndex] = useState(0);
+  const showcaseMode: ShowcaseMode = SHOWCASE_CYCLE[showcaseIndex];
+  const showcaseTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [displayedText, setDisplayedText] = useState("");
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -436,17 +1175,16 @@ export default function HeroSection() {
     "Connecting People.",
     "Driving Innovation.",
   ];
-
   const staticText = "Empowering Lives. ";
   const lastLine = "Transforming Communities.";
 
-  // ─── Live data ───────────────────────────────────────────────────────────────
   const { counselors, loading: loadingCounselors } = useCounselors({
     available: true,
   });
   const { products, isLoading: loadingProducts } = useFeaturedProducts(6);
   const { communities, loading: loadingCommunities } = useCommunities();
   const { jobs, categories, jobsLoading, categoriesLoading } = useJobs();
+  const { courses, isLoading: loadingCourses } = useCourses({ featured: true });
 
   const go = useCallback((next: number, direction: number) => {
     setDir(direction);
@@ -461,6 +1199,15 @@ export default function HeroSection() {
     const t = setInterval(() => go(active + 1, 1), 5000);
     return () => clearInterval(t);
   }, [active, paused, go]);
+
+  useEffect(() => {
+    showcaseTimerRef.current = setInterval(() => {
+      setShowcaseIndex((prev) => (prev + 1) % SHOWCASE_CYCLE.length);
+    }, SHOWCASE_INTERVAL);
+    return () => {
+      if (showcaseTimerRef.current) clearInterval(showcaseTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (hasCompletedInitial) return;
@@ -544,36 +1291,36 @@ export default function HeroSection() {
       : slide;
   const Icon = slideData.icon;
 
-  // Resolve which preview + loading state to show for current slide
-  const renderPreview = () => {
-    switch (slide.preview) {
-      case "counselors":
-        return loadingCounselors ? (
-          <PreviewSkeleton type="counselors" />
-        ) : (
-          <CounselorPreview counselors={counselors} />
+  const renderCounselorPreview = () =>
+    loadingCounselors ? (
+      <PreviewSkeleton type="counselors" />
+    ) : (
+      <CounselorPreview counselors={counselors} />
+    );
+
+  const renderShowcase = () => {
+    switch (showcaseMode) {
+      case "products":
+        return (
+          <ProductsShowcase products={products} loading={loadingProducts} />
+        );
+      case "communities":
+        return (
+          <CommunitiesShowcase
+            communities={communities}
+            loading={loadingCommunities}
+          />
         );
       case "jobs":
-        return jobsLoading ? (
-          <PreviewSkeleton type="jobs" />
-        ) : (
-          <JobsPreview jobs={jobs} />
-        );
-      case "community":
-        return loadingCommunities ? (
-          <PreviewSkeleton type="community" />
-        ) : (
-          <CommunityPreview communities={communities} />
-        );
-      case "marketplace":
-        return loadingProducts ? (
-          <PreviewSkeleton type="marketplace" />
-        ) : (
-          <MarketplacePreview products={products} />
-        );
-      default:
-        return null;
+        return <JobsShowcase jobs={jobs} loading={jobsLoading} />;
+      case "courses":
+        return <CoursesShowcase courses={courses} loading={loadingCourses} />;
     }
+  };
+
+  const renderRightPanel = () => {
+    if (slide.preview === "counselors") return renderCounselorPreview();
+    return renderShowcase();
   };
 
   return (
@@ -583,7 +1330,6 @@ export default function HeroSection() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Background Image */}
       <div
         className="absolute left-0 top-1/2 -translate-y-1/2 w-1/2 h-[700px] pointer-events-none z-[5] animate-float"
         style={{
@@ -595,7 +1341,6 @@ export default function HeroSection() {
         }}
       />
 
-      {/* Animated gradient background */}
       <AnimatePresence mode="sync">
         <motion.div
           key={slide.id + "-bg"}
@@ -608,7 +1353,6 @@ export default function HeroSection() {
         />
       </AnimatePresence>
 
-      {/* Glow blobs */}
       <AnimatePresence mode="sync">
         <motion.div
           key={slide.id + "-glow-a"}
@@ -636,144 +1380,299 @@ export default function HeroSection() {
         />
       </AnimatePresence>
 
-      {/* Hero headline */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-32 lg:pt-36 pb-6">
-        <div className="text-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+        {/* Scrolling card strip */}
+        <div className="relative mb-8 overflow-hidden">
           <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-8"
+            className="pointer-events-none absolute left-0 top-0 h-full w-16 z-10"
             style={{
-              background: "var(--glass-bg-subtle)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--text-muted)",
-              backdropFilter: "blur(12px)",
+              background:
+                "linear-gradient(to right, var(--bg-base), transparent)",
             }}
-          >
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
-              }}
-            />
-            Digital Ecosystem for Everyone
-          </div>
+          />
+          <div
+            className="pointer-events-none absolute right-0 top-0 h-full w-16 z-10"
+            style={{
+              background:
+                "linear-gradient(to left, var(--bg-base), transparent)",
+            }}
+          />
 
-          <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight min-h-[180px] sm:min-h-[200px] lg:min-h-[220px]"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {displayedText.includes(staticText.trim()) ? (
-              <>
-                Empowering Lives. <br />
-                {displayedText.length > staticText.length && (
-                  <span
-                    style={{
-                      background:
-                        "linear-gradient(90deg, var(--purple-light), var(--scarlet-light), var(--blue-light))",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {displayedText.slice(staticText.length)}
-                  </span>
-                )}
-                <span
-                  className="inline-block w-0.5 h-[0.9em] ml-1"
-                  style={{
-                    background: "var(--purple)",
-                    verticalAlign: "middle",
-                    animation: "blink 1s infinite",
-                  }}
-                />
-                <br />
-                <span style={{ color: "var(--text-secondary)" }}>
-                  {lastLine}
-                </span>
-              </>
-            ) : (
-              <>
-                {displayedText}
-                <span
-                  className="inline-block w-0.5 h-[0.9em] ml-1"
-                  style={{
-                    background: "var(--purple)",
-                    verticalAlign: "middle",
-                    animation: "blink 1s infinite",
-                  }}
-                />
-              </>
-            )}
-          </h1>
-
-          <style jsx>{`
-            @keyframes blink {
-              0%,
-              50% {
-                opacity: 1;
-              }
-              51%,
-              100% {
-                opacity: 0;
-              }
+          <style>{`
+            @keyframes marquee-rtl {
+              0%   { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
             }
+            .marquee-track {
+              display: flex;
+              width: max-content;
+              animation: marquee-rtl 35s linear infinite;
+            }
+            .marquee-track:hover { animation-play-state: paused; }
           `}</style>
 
-          <p
-            className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-10"
-            style={{ color: "var(--text-muted)" }}
-          >
-            A digital ecosystem connecting counseling, remote work, community
-            development, and commerce across Africa and the World.
-          </p>
+          <div className="marquee-track gap-3">
+            {[0, 1].map((pass) => (
+              <div key={pass} className="flex gap-3 flex-shrink-0">
+                {products.slice(0, 4).map((p, i) => (
+                  <Link
+                    href="/marketplace"
+                    key={`p-${pass}-${i}`}
+                    className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
+                    style={{
+                      border: "1px solid var(--glass-border)",
+                      background: "var(--glass-bg)",
+                    }}
+                  >
+                    <div className="h-28 relative overflow-hidden">
+                      <img
+                        src={
+                          p.images?.[0] ??
+                          "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
+                        }
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
+                        }}
+                      />
+                      <span
+                        className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: "rgba(123,47,190,0.85)",
+                          color: "#fff",
+                        }}
+                      >
+                        {p.category?.icon ?? ""} {p.category?.name ?? "Product"}
+                      </span>
+                    </div>
+                    <div className="p-2.5">
+                      <p
+                        className="text-[11px] font-bold truncate"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {p.name}
+                      </p>
+                      <p
+                        className="text-[10px] font-extrabold mt-0.5"
+                        style={{ color: "var(--scarlet, #dc143c)" }}
+                      >
+                        CFA {(p.price ?? 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="px-8 py-3.5 rounded-2xl text-[var(--text-inverse)] font-bold text-sm transition-all duration-200 hover:scale-105 hover:-translate-y-0.5"
-              style={{
-                background: "var(--btn-primary-bg)",
-                boxShadow: "var(--btn-primary-shadow)",
-              }}
-            >
-              Get Started Free
-            </Link>
-          </div>
-        </div>
-      </div>
+                {jobs.slice(0, 3).map((job, i) => (
+                  <Link
+                    href="/jobs"
+                    key={`j-${pass}-${i}`}
+                    className="flex-shrink-0 w-52 rounded-2xl p-3 flex flex-col gap-2 transition-transform hover:scale-[1.03]"
+                    style={{
+                      border: "1px solid var(--glass-border)",
+                      background: "var(--glass-bg)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white flex-shrink-0 overflow-hidden"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                        }}
+                      >
+                        {job.companyLogo ? (
+                          <img
+                            src={job.companyLogo}
+                            alt={job.company}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          job.company?.[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className="text-[11px] font-bold truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {job.title}
+                        </p>
+                        <p
+                          className="text-[9px] truncate"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {job.company}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className="text-[9px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: "rgba(123,47,190,0.15)",
+                          color: "var(--purple, #7b2fbe)",
+                        }}
+                      >
+                        {job.type?.replace("_", " ")}
+                      </span>
+                      {job.location && (
+                        <span
+                          className="flex items-center gap-0.5 text-[9px]"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          <MapPin size={7} />
+                          {job.location}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
 
-      {/* Carousel */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
-        {/* Tab pills */}
-        <div className="flex justify-center gap-1 sm:gap-2 mb-8 flex-wrap px-2">
-          {slides.map((s, i) => {
-            const SIcon = s.icon;
-            return (
-              <button
-                key={s.id}
-                onClick={() => go(i, i > active ? 1 : -1)}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 min-w-0 flex-shrink-0"
-                style={
-                  i === active
-                    ? {
-                        background: slide.gradient,
-                        color: "var(--text-inverse)",
-                        boxShadow: `0 4px 14px ${slide.glowA}`,
-                        border: "1px solid rgba(255,255,255,0.20)",
-                      }
-                    : {
-                        background: "var(--glass-bg)",
+                {communities.slice(0, 3).map((c, i) => (
+                  <Link
+                    href="/community"
+                    key={`c-${pass}-${i}`}
+                    className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
+                    style={{
+                      border: "1px solid var(--glass-border)",
+                      background: "var(--glass-bg)",
+                    }}
+                  >
+                    <div className="h-24 relative overflow-hidden">
+                      {c.image ? (
+                        <img
+                          src={c.image}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, var(--purple), var(--blue))",
+                          }}
+                        />
+                      )}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.55), transparent)",
+                        }}
+                      />
+                      <span className="absolute bottom-1.5 left-2 text-[9px] font-bold text-white">
+                        {c.memberCount ?? 0} members
+                      </span>
+                    </div>
+                    <div className="p-2.5">
+                      <p
+                        className="text-[11px] font-bold truncate"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {c.name}
+                      </p>
+                      <p
+                        className="text-[9px] truncate mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {c.category}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+
+                {courses.slice(0, 3).map((course, i) => {
+                  const totalLessons =
+                    course.sections?.reduce(
+                      (acc: number, s: any) => acc + (s.lessons?.length ?? 0),
+                      0,
+                    ) ?? 0;
+                  return (
+                    <Link
+                      href="/e-learning"
+                      key={`co-${pass}-${i}`}
+                      className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
+                      style={{
                         border: "1px solid var(--glass-border)",
-                        color: "var(--text-muted)",
-                        backdropFilter: "blur(10px)",
-                      }
-                }
-              >
-                <SIcon size={14} className="flex-shrink-0" />
-                <span className="hidden sm:inline truncate">{s.label}</span>
-              </button>
-            );
-          })}
+                        background: "var(--glass-bg)",
+                      }}
+                    >
+                      <div className="h-24 relative overflow-hidden">
+                        {course.thumbnail ? (
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, var(--blue), var(--purple))",
+                            }}
+                          >
+                            <BookOpen size={24} color="rgba(255,255,255,0.4)" />
+                          </div>
+                        )}
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
+                          }}
+                        />
+                        {course.level && (
+                          <span
+                            className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{
+                              background: "rgba(26,58,219,0.8)",
+                              color: "#fff",
+                            }}
+                          >
+                            {course.level}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-2.5">
+                        <p
+                          className="text-[11px] font-bold line-clamp-2 leading-tight"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {course.title}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          {totalLessons > 0 && (
+                            <span
+                              className="flex items-center gap-0.5 text-[9px]"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              <Clock size={7} />
+                              {totalLessons} lessons
+                            </span>
+                          )}
+                          <span
+                            className="text-[9px] font-extrabold"
+                            style={{ color: "var(--scarlet, #dc143c)" }}
+                          >
+                            {course.price === 0
+                              ? "Free"
+                              : `CFA ${(course.price ?? 0).toLocaleString()}`}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Carousel card */}
@@ -904,7 +1803,6 @@ export default function HeroSection() {
                     className="text-[var(--text-on-glass)]"
                   />
                 </button>
-
                 <div className="flex items-center gap-2 ml-2">
                   {slides.map((s, i) => (
                     <button
@@ -923,7 +1821,6 @@ export default function HeroSection() {
                     />
                   ))}
                 </div>
-
                 <span className="ml-auto text-xs text-[var(--text-on-glass)] font-mono">
                   {String(active + 1).padStart(2, "0")} /{" "}
                   {String(slides.length).padStart(2, "0")}
@@ -931,29 +1828,68 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* RIGHT — live preview */}
+            {/* RIGHT — rotating showcase */}
             <div
-              className="hidden lg:flex items-center p-8 lg:p-10"
+              className="hidden lg:flex flex-col p-8 lg:p-10"
               style={{ borderLeft: "1px solid var(--glass-border-subtle)" }}
             >
-              <AnimatePresence mode="wait" custom={dir}>
+              {slide.preview !== "counselors" && (
+                <div className="flex items-center gap-1.5 mb-4">
+                  {SHOWCASE_CYCLE.map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setShowcaseIndex(SHOWCASE_CYCLE.indexOf(mode));
+                        if (showcaseTimerRef.current)
+                          clearInterval(showcaseTimerRef.current);
+                        showcaseTimerRef.current = setInterval(() => {
+                          setShowcaseIndex(
+                            (prev) => (prev + 1) % SHOWCASE_CYCLE.length,
+                          );
+                        }, SHOWCASE_INTERVAL);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all"
+                      style={{
+                        background:
+                          showcaseMode === mode
+                            ? "linear-gradient(135deg, var(--purple), var(--scarlet))"
+                            : "var(--glass-bg-subtle)",
+                        color:
+                          showcaseMode === mode
+                            ? "#fff"
+                            : "var(--text-on-glass)",
+                        border:
+                          showcaseMode === mode
+                            ? "none"
+                            : "1px solid var(--glass-border)",
+                        opacity: showcaseMode === mode ? 1 : 0.7,
+                      }}
+                    >
+                      {SHOWCASE_ICONS[mode]}
+                      {SHOWCASE_LABELS[mode]}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <AnimatePresence mode="wait">
                 <motion.div
-                  key={slide.id + "-preview"}
-                  custom={dir}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
-                  className="w-full"
+                  key={
+                    slide.preview === "counselors" ? "counselors" : showcaseMode
+                  }
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                  className="flex-1 overflow-y-auto"
+                  style={{ scrollbarWidth: "none" }}
                 >
-                  {renderPreview()}
+                  {renderRightPanel()}
                 </motion.div>
               </AnimatePresence>
             </div>
           </div>
 
-          {/* Progress bar */}
           {!paused && (
             <motion.div
               key={slide.id + "-progress"}

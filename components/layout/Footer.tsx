@@ -17,6 +17,7 @@ const links = {
     { label: "Blog", href: "/blog" },
     { label: "Careers", href: "/careers" },
     { label: "Contact", href: "/contact" },
+    { label: "Docs", href: "/docs" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },

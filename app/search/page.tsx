@@ -103,7 +103,7 @@ function SearchResults() {
             title="Communities"
             items={data.communities.map((c) => ({
               key: c.id,
-              href: `/community?slug=${c.slug}`,
+              href: `/community/${c.slug}`,
               title: c.name,
               image: c.image,
             }))}
