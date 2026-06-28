@@ -990,6 +990,632 @@ function CoursesShowcase({
   );
 }
 
+// ─── Stories Strip ─────────────────────────────────────────────────────────────
+
+const STORY_DURATION = 5000; // ms per section
+
+type StorySection = "products" | "jobs" | "communities" | "courses";
+const STORY_SECTIONS: StorySection[] = [
+  "products",
+  "jobs",
+  "communities",
+  "courses",
+];
+
+const STORY_META: Record<
+  StorySection,
+  { label: string; icon: React.ReactNode; color: string }
+> = {
+  products: {
+    label: "Products",
+    icon: <ShoppingCart size={11} />,
+    color: "var(--purple, #7b2fbe)",
+  },
+  jobs: {
+    label: "Jobs",
+    icon: <Briefcase size={11} />,
+    color: "var(--scarlet, #dc143c)",
+  },
+  communities: {
+    label: "Community",
+    icon: <Users size={11} />,
+    color: "var(--blue, #1a3adb)",
+  },
+  courses: { label: "Courses", icon: <BookOpen size={11} />, color: "#f59e0b" },
+};
+
+function StoriesStrip({
+  products,
+  jobs,
+  communities,
+  courses,
+}: {
+  products: any[];
+  jobs: any[];
+  communities: any[];
+  courses: any[];
+}) {
+  const [active, setActive] = useState<StorySection>("products");
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressRef = useRef<NodeJS.Timeout | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+
+  const goTo = useCallback((section: StorySection) => {
+    setActive(section);
+    setProgress(0);
+  }, []);
+
+  const goNext = useCallback(() => {
+    setActive((prev) => {
+      const idx = STORY_SECTIONS.indexOf(prev);
+      const next = STORY_SECTIONS[(idx + 1) % STORY_SECTIONS.length];
+      return next;
+    });
+    setProgress(0);
+  }, []);
+
+  // Progress ticker
+  useEffect(() => {
+    if (paused) return;
+    const tick = 50;
+    progressRef.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 100) return 0;
+        return p + (tick / STORY_DURATION) * 100;
+      });
+    }, tick);
+    return () => {
+      if (progressRef.current) clearInterval(progressRef.current);
+    };
+  }, [paused, active]);
+
+  // Auto-advance
+  useEffect(() => {
+    if (paused) return;
+    intervalRef.current = setInterval(goNext, STORY_DURATION);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [paused, active, goNext]);
+
+  // ── Voice narration ──────────────────────────────────────────────
+  const speak = useCallback((text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+    utterance.volume = 1;
+    utterance.lang = "en-US";
+
+    const trySpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(
+        (v) =>
+          v.name === "Google US English" ||
+          v.name === "Samantha" ||
+          v.name === "Karen" ||
+          v.name.includes("Female") ||
+          (v.lang.startsWith("en") && v.localService),
+      );
+      if (preferred) utterance.voice = preferred;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      // voices already loaded
+      trySpeak();
+    } else {
+      // wait for voices to load then speak
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        trySpeak();
+      };
+    }
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!voiceEnabled) return;
+
+    // Build a short description based on active section + first item
+    let text = "";
+
+    if (active === "products" && products.length > 0) {
+      const p = products[0];
+      text = `Featured product: ${p.name}. ${p.description ?? ""} Priced at ${(p.price ?? 0).toLocaleString()} CFA francs.`;
+    } else if (active === "jobs" && jobs.length > 0) {
+      const j = jobs[0];
+      text = `Job opportunity: ${j.title} at ${j.company}. ${j.type?.replace("_", " ") ?? ""}. ${j.location ? `Located in ${j.location}.` : ""} ${j.description ?? ""}`;
+    } else if (active === "communities" && communities.length > 0) {
+      const c = communities[0];
+      text = `Community spotlight: ${c.name}. ${c.description ?? ""} ${c.memberCount ?? 0} members have already joined.`;
+    } else if (active === "courses" && courses.length > 0) {
+      const c = courses[0];
+      text = `Course available: ${c.title}. Level: ${c.level ?? "all levels"}. ${c.price === 0 ? "This course is free." : `Priced at ${(c.price ?? 0).toLocaleString()} CFA francs.`}`;
+    }
+
+    if (text) speak(text);
+
+    return () => stopSpeaking();
+  }, [active, voiceEnabled]);
+
+  const renderCards = (section: StorySection) => {
+    if (section === "products") {
+      return products.slice(0, 6).map((p, i) => (
+        <Link
+          href="/marketplace"
+          key={`sp-${i}`}
+          className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
+          style={{
+            border: "1px solid var(--glass-border)",
+            background: "var(--glass-bg)",
+          }}
+        >
+          <div className="h-56 relative overflow-hidden">
+            <img
+              src={
+                p.images?.[0] ??
+                "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=600&q=80"
+              }
+              alt={p.name}
+              className="w-full h-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(0,0,0,0.55), transparent)",
+              }}
+            />
+            <span
+              className="absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+              style={{ background: "rgba(123,47,190,0.85)", color: "#fff" }}
+            >
+              {p.category?.icon ?? ""} {p.category?.name ?? "Product"}
+            </span>
+          </div>
+          <div className="p-4">
+            <p
+              className="text-[14px] font-bold truncate mb-1"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {p.name}
+            </p>
+            {p.description && (
+              <p
+                className="text-[12px] line-clamp-2 mb-2"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {p.description}
+              </p>
+            )}
+            <div className="flex items-center justify-between mt-2">
+              <p
+                className="text-[15px] font-extrabold"
+                style={{ color: "var(--scarlet, #dc143c)" }}
+              >
+                CFA {(p.price ?? 0).toLocaleString()}
+              </p>
+              <span
+                className="text-[11px] font-bold px-3 py-1 rounded-lg"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                  color: "#fff",
+                }}
+              >
+                View
+              </span>
+            </div>
+          </div>
+        </Link>
+      ));
+    }
+
+    if (section === "jobs") {
+      return jobs.slice(0, 6).map((job, i) => (
+        <Link
+          href="/jobs"
+          key={`sj-${i}`}
+          className="flex-shrink-0 w-[400px] rounded-2xl p-5 flex flex-col gap-3 transition-transform hover:scale-[1.02]"
+          style={{
+            border: "1px solid var(--glass-border)",
+            background: "var(--glass-bg)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0 overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--purple), var(--scarlet))",
+              }}
+            >
+              {job.companyLogo ? (
+                <img
+                  src={job.companyLogo}
+                  alt={job.company}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                job.company?.[0]?.toUpperCase()
+              )}
+            </div>
+            <div className="min-w-0">
+              <p
+                className="text-[14px] font-bold truncate"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {job.title}
+              </p>
+              <p
+                className="text-[12px] truncate"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {job.company}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{
+                background: "rgba(123,47,190,0.15)",
+                color: "var(--purple, #7b2fbe)",
+              }}
+            >
+              {job.type?.replace("_", " ")}
+            </span>
+            {job.location && (
+              <span
+                className="flex items-center gap-1 text-[11px]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <MapPin size={10} />
+                {job.location}
+              </span>
+            )}
+            {job.salary && (
+              <span
+                className="text-[12px] font-extrabold ml-auto"
+                style={{ color: "var(--scarlet, #dc143c)" }}
+              >
+                {job.salary}
+              </span>
+            )}
+          </div>
+          {job.description && (
+            <p
+              className="text-[12px] line-clamp-3 leading-relaxed"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {job.description}
+            </p>
+          )}
+          <div className="mt-auto pt-2">
+            <span
+              className="block w-full text-center text-[12px] font-bold px-4 py-2 rounded-xl"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                color: "#fff",
+              }}
+            >
+              Apply Now
+            </span>
+          </div>
+        </Link>
+      ));
+    }
+
+    if (section === "communities") {
+      return communities.slice(0, 6).map((c, i) => (
+        <Link
+          href="/community"
+          key={`sc-${i}`}
+          className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
+          style={{
+            border: "1px solid var(--glass-border)",
+            background: "var(--glass-bg)",
+          }}
+        >
+          <div className="h-56 relative overflow-hidden">
+            {c.image ? (
+              <img
+                src={c.image}
+                alt={c.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-full h-full"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--purple), var(--blue))",
+                }}
+              />
+            )}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
+              }}
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <p className="text-[15px] font-bold text-white truncate">
+                {c.name}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[11px] text-white/70">
+                  {c.memberCount ?? 0} members
+                </span>
+                {c.category && (
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                    style={{
+                      background: "rgba(123,47,190,0.75)",
+                      color: "#fff",
+                    }}
+                  >
+                    {c.category}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            <p
+              className="text-[12px] line-clamp-2 leading-relaxed mb-3"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {c.description}
+            </p>
+            <span
+              className="block w-full text-center text-[12px] font-bold px-4 py-2 rounded-xl"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--purple), var(--blue))",
+                color: "#fff",
+              }}
+            >
+              Join Community
+            </span>
+          </div>
+        </Link>
+      ));
+    }
+
+    if (section === "courses") {
+      return courses.slice(0, 6).map((course, i) => {
+        const totalLessons =
+          course.sections?.reduce(
+            (acc: number, s: any) => acc + (s.lessons?.length ?? 0),
+            0,
+          ) ?? 0;
+        return (
+          <Link
+            href="/learn"
+            key={`sco-${i}`}
+            className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
+            style={{
+              border: "1px solid var(--glass-border)",
+              background: "var(--glass-bg)",
+            }}
+          >
+            <div className="h-56 relative overflow-hidden">
+              {course.thumbnail ? (
+                <img
+                  src={course.thumbnail}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--blue), var(--purple))",
+                  }}
+                >
+                  <BookOpen size={40} color="rgba(255,255,255,0.4)" />
+                </div>
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
+                }}
+              />
+              {course.level && (
+                <span
+                  className="absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                  style={{ background: "rgba(26,58,219,0.85)", color: "#fff" }}
+                >
+                  {course.level}
+                </span>
+              )}
+              {course.featured && (
+                <span
+                  className="absolute top-2.5 right-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
+                  style={{ background: "rgba(245,158,11,0.9)", color: "#fff" }}
+                >
+                  <Zap size={9} /> Featured
+                </span>
+              )}
+            </div>
+            <div className="p-4">
+              <p
+                className="text-[14px] font-bold line-clamp-2 leading-tight mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {course.title}
+              </p>
+              <div className="flex items-center justify-between mt-2">
+                {totalLessons > 0 && (
+                  <span
+                    className="flex items-center gap-1 text-[12px]"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <Clock size={11} /> {totalLessons} lessons
+                  </span>
+                )}
+                <span
+                  className="text-[15px] font-extrabold ml-auto"
+                  style={{ color: "var(--scarlet, #dc143c)" }}
+                >
+                  {course.price === 0
+                    ? "Free"
+                    : `CFA ${(course.price ?? 0).toLocaleString()}`}
+                </span>
+              </div>
+            </div>
+          </Link>
+        );
+      });
+    }
+
+    return null;
+  };
+  return (
+    <div
+      className="relative mb-8"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Story progress bars + section tabs */}
+      {/* Story progress bars + section tabs */}
+      <div className="flex items-center gap-2 mb-3">
+        {/* Voice toggle */}
+        <button
+          onClick={() => {
+            const next = !voiceEnabled;
+            setVoiceEnabled(next);
+            if (!next) stopSpeaking();
+          }}
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          style={{
+            background: voiceEnabled
+              ? "linear-gradient(135deg, var(--purple), var(--scarlet))"
+              : "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+          title={voiceEnabled ? "Mute narration" : "Enable voice narration"}
+        >
+          {voiceEnabled ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+            </svg>
+          ) : (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="var(--text-muted)"
+            >
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+            </svg>
+          )}
+        </button>
+        {STORY_SECTIONS.map((section) => {
+          const meta = STORY_META[section];
+          const isActive = section === active;
+          return (
+            <button
+              key={section}
+              onClick={() => goTo(section)}
+              className="flex-1 group flex flex-col gap-1.5"
+            >
+              {/* Progress bar */}
+              <div
+                className="w-full h-[3px] rounded-full overflow-hidden"
+                style={{ background: "var(--glass-border)" }}
+              >
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: meta.color }}
+                  animate={{
+                    width: isActive
+                      ? `${progress}%`
+                      : section ===
+                            STORY_SECTIONS[
+                              STORY_SECTIONS.indexOf(active) - 1
+                            ] ||
+                          STORY_SECTIONS.indexOf(section) <
+                            STORY_SECTIONS.indexOf(active)
+                        ? "100%"
+                        : "0%",
+                  }}
+                  transition={{ duration: 0, ease: "linear" }}
+                />
+              </div>
+              {/* Label */}
+              <div className="flex items-center gap-1 justify-center">
+                <span
+                  style={{
+                    color: isActive ? meta.color : "var(--text-muted)",
+                    transition: "color 0.2s",
+                  }}
+                >
+                  {meta.icon}
+                </span>
+                <span
+                  className="text-[10px] font-bold transition-all"
+                  style={{ color: isActive ? meta.color : "var(--text-muted)" }}
+                >
+                  {meta.label}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Cards area */}
+      <div className="relative overflow-hidden">
+        {/* Fade edges */}
+        <div
+          className="pointer-events-none absolute left-0 top-0 h-full w-12 z-10"
+          style={{
+            background:
+              "linear-gradient(to right, var(--bg-base), transparent)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute right-0 top-0 h-full w-12 z-10"
+          style={{
+            background: "linear-gradient(to left, var(--bg-base), transparent)",
+          }}
+        />
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+            className="flex gap-3 overflow-x-auto pb-1"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {renderCards(active)}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 // ─── Counselor preview ────────────────────────────────────────────────────────
 
 function CounselorPreview({ counselors }: { counselors: any[] }) {
@@ -1381,300 +2007,13 @@ export default function HeroSection() {
       </AnimatePresence>
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
-        {/* Scrolling card strip */}
-        <div className="relative mb-8 overflow-hidden">
-          <div
-            className="pointer-events-none absolute left-0 top-0 h-full w-16 z-10"
-            style={{
-              background:
-                "linear-gradient(to right, var(--bg-base), transparent)",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute right-0 top-0 h-full w-16 z-10"
-            style={{
-              background:
-                "linear-gradient(to left, var(--bg-base), transparent)",
-            }}
-          />
-
-          <style>{`
-            @keyframes marquee-rtl {
-              0%   { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .marquee-track {
-              display: flex;
-              width: max-content;
-              animation: marquee-rtl 35s linear infinite;
-            }
-            .marquee-track:hover { animation-play-state: paused; }
-          `}</style>
-
-          <div className="marquee-track gap-3">
-            {[0, 1].map((pass) => (
-              <div key={pass} className="flex gap-3 flex-shrink-0">
-                {products.slice(0, 4).map((p, i) => (
-                  <Link
-                    href="/marketplace"
-                    key={`p-${pass}-${i}`}
-                    className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
-                    style={{
-                      border: "1px solid var(--glass-border)",
-                      background: "var(--glass-bg)",
-                    }}
-                  >
-                    <div className="h-28 relative overflow-hidden">
-                      <img
-                        src={
-                          p.images?.[0] ??
-                          "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80"
-                        }
-                        alt={p.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          background:
-                            "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
-                        }}
-                      />
-                      <span
-                        className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: "rgba(123,47,190,0.85)",
-                          color: "#fff",
-                        }}
-                      >
-                        {p.category?.icon ?? ""} {p.category?.name ?? "Product"}
-                      </span>
-                    </div>
-                    <div className="p-2.5">
-                      <p
-                        className="text-[11px] font-bold truncate"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {p.name}
-                      </p>
-                      <p
-                        className="text-[10px] font-extrabold mt-0.5"
-                        style={{ color: "var(--scarlet, #dc143c)" }}
-                      >
-                        CFA {(p.price ?? 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-
-                {jobs.slice(0, 3).map((job, i) => (
-                  <Link
-                    href="/jobs"
-                    key={`j-${pass}-${i}`}
-                    className="flex-shrink-0 w-52 rounded-2xl p-3 flex flex-col gap-2 transition-transform hover:scale-[1.03]"
-                    style={{
-                      border: "1px solid var(--glass-border)",
-                      background: "var(--glass-bg)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white flex-shrink-0 overflow-hidden"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, var(--purple), var(--scarlet))",
-                        }}
-                      >
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={job.company}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          job.company?.[0]?.toUpperCase()
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p
-                          className="text-[11px] font-bold truncate"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {job.title}
-                        </p>
-                        <p
-                          className="text-[9px] truncate"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {job.company}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className="text-[9px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: "rgba(123,47,190,0.15)",
-                          color: "var(--purple, #7b2fbe)",
-                        }}
-                      >
-                        {job.type?.replace("_", " ")}
-                      </span>
-                      {job.location && (
-                        <span
-                          className="flex items-center gap-0.5 text-[9px]"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          <MapPin size={7} />
-                          {job.location}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-
-                {communities.slice(0, 3).map((c, i) => (
-                  <Link
-                    href="/community"
-                    key={`c-${pass}-${i}`}
-                    className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
-                    style={{
-                      border: "1px solid var(--glass-border)",
-                      background: "var(--glass-bg)",
-                    }}
-                  >
-                    <div className="h-24 relative overflow-hidden">
-                      {c.image ? (
-                        <img
-                          src={c.image}
-                          alt={c.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-full"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, var(--purple), var(--blue))",
-                          }}
-                        />
-                      )}
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          background:
-                            "linear-gradient(to top, rgba(0,0,0,0.55), transparent)",
-                        }}
-                      />
-                      <span className="absolute bottom-1.5 left-2 text-[9px] font-bold text-white">
-                        {c.memberCount ?? 0} members
-                      </span>
-                    </div>
-                    <div className="p-2.5">
-                      <p
-                        className="text-[11px] font-bold truncate"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {c.name}
-                      </p>
-                      <p
-                        className="text-[9px] truncate mt-0.5"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {c.category}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-
-                {courses.slice(0, 3).map((course, i) => {
-                  const totalLessons =
-                    course.sections?.reduce(
-                      (acc: number, s: any) => acc + (s.lessons?.length ?? 0),
-                      0,
-                    ) ?? 0;
-                  return (
-                    <Link
-                      href="/e-learning"
-                      key={`co-${pass}-${i}`}
-                      className="flex-shrink-0 w-44 rounded-2xl overflow-hidden transition-transform hover:scale-[1.03]"
-                      style={{
-                        border: "1px solid var(--glass-border)",
-                        background: "var(--glass-bg)",
-                      }}
-                    >
-                      <div className="h-24 relative overflow-hidden">
-                        {course.thumbnail ? (
-                          <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="w-full h-full flex items-center justify-center"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, var(--blue), var(--purple))",
-                            }}
-                          >
-                            <BookOpen size={24} color="rgba(255,255,255,0.4)" />
-                          </div>
-                        )}
-                        <div
-                          className="absolute inset-0"
-                          style={{
-                            background:
-                              "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
-                          }}
-                        />
-                        {course.level && (
-                          <span
-                            className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{
-                              background: "rgba(26,58,219,0.8)",
-                              color: "#fff",
-                            }}
-                          >
-                            {course.level}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-2.5">
-                        <p
-                          className="text-[11px] font-bold line-clamp-2 leading-tight"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {course.title}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          {totalLessons > 0 && (
-                            <span
-                              className="flex items-center gap-0.5 text-[9px]"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              <Clock size={7} />
-                              {totalLessons} lessons
-                            </span>
-                          )}
-                          <span
-                            className="text-[9px] font-extrabold"
-                            style={{ color: "var(--scarlet, #dc143c)" }}
-                          >
-                            {course.price === 0
-                              ? "Free"
-                              : `CFA ${(course.price ?? 0).toLocaleString()}`}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-
+        {/* Facebook Stories-style section strip */}
+        <StoriesStrip
+          products={products}
+          jobs={jobs}
+          communities={communities}
+          courses={courses}
+        />
         {/* Carousel card */}
         <div
           className="rounded-3xl overflow-hidden relative"
