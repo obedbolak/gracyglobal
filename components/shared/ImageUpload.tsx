@@ -14,6 +14,7 @@ interface ImageUploadProps {
   label?: string;
   currentImage?: string;
   aspectRatio?: "square" | "video" | "auto";
+  previewShape?: "rounded" | "circle";
 }
 
 export default function ImageUpload({
@@ -24,6 +25,7 @@ export default function ImageUpload({
   label = "Upload Image",
   currentImage,
   aspectRatio = "auto",
+  previewShape = "rounded",
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
@@ -39,6 +41,16 @@ export default function ImageUpload({
     video: "aspect-video",
     auto: "",
   };
+
+  const previewContainerClasses =
+    previewShape === "circle"
+      ? "mx-auto max-w-48 aspect-square overflow-hidden rounded-full border border-[var(--glass-border)]"
+      : "overflow-hidden rounded-xl";
+
+  const uploadBoxClasses =
+    previewShape === "circle"
+      ? "glass cursor-pointer block aspect-square p-6 text-center hover:bg-[var(--glass-bg-hover)] transition-colors rounded-full flex items-center justify-center"
+      : "glass cursor-pointer block p-8 text-center hover:bg-[var(--glass-bg-hover)] transition-colors rounded-xl";
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,7 +121,7 @@ export default function ImageUpload({
 
       <div className="relative">
         {!preview ? (
-          <label className="glass cursor-pointer block p-8 text-center hover:bg-[var(--glass-bg-hover)] transition-colors rounded-xl">
+          <label className={uploadBoxClasses}>
             <input
               ref={fileInputRef}
               type="file"
@@ -141,7 +153,7 @@ export default function ImageUpload({
             )}
           </label>
         ) : (
-          <div className="glass relative overflow-hidden rounded-xl">
+          <div className={`glass relative ${previewContainerClasses}`}>
             <button
               onClick={clearImage}
               disabled={uploading}
@@ -150,9 +162,7 @@ export default function ImageUpload({
               <X className="w-4 h-4" />
             </button>
 
-            <div
-              className={`relative w-full ${aspectRatioClasses[aspectRatio]} ${!aspectRatioClasses[aspectRatio] && "h-64"}`}
-            >
+            <div className={`relative h-full w-full ${aspectRatioClasses[aspectRatio]}`}>
               <Image
                 src={preview}
                 alt="Preview"

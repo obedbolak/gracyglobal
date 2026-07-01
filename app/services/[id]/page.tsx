@@ -97,9 +97,6 @@ export default function ServiceBookingPage({
   const selectedPlan = service.options?.find(
     (option) => option.id === selectedOption,
   );
-  const usePlanGrid =
-    categories.find((c) => c.id === service.categoryId)?.name ===
-    "Housing & Property Services";
 
   if (submitted) {
     return (
@@ -154,6 +151,7 @@ export default function ServiceBookingPage({
           Back to Services
         </Link>
 
+        {/* Top row: Image (left) + Info / Form (right) */}
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Image Gallery */}
           <div className="flex flex-col gap-3">
@@ -207,7 +205,7 @@ export default function ServiceBookingPage({
             )}
           </div>
 
-          {/* Details, Plans, then Booking Form */}
+          {/* Info card (title, rating, description, availability, includes) OR booking form */}
           <div
             className="rounded-2xl p-6"
             style={{
@@ -229,16 +227,16 @@ export default function ServiceBookingPage({
                       ?.name || "Service"}
                   </span>
                   {service.badge && (
-                  <span
-                    className="text-xs font-bold px-3 py-1 rounded-full text-white"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                    }}
-                  >
-                    {service.badge}
-                  </span>
-                )}
+                    <span
+                      className="text-xs font-bold px-3 py-1 rounded-full text-white"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                      }}
+                    >
+                      {service.badge}
+                    </span>
+                  )}
                 </div>
 
                 <h1
@@ -290,7 +288,7 @@ export default function ServiceBookingPage({
 
                 {/* Includes */}
                 {service.includes && service.includes.length > 0 && (
-                  <div className="mb-6">
+                  <div>
                     <h3
                       className="text-sm font-bold mb-3"
                       style={{ color: "var(--text-primary)" }}
@@ -315,100 +313,6 @@ export default function ServiceBookingPage({
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* Service Options / Pricing Tiers */}
-                <h3
-                  className="text-xl font-bold mb-4"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Choose Your Plan
-                </h3>
-                {service.options && service.options.length > 0 ? (
-                  <div
-                    className={
-                      usePlanGrid
-                        ? "grid grid-cols-1 md:grid-cols-2 gap-4"
-                        : "space-y-3"
-                    }
-                  >
-                    {service.options.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedOption(option.id)}
-                        className="w-full p-4 rounded-xl text-left cursor-pointer transition-all hover:scale-[1.01]"
-                        style={{
-                          background: "var(--glass-bg-subtle)",
-                          border: "2px solid var(--glass-border)",
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-3 mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h4
-                              className="font-bold text-sm truncate"
-                              style={{ color: "var(--text-primary)" }}
-                            >
-                              {option.name}
-                            </h4>
-                            {option.popular && (
-                              <span
-                                className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
-                                style={{
-                                  background: "var(--info-bg)",
-                                  color: "var(--blue)",
-                                }}
-                              >
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                          <CheckCircle2
-                            size={18}
-                            className="opacity-50 flex-shrink-0"
-                            style={{ color: "var(--blue)" }}
-                          />
-                        </div>
-                        <p
-                          className="text-xs mb-3 line-clamp-2"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {option.description}
-                        </p>
-                        <div className="flex items-baseline gap-2 mb-2">
-                          <span
-                            className="text-lg font-black"
-                            style={{ color: "var(--text-primary)" }}
-                          >
-                            {convert(option.amount)}
-                          </span>
-                          <span
-                            className="text-xs"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            {option.pricingType === "MONTHLY" && "per month"}
-                            {option.pricingType === "ONE_TIME" && option.label}
-                            {option.pricingType === "PER_SESSION" &&
-                              option.label}
-                          </span>
-                        </div>
-                        {option.yearlyAmount && (
-                          <p
-                            className="text-xs"
-                            style={{ color: "var(--green)" }}
-                          >
-                            Save{" "}
-                            {convert(option.amount * 12 - option.yearlyAmount)}{" "}
-                            yearly
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    No plans are available for this service yet.
-                  </p>
                 )}
               </div>
             ) : (
@@ -444,89 +348,19 @@ export default function ServiceBookingPage({
                   </button>
                 </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
-                    }}
-                    placeholder="Enter your full name"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
-                    }}
-                    placeholder="your@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    required
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
-                    }}
-                    placeholder="+234 800 000 0000"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label
                       className="block text-sm font-semibold mb-2"
                       style={{ color: "var(--text-secondary)" }}
                     >
-                      Preferred Date *
+                      Full Name *
                     </label>
                     <input
-                      type="date"
-                      name="date"
+                      type="text"
+                      name="name"
                       required
-                      value={formData.date}
+                      value={formData.name}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
                       style={{
@@ -534,20 +368,22 @@ export default function ServiceBookingPage({
                         border: "1px solid var(--input-border)",
                         color: "var(--text-primary)",
                       }}
+                      placeholder="Enter your full name"
                     />
                   </div>
+
                   <div>
                     <label
                       className="block text-sm font-semibold mb-2"
                       style={{ color: "var(--text-secondary)" }}
                     >
-                      Preferred Time *
+                      Email *
                     </label>
                     <input
-                      type="time"
-                      name="time"
+                      type="email"
+                      name="email"
                       required
-                      value={formData.time}
+                      value={formData.email}
                       onChange={handleChange}
                       className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
                       style={{
@@ -555,79 +391,255 @@ export default function ServiceBookingPage({
                         border: "1px solid var(--input-border)",
                         color: "var(--text-primary)",
                       }}
+                      placeholder="your@email.com"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Service Address *
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    required
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                  <div>
+                    <label
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      required
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                      style={{
+                        background: "var(--input-bg)",
+                        border: "1px solid var(--input-border)",
+                        color: "var(--text-primary)",
+                      }}
+                      placeholder="+234 800 000 0000"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        className="block text-sm font-semibold mb-2"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        Preferred Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="date"
+                        required
+                        value={formData.date}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                        style={{
+                          background: "var(--input-bg)",
+                          border: "1px solid var(--input-border)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className="block text-sm font-semibold mb-2"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        Preferred Time *
+                      </label>
+                      <input
+                        type="time"
+                        name="time"
+                        required
+                        value={formData.time}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                        style={{
+                          background: "var(--input-bg)",
+                          border: "1px solid var(--input-border)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Service Address *
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      required
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                      style={{
+                        background: "var(--input-bg)",
+                        border: "1px solid var(--input-border)",
+                        color: "var(--text-primary)",
+                      }}
+                      placeholder="Where should we provide the service?"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Additional Notes
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
+                      style={{
+                        background: "var(--input-bg)",
+                        border: "1px solid var(--input-border)",
+                        color: "var(--text-primary)",
+                      }}
+                      placeholder="Any special requests or requirements?"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
                     style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
+                      background:
+                        "linear-gradient(135deg, var(--purple), var(--blue))",
+                      boxShadow: "0 4px 14px rgba(123,47,190,0.35)",
                     }}
-                    placeholder="Where should we provide the service?"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: "var(--text-secondary)" }}
                   >
-                    Additional Notes
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-primary)",
-                    }}
-                    placeholder="Any special requests or requirements?"
-                  />
-                </div>
+                    Confirm Booking
+                  </button>
 
-                <button
-                  type="submit"
-                  className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--purple), var(--blue))",
-                    boxShadow: "0 4px 14px rgba(123,47,190,0.35)",
-                  }}
-                >
-                  Confirm Booking
-                </button>
-
-                <p
-                  className="text-xs text-center"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  By booking, you agree to our Terms of Service and Privacy
-                  Policy
-                </p>
-              </form>
+                  <p
+                    className="text-xs text-center"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    By booking, you agree to our Terms of Service and Privacy
+                    Policy
+                  </p>
+                </form>
               </div>
             )}
           </div>
         </div>
+
+        {/* Plans row: full width, below the image/info row */}
+        {!selectedPlan && service.options && service.options.length > 0 && (
+          <div
+            className="rounded-2xl p-6 mt-8"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <h3
+              className="text-xl font-bold mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Choose Your Plan
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {service.options.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSelectedOption(option.id)}
+                  className="flex-1 min-w-[240px] p-4 rounded-xl text-left cursor-pointer transition-all hover:scale-[1.01]"
+                  style={{
+                    background: "var(--glass-bg-subtle)",
+                    border: "2px solid var(--glass-border)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h4
+                        className="font-bold text-sm truncate"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {option.name}
+                      </h4>
+                      {option.popular && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+                          style={{
+                            background: "var(--info-bg)",
+                            color: "var(--blue)",
+                          }}
+                        >
+                          Popular
+                        </span>
+                      )}
+                    </div>
+                    <CheckCircle2
+                      size={18}
+                      className="opacity-50 flex-shrink-0"
+                      style={{ color: "var(--blue)" }}
+                    />
+                  </div>
+                  <p
+                    className="text-xs mb-3 line-clamp-2"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {option.description}
+                  </p>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span
+                      className="text-lg font-black"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {convert(option.amount)}
+                    </span>
+                    <span
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {option.pricingType === "MONTHLY" && "per month"}
+                      {option.pricingType === "ONE_TIME" && option.label}
+                      {option.pricingType === "PER_SESSION" && option.label}
+                    </span>
+                  </div>
+                  {option.yearlyAmount && (
+                    <p className="text-xs" style={{ color: "var(--green)" }}>
+                      Save {convert(option.amount * 12 - option.yearlyAmount)}{" "}
+                      yearly
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!selectedPlan &&
+          (!service.options || service.options.length === 0) && (
+            <div
+              className="rounded-2xl p-6 mt-8"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+              }}
+            >
+              <h3
+                className="text-xl font-bold mb-4"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Choose Your Plan
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                No plans are available for this service yet.
+              </p>
+            </div>
+          )}
       </div>
     </div>
   );

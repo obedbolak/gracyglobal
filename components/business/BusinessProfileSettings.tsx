@@ -210,6 +210,7 @@ export default function BusinessProfileSettings({
         <ImageUpload
           label={imageLabel}
           aspectRatio="square"
+          previewShape="circle"
           currentImage={form.image || undefined}
           folder={uploadFolder}
           onUploadComplete={(url) => set("image", url)}
