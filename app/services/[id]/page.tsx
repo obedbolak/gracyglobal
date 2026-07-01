@@ -57,7 +57,7 @@ export default function ServiceBookingPage({
   if (error || !service) {
     return (
       <div
-        className="min-h-screen pt-24 pb-16"
+        className="min-h-screen pt-14 pb-16"
         style={{ background: "var(--background)" }}
       >
         <div className="max-w-4xl mx-auto px-4 text-center">
@@ -101,7 +101,7 @@ export default function ServiceBookingPage({
   if (submitted) {
     return (
       <div
-        className="min-h-screen pt-24 pb-16 flex items-center justify-center"
+        className="min-h-screen pt-14 pb-16 flex items-center justify-center"
         style={{ background: "var(--background)" }}
       >
         <div className="text-center max-w-md px-4">
