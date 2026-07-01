@@ -2,7 +2,14 @@
 
 import { use, useState } from "react";
 import { useService } from "@/hooks/useServices";
-import { Star, Clock, Check, ChevronLeft, CheckCircle2, Store } from "lucide-react";
+import {
+  Star,
+  Clock,
+  Check,
+  ChevronLeft,
+  CheckCircle2,
+  Store,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -100,12 +107,12 @@ export default function ServiceBookingPage({
   const businessStore = service.seller?.store;
   const hasBusinessInfo = Boolean(
     businessStore &&
-      (businessStore.businessName ||
-        businessStore.location ||
-        businessStore.quarter ||
-        businessStore.description ||
-        businessStore.phone ||
-        businessStore.whatsapp),
+    (businessStore.businessName ||
+      businessStore.location ||
+      businessStore.quarter ||
+      businessStore.description ||
+      businessStore.phone ||
+      businessStore.whatsapp),
   );
 
   if (submitted) {
@@ -318,10 +325,7 @@ export default function ServiceBookingPage({
                             className="text-xs mt-1"
                             style={{ color: "var(--text-secondary)" }}
                           >
-                            {[
-                              businessStore?.quarter,
-                              businessStore?.location,
-                            ]
+                            {[businessStore?.quarter, businessStore?.location]
                               .filter(Boolean)
                               .join(", ")}
                           </p>
@@ -330,7 +334,7 @@ export default function ServiceBookingPage({
                     </div>
                     {businessStore?.slug && (
                       <Link
-                        href={`/stores/${businessStore.slug}`}
+                        href={`/stores/${businessStore.slug}/services`}
                         className="inline-flex items-center gap-1 mt-3 text-sm font-semibold"
                         style={{ color: "var(--blue)" }}
                       >
@@ -572,10 +576,7 @@ export default function ServiceBookingPage({
                               className="text-xs mt-1"
                               style={{ color: "var(--text-secondary)" }}
                             >
-                              {[
-                                businessStore?.quarter,
-                                businessStore?.location,
-                              ]
+                              {[businessStore?.quarter, businessStore?.location]
                                 .filter(Boolean)
                                 .join(", ")}
                             </p>
@@ -584,7 +585,7 @@ export default function ServiceBookingPage({
                       </div>
                       {businessStore?.slug && (
                         <Link
-                          href={`/stores/${businessStore.slug}`}
+                          href={`/stores/${businessStore.slug}/services`}
                           className="inline-flex items-center gap-1 mt-3 text-sm font-semibold"
                           style={{ color: "var(--blue)" }}
                         >

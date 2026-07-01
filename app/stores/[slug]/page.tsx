@@ -54,7 +54,11 @@ async function getStore(slug: string) {
     },
   });
 
-  return { store, products };
+  const servicesCount = await prisma.service.count({
+    where: { sellerId: store.userId, active: true },
+  });
+
+  return { store, products, servicesCount };
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -102,7 +106,7 @@ export default async function StorefrontPage({
   const data = await getStore(slug);
   if (!data) notFound();
 
-  const { store, products } = data;
+  const { store, products, servicesCount } = data;
   const locationLine = [store.quarter, store.location]
     .filter(Boolean)
     .join(", ");
@@ -176,7 +180,7 @@ export default async function StorefrontPage({
             </div>
 
             {/* Contact buttons */}
-            <div className="flex items-center gap-2 pb-2">
+            <div className="flex flex-wrap items-center gap-2 pb-2">
               {store.whatsapp && (
                 <a
                   href={waLink(store.whatsapp)}
@@ -199,6 +203,17 @@ export default async function StorefrontPage({
                 >
                   <Phone className="w-4 h-4" /> Call
                 </a>
+              )}
+              {servicesCount > 0 && (
+                <Link
+                  href={`/stores/${store.slug}/services`}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity"
+                  style={{
+                    background: "linear-gradient(135deg, var(--purple), var(--blue))",
+                  }}
+                >
+                  <Package className="w-4 h-4" /> View services
+                </Link>
               )}
             </div>
           </div>
