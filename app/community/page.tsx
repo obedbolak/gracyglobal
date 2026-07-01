@@ -6,18 +6,9 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
-import { Loader2, Check, X, Search, ArrowRight } from "lucide-react";
+import { Check, X, Search, ArrowRight } from "lucide-react";
 import { useCommunityMembership } from "@/context/CommunityMembershipContext";
-
-const CATEGORIES = [
-  "Health & Environment",
-  "Education & Knowledge",
-  "Governance & Law",
-  "Economic Empowerment",
-  "Youth Empowerment",
-  "Women Empowerment",
-  "Other",
-];
+import ShareButton from "@/components/shared/ShareButton";
 
 const FALLBACK_CARD_IMAGE =
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80";
@@ -29,6 +20,10 @@ interface CommunitySummary {
   memberCount?: number;
   postCount?: number;
   image?: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function CommunityPageContent() {
@@ -96,10 +91,10 @@ function CommunityPageContent() {
       });
       refresh();
       openCommunity(slug);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setJoinMessage({
         type: "error",
-        text: err.message || "Something went wrong.",
+        text: getErrorMessage(err, "Something went wrong."),
       });
     } finally {
       setJoining(false);
@@ -331,27 +326,40 @@ function CommunityCard({
           {community.description}
         </p>
 
-        {isMember ? (
-          <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white">
-            Open community
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </span>
-        ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onJoin(community.slug, community.name);
-            }}
-            disabled={joining}
-            className="mt-3 w-full rounded-xl bg-white/95 py-2 text-sm font-semibold text-neutral-900 backdrop-blur transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {isMember ? (
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-white">
+              Open community
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onJoin(community.slug, community.name);
+              }}
+              disabled={joining}
+              className="min-w-0 flex-1 rounded-xl bg-white/95 px-3 py-2 text-sm font-semibold text-neutral-900 backdrop-blur transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {joining
+                ? "Joining..."
+                : isLoggedIn
+                  ? "Join community"
+                  : "Sign in to join"}
+            </button>
+          )}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
-            {joining
-              ? "Joining…"
-              : isLoggedIn
-                ? "Join community"
-                : "Sign in to join"}
-          </button>
-        )}
+            <ShareButton
+              href={`/community/${community.slug}`}
+              title={`Join ${community.name} on GracyGlobal`}
+              text={community.description}
+              className="!min-h-0 !px-3 !py-2"
+            />
+          </div>
+        </div>
       </div>
     </motion.div>
   );

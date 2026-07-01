@@ -11,11 +11,11 @@ import {
   Check,
   X,
   ArrowLeft,
-  ArrowRight,
   Menu,
 } from "lucide-react";
 import Link from "next/link";
 import { useCommunityMembership } from "@/context/CommunityMembershipContext";
+import ShareButton from "@/components/shared/ShareButton";
 
 type TabId = "feed" | "projects" | "events" | "resources" | "members";
 
@@ -112,6 +112,10 @@ interface CommunityEditForm {
   image: string;
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function getActiveTab(pathname: string): TabId {
   if (pathname.includes("/projects")) return "projects";
   if (pathname.includes("/events")) return "events";
@@ -133,9 +137,7 @@ export default function CommunityLayout({
   const pathname = usePathname();
 
   const {
-    isAnyMember,
     loading: membershipLoading,
-    selectedSlug,
     setSelectedSlug,
     selectedCommunity,
     memberships,
@@ -222,8 +224,8 @@ export default function CommunityLayout({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setEditForm((f) => ({ ...f, image: data.uploads.url }));
-    } catch (err: any) {
-      setEditError(err.message || "Image upload failed");
+    } catch (err: unknown) {
+      setEditError(getErrorMessage(err, "Image upload failed"));
     } finally {
       setUploading(false);
     }
@@ -243,8 +245,8 @@ export default function CommunityLayout({
       if (!res.ok) throw new Error(data.error);
       refresh();
       setEditing(false);
-    } catch (err: any) {
-      setEditError(err.message || "Failed to save changes");
+    } catch (err: unknown) {
+      setEditError(getErrorMessage(err, "Failed to save changes"));
     } finally {
       setSaving(false);
     }
@@ -320,6 +322,12 @@ export default function CommunityLayout({
                 {selectedCommunity.postCount} posts
               </span>
             </div>
+            <ShareButton
+              href={`/community/${selectedCommunity.slug}`}
+              title={`Join ${selectedCommunity.name} on GracyGlobal`}
+              text={selectedCommunity.description}
+              className="mt-3 w-full !min-h-0 !py-2"
+            />
             {isAdmin && !editing && (
               <button
                 onClick={() => {
