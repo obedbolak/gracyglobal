@@ -30,6 +30,25 @@ export interface Service {
     icon: string | null;
     color: string | null;
   };
+  seller?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    store: {
+      id: string;
+      slug: string | null;
+      businessName: string;
+      businessType: string | null;
+      image: string | null;
+      location: string | null;
+      quarter: string | null;
+      openingHours: string | null;
+      description: string | null;
+      phone: string | null;
+      whatsapp: string | null;
+      active: boolean;
+    } | null;
+  } | null;
   group: string;
   featured: boolean;
   active: boolean;

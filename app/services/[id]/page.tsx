@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useService } from "@/hooks/useServices";
-import { Star, Clock, Check, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { Star, Clock, Check, ChevronLeft, CheckCircle2, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -96,6 +96,16 @@ export default function ServiceBookingPage({
   const serviceImages = service.images?.length ? service.images : [];
   const selectedPlan = service.options?.find(
     (option) => option.id === selectedOption,
+  );
+  const businessStore = service.seller?.store;
+  const hasBusinessInfo = Boolean(
+    businessStore &&
+      (businessStore.businessName ||
+        businessStore.location ||
+        businessStore.quarter ||
+        businessStore.description ||
+        businessStore.phone ||
+        businessStore.whatsapp),
   );
 
   if (submitted) {
@@ -269,6 +279,67 @@ export default function ServiceBookingPage({
                 <p className="mb-6" style={{ color: "var(--text-secondary)" }}>
                   {service.description}
                 </p>
+
+                {hasBusinessInfo && (
+                  <div
+                    className="rounded-xl p-4 mb-4"
+                    style={{
+                      background: "var(--glass-bg-subtle)",
+                      border: "1px solid var(--glass-border)",
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="p-2 rounded-lg"
+                        style={{ background: "var(--glass-bg)" }}
+                      >
+                        <Store size={16} style={{ color: "var(--blue)" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-[10px] uppercase tracking-wider mb-1"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          Service provider
+                        </p>
+                        <p
+                          className="font-bold text-sm truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {businessStore?.businessName ||
+                            service.seller?.name ||
+                            "Business"}
+                        </p>
+                        {[
+                          businessStore?.quarter,
+                          businessStore?.location,
+                        ].filter(Boolean).length > 0 && (
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            {[
+                              businessStore?.quarter,
+                              businessStore?.location,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {businessStore?.slug && (
+                      <Link
+                        href={`/stores/${businessStore.slug}`}
+                        className="inline-flex items-center gap-1 mt-3 text-sm font-semibold"
+                        style={{ color: "var(--blue)" }}
+                      >
+                        Visit services
+                        <span aria-hidden="true">→</span>
+                      </Link>
+                    )}
+                  </div>
+                )}
 
                 {/* Availability */}
                 {service.availability && (
@@ -462,6 +533,67 @@ export default function ServiceBookingPage({
                       />
                     </div>
                   </div>
+
+                  {hasBusinessInfo && (
+                    <div
+                      className="rounded-xl p-4"
+                      style={{
+                        background: "var(--glass-bg-subtle)",
+                        border: "1px solid var(--glass-border)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="p-2 rounded-lg"
+                          style={{ background: "var(--glass-bg)" }}
+                        >
+                          <Store size={16} style={{ color: "var(--blue)" }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-[10px] uppercase tracking-wider mb-1"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            Service provider
+                          </p>
+                          <p
+                            className="font-bold text-sm truncate"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {businessStore?.businessName ||
+                              service.seller?.name ||
+                              "Business"}
+                          </p>
+                          {[
+                            businessStore?.quarter,
+                            businessStore?.location,
+                          ].filter(Boolean).length > 0 && (
+                            <p
+                              className="text-xs mt-1"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              {[
+                                businessStore?.quarter,
+                                businessStore?.location,
+                              ]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {businessStore?.slug && (
+                        <Link
+                          href={`/stores/${businessStore.slug}`}
+                          className="inline-flex items-center gap-1 mt-3 text-sm font-semibold"
+                          style={{ color: "var(--blue)" }}
+                        >
+                          Visit services
+                          <span aria-hidden="true">→</span>
+                        </Link>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <label
