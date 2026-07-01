@@ -27,6 +27,14 @@ export async function GET(req: NextRequest) {
         where: { sellerId: session.user.id },
         include: {
           category: true,
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              store: true,
+            },
+          },
           options: { orderBy: { amount: "asc" } },
           _count: { select: { bookings: true } },
         },
@@ -63,6 +71,14 @@ export async function GET(req: NextRequest) {
       include: {
         // ✅ Include full category relation so frontend gets name + icon + color
         category: true,
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            store: true,
+          },
+        },
         options: { where: { active: true }, orderBy: { amount: "asc" } },
         _count: { select: { bookings: true } },
       },

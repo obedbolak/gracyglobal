@@ -1,4 +1,4 @@
-// middleware.ts
+// proxy.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { getRoleHome, hasRole, normalizeRoles } from "@/lib/roleHelpers";
@@ -14,13 +14,13 @@ const ROLE_PROTECTED_PATHS = [
   { prefix: "/volunteer", role: "VOLUNTEER" },
 ];
 
-export default withAuth(
-  function middleware(req) {
+export const proxy = withAuth(
+  function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
     const roles = normalizeRoles(token?.role);
 
-    // ── Logged-in user hits /login or /register ───────────────────────
+    // Logged-in user hits /login or /register.
     if (token && PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
       const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
       const destination =
@@ -30,7 +30,7 @@ export default withAuth(
       return NextResponse.redirect(new URL(destination, req.url));
     }
 
-    // ── Role-based route protection ───────────────────────────────────
+    // Role-based route protection.
     if (token) {
       for (const { prefix, role } of ROLE_PROTECTED_PATHS) {
         if (path.startsWith(prefix) && !hasRole(roles, role)) {
@@ -42,9 +42,7 @@ export default withAuth(
     return NextResponse.next();
   },
   {
-    // FIX: must match the cookie name in auth.ts exactly —
-    // otherwise withAuth can't read the token and treats every
-    // user as unauthenticated → redirect loop back to /login
+    // Must match the cookie name in auth.ts exactly.
     cookies: {
       sessionToken: {
         name: isProduction

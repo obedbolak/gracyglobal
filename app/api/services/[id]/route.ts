@@ -18,6 +18,14 @@ export async function GET(
       where: { id },
       include: {
         category: true, // ✅ Include category
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            store: true,
+          },
+        },
         options: {
           where: { active: true },
           orderBy: { amount: "asc" },
@@ -119,6 +127,14 @@ export async function PUT(
       },
       include: {
         category: true, // ✅ Include category
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            store: true,
+          },
+        },
         options: true,
       },
     });

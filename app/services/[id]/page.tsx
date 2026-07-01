@@ -21,6 +21,7 @@ export default function ServiceBookingPage({
   const { convert } = useCurrency();
 
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [activeImg, setActiveImg] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -92,6 +93,14 @@ export default function ServiceBookingPage({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const serviceImages = service.images?.length ? service.images : [];
+  const selectedPlan = service.options?.find(
+    (option) => option.id === selectedOption,
+  );
+  const usePlanGrid =
+    categories.find((c) => c.id === service.categoryId)?.name ===
+    "Housing & Property Services";
+
   if (submitted) {
     return (
       <div
@@ -145,25 +154,83 @@ export default function ServiceBookingPage({
           Back to Services
         </Link>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Service Details */}
-          <div>
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* Image Gallery */}
+          <div className="flex flex-col gap-3">
             <div
-              className="rounded-2xl overflow-hidden mb-6"
+              className="rounded-2xl overflow-hidden"
               style={{
                 background: "var(--glass-bg)",
                 border: "1px solid var(--glass-border)",
               }}
             >
-              <img
-                src={service.images[0]}
-                alt={service.name}
-                className="w-full h-64 object-cover"
-              />
-              <div className="p-6">
-                {service.badge && (
+              {serviceImages.length > 0 ? (
+                <img
+                  src={serviceImages[activeImg]}
+                  alt={service.name}
+                  className="w-full h-72 sm:h-96 object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-72 sm:h-96 flex items-center justify-center"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  No image available
+                </div>
+              )}
+            </div>
+
+            {serviceImages.length > 1 && (
+              <div className="flex gap-3">
+                {serviceImages.map((img, index) => (
+                  <button
+                    key={img}
+                    type="button"
+                    onClick={() => setActiveImg(index)}
+                    className="flex-1 overflow-hidden rounded-xl transition-all duration-200"
+                    style={{
+                      border:
+                        activeImg === index
+                          ? "2px solid var(--purple-light)"
+                          : "2px solid transparent",
+                    }}
+                    aria-label={`Show image ${index + 1}`}
+                  >
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-20 object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Details, Plans, then Booking Form */}
+          <div
+            className="rounded-2xl p-6"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            {!selectedPlan ? (
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span
-                    className="inline-block px-3 py-1 rounded-full text-xs font-bold text-white mb-3"
+                    className="text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{
+                      background: "var(--badge-purple-bg)",
+                      color: "var(--badge-purple-text)",
+                    }}
+                  >
+                    {categories.find((c) => c.id === service.categoryId)
+                      ?.name || "Service"}
+                  </span>
+                  {service.badge && (
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full text-white"
                     style={{
                       background:
                         "linear-gradient(135deg, var(--scarlet), var(--purple))",
@@ -172,6 +239,8 @@ export default function ServiceBookingPage({
                     {service.badge}
                   </span>
                 )}
+                </div>
+
                 <h1
                   className="text-3xl font-black mb-3"
                   style={{ color: "var(--text-primary)" }}
@@ -221,7 +290,7 @@ export default function ServiceBookingPage({
 
                 {/* Includes */}
                 {service.includes && service.includes.length > 0 && (
-                  <div>
+                  <div className="mb-6">
                     <h3
                       className="text-sm font-bold mb-3"
                       style={{ color: "var(--text-primary)" }}
@@ -247,64 +316,58 @@ export default function ServiceBookingPage({
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Service Options / Pricing Tiers */}
-            {service.options && service.options.length > 0 && (
-              <div
-                className="rounded-2xl p-6"
-                style={{
-                  background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
-                }}
-              >
+                {/* Service Options / Pricing Tiers */}
                 <h3
                   className="text-xl font-bold mb-4"
                   style={{ color: "var(--text-primary)" }}
                 >
                   Choose Your Plan
                 </h3>
-                <div
-                  className={
-                    categories.find((c) => c.id === service.categoryId)
-                      ?.name === "Housing & Property Services"
-                      ? "grid grid-cols-1 md:grid-cols-2 gap-4"
-                      : "space-y-3"
-                  }
-                >
-                  {service.options.map((option) => (
-                    <div
-                      key={option.id}
-                      onClick={() => setSelectedOption(option.id)}
-                      className="p-4 rounded-xl cursor-pointer transition-all"
-                      style={{
-                        background:
-                          selectedOption === option.id
-                            ? "var(--glass-bg-subtle)"
-                            : "transparent",
-                        border: `2px solid ${selectedOption === option.id ? "var(--blue)" : "var(--glass-border)"}`,
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4
-                            className="font-bold text-sm"
-                            style={{ color: "var(--text-primary)" }}
-                          >
-                            {option.name}
-                          </h4>
-                          {option.popular && (
-                            <span
-                              className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                              style={{
-                                background: "var(--info-bg)",
-                                color: "var(--blue)",
-                              }}
+                {service.options && service.options.length > 0 ? (
+                  <div
+                    className={
+                      usePlanGrid
+                        ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                        : "space-y-3"
+                    }
+                  >
+                    {service.options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSelectedOption(option.id)}
+                        className="w-full p-4 rounded-xl text-left cursor-pointer transition-all hover:scale-[1.01]"
+                        style={{
+                          background: "var(--glass-bg-subtle)",
+                          border: "2px solid var(--glass-border)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h4
+                              className="font-bold text-sm truncate"
+                              style={{ color: "var(--text-primary)" }}
                             >
-                              Popular
-                            </span>
-                          )}
+                              {option.name}
+                            </h4>
+                            {option.popular && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+                                style={{
+                                  background: "var(--info-bg)",
+                                  color: "var(--blue)",
+                                }}
+                              >
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                          <CheckCircle2
+                            size={18}
+                            className="opacity-50 flex-shrink-0"
+                            style={{ color: "var(--blue)" }}
+                          />
                         </div>
                         <p
                           className="text-xs mb-3 line-clamp-2"
@@ -339,37 +402,48 @@ export default function ServiceBookingPage({
                             yearly
                           </p>
                         )}
-                        {selectedOption === option.id && (
-                          <div className="mt-3 flex justify-center">
-                            <CheckCircle2
-                              size={20}
-                              style={{ color: "var(--blue)" }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    No plans are available for this service yet.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+            ) : (
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div>
+                    <p
+                      className="text-xs uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Selected plan
+                    </p>
+                    <h2
+                      className="text-2xl font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {selectedPlan.name}
+                    </h2>
+                    <p
+                      className="text-sm mt-1"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {convert(selectedPlan.amount)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOption(null)}
+                    className="text-sm font-semibold flex-shrink-0"
+                    style={{ color: "var(--blue)" }}
+                  >
+                    Change plan
+                  </button>
+                </div>
 
-          {/* Booking Form */}
-          <div>
-            <div
-              className="rounded-2xl p-6"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-              }}
-            >
-              <h2
-                className="text-2xl font-bold mb-6"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Book This Service
-              </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label
@@ -532,20 +606,14 @@ export default function ServiceBookingPage({
 
                 <button
                   type="submit"
-                  disabled={!selectedOption}
-                  className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
                   style={{
-                    background: selectedOption
-                      ? "linear-gradient(135deg, var(--purple), var(--blue))"
-                      : "var(--glass-bg)",
-                    boxShadow: selectedOption
-                      ? "0 4px 14px rgba(123,47,190,0.35)"
-                      : "none",
+                    background:
+                      "linear-gradient(135deg, var(--purple), var(--blue))",
+                    boxShadow: "0 4px 14px rgba(123,47,190,0.35)",
                   }}
                 >
-                  {selectedOption
-                    ? "Confirm Booking"
-                    : "Select a plan to continue"}
+                  Confirm Booking
                 </button>
 
                 <p
@@ -556,7 +624,8 @@ export default function ServiceBookingPage({
                   Policy
                 </p>
               </form>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -15,13 +15,10 @@ import {
   Star,
   Search,
   AlertCircle,
-  ExternalLink,
-  Copy,
-  Save,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import CreatorProductForm from "@/components/creator/creatorProductForm";
-import ImageUpload from "@/components/shared/ImageUpload";
+import BusinessProfileSettings from "@/components/business/BusinessProfileSettings";
 import type { StoreView } from "@/components/store/StoreSidebar";
 import type { StoreProfile } from "@/components/store/StoreShell";
 
@@ -650,248 +647,6 @@ function EarningsView({
   );
 }
 
-function PublicPageBanner({ slug }: { slug: string }) {
-  const [copied, setCopied] = useState(false);
-  // Build absolute URL on the client; falls back to relative path during SSR.
-  const url =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/stores/${slug}`
-      : `/stores/${slug}`;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard may be unavailable; ignore
-    }
-  };
-
-  return (
-    <div
-      className="glass flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl"
-      style={{ border: "1px solid var(--glass-border)" }}
-    >
-      <div className="flex-1 min-w-0">
-        <p
-          className="text-sm font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Your public storefront
-        </p>
-        <p
-          className="text-xs truncate mt-0.5"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          {url}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button
-          onClick={copy}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[var(--sidebar-item-hover)] transition-colors"
-          style={{
-            border: "1px solid var(--glass-border)",
-            color: "var(--text-primary)",
-          }}
-        >
-          <Copy className="w-3.5 h-3.5" /> {copied ? "Copied!" : "Copy link"}
-        </button>
-        <a
-          href={`/stores/${slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white hover:opacity-90 transition-opacity"
-          style={{
-            background: "linear-gradient(135deg, var(--purple), var(--blue))",
-          }}
-        >
-          <ExternalLink className="w-3.5 h-3.5" /> View page
-        </a>
-      </div>
-    </div>
-  );
-}
-
-// ── Settings View ─────────────────────────────────────────────────────────────
-
-function StoreSettings({
-  store,
-  onSaved,
-}: {
-  store: StoreProfile | null;
-  onSaved: (s: StoreProfile) => void;
-}) {
-  const [form, setForm] = useState({
-    businessName: store?.businessName ?? "",
-    businessType: store?.businessType ?? "",
-    location: store?.location ?? "",
-    quarter: store?.quarter ?? "",
-    openingHours: store?.openingHours ?? "",
-    phone: store?.phone ?? "",
-    whatsapp: store?.whatsapp ?? "",
-    description: store?.description ?? "",
-    image: store?.image ?? "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const set = (k: keyof typeof form, v: string) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaved(false);
-    setError(null);
-    try {
-      const res = await fetch("/api/store", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.ok && data.store) {
-        onSaved(data.store);
-        setSaved(true);
-      } else {
-        setError(data.error || "Failed to save");
-      }
-    } catch {
-      setError("Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const incomplete =
-    !store?.businessName || !store?.location || !store?.openingHours;
-
-  const fields = [
-    ["businessName", "Business Name *", "e.g. Gracy Electronics"],
-    ["businessType", "Business Type", "e.g. Electronics, Fashion, Food"],
-    ["location", "Location", "e.g. Douala"],
-    ["quarter", "Quarter / Neighborhood", "e.g. Akwa"],
-    ["openingHours", "Opening Hours", "e.g. Mon–Sat, 8am–6pm"],
-    ["phone", "Phone", "e.g. +237..."],
-    ["whatsapp", "WhatsApp", "e.g. +237..."],
-  ] as const;
-
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <h1
-        className="text-3xl font-bold"
-        style={{ color: "var(--text-primary)" }}
-      >
-        Store Settings
-      </h1>
-      {store?.slug && <PublicPageBanner slug={store.slug} />}
-      {incomplete && (
-        <div
-          className="glass flex items-start gap-3 p-4 rounded-xl"
-          style={{ border: "1px solid var(--glass-border)" }}
-        >
-          <AlertCircle
-            className="w-5 h-5 flex-shrink-0 mt-0.5"
-            style={{ color: "var(--yellow, #f59e0b)" }}
-          />
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Complete your store profile so customers can find and trust your
-            shop.
-          </p>
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="glass p-6 rounded-2xl space-y-4"
-        style={{ border: "1px solid var(--glass-border)" }}
-      >
-        <ImageUpload
-          label="Store Logo / Image"
-          aspectRatio="square"
-          currentImage={form.image || undefined}
-          folder="gracyglobal/stores"
-          onUploadComplete={(url) => set("image", url)}
-          onRemove={() => set("image", "")}
-        />
-
-        {fields.map(([key, label, placeholder]) => (
-          <div key={key}>
-            <label
-              className="block text-sm font-semibold mb-1.5"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {label}
-            </label>
-            <input
-              type="text"
-              value={form[key]}
-              onChange={(e) => set(key, e.target.value)}
-              placeholder={placeholder}
-              className="glass-input w-full px-4 py-2.5 text-sm"
-              required={key === "businessName"}
-            />
-          </div>
-        ))}
-
-        <div>
-          <label
-            className="block text-sm font-semibold mb-1.5"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Description
-          </label>
-          <textarea
-            value={form.description}
-            onChange={(e) => set("description", e.target.value)}
-            rows={3}
-            placeholder="Tell customers about your store..."
-            className="glass-input w-full px-4 py-2.5 text-sm"
-          />
-        </div>
-
-        {error && (
-          <p
-            className="text-sm font-medium"
-            style={{ color: "var(--error-text)" }}
-          >
-            {error}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-            style={{
-              background: "linear-gradient(135deg, var(--purple), var(--blue))",
-            }}
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {saving ? "Saving..." : "Save Profile"}
-          </button>
-          {saved && (
-            <span
-              className="text-sm font-semibold"
-              style={{ color: "var(--green)" }}
-            >
-              Saved ✓
-            </span>
-          )}
-        </div>
-      </form>
-    </div>
-  );
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function StorePageContent({
@@ -950,7 +705,20 @@ export default function StorePageContent({
 
   // Settings does not need product/order data, render immediately.
   if (view === "settings") {
-    return <StoreSettings store={store} onSaved={onStoreSaved} />;
+    return (
+      <BusinessProfileSettings
+        profile={store}
+        onSaved={onStoreSaved}
+        title="Store Settings"
+        incompleteMessage="Complete your store profile so customers can find and trust your shop."
+        imageLabel="Store Logo / Image"
+        descriptionPlaceholder="Tell customers about your store..."
+        publicPage={{
+          hrefPrefix: "/stores",
+          label: "Your public storefront",
+        }}
+      />
+    );
   }
 
   if (loading)

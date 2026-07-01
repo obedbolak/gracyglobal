@@ -5,10 +5,13 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import {
   Wrench, PlusCircle, DollarSign, CalendarCheck, TrendingUp,
-  Loader2, Pencil, Trash2, Star, Search,
+  Loader2, Pencil, Trash2, Star, Search, AlertCircle,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import CreatorServiceForm from "@/components/creator/creatorServiceForm";
+import BusinessProfileSettings, {
+  type BusinessProfile,
+} from "@/components/business/BusinessProfileSettings";
 import type { ServicesView } from "@/components/services-dashboard/ServicesDashSidebar";
 
 interface Service {
@@ -95,7 +98,7 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
-function Overview({ services, bookings, onViewChange, convert }: { services: Service[]; bookings: any[]; onViewChange: (v: ServicesView) => void; convert: (n: number) => string }) {
+function Overview({ services, bookings, onViewChange, convert, profileIncomplete }: { services: Service[]; bookings: any[]; onViewChange: (v: ServicesView) => void; convert: (n: number) => string; profileIncomplete: boolean }) {
   const totalEarnings = bookings.filter((b) => b.status === "COMPLETED").reduce((a, b) => a + (b.totalPrice ?? 0), 0);
 
   return (
@@ -109,6 +112,27 @@ function Overview({ services, bookings, onViewChange, convert }: { services: Ser
           <PlusCircle className="w-4 h-4" /> New Service
         </button>
       </div>
+
+      {profileIncomplete && (
+        <button
+          onClick={() => onViewChange("settings")}
+          className="glass w-full flex items-start gap-3 p-4 rounded-xl text-left hover:bg-[var(--glass-bg-hover)] transition-colors"
+          style={{ border: "1px solid var(--glass-border)" }}
+        >
+          <AlertCircle
+            className="w-5 h-5 flex-shrink-0 mt-0.5"
+            style={{ color: "var(--yellow, #f59e0b)" }}
+          />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Complete your provider profile
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+              Add your business name, location and opening hours so clients can contact you.
+            </p>
+          </div>
+        </button>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Services" value={services.length} icon={Wrench} color="var(--purple)" />
@@ -268,7 +292,7 @@ function EarningsView({ bookings, convert }: { bookings: any[]; convert: (n: num
 
 // ── Main Content ──────────────────────────────────────────────────────────────
 
-export default function ServicesDashPageContent({ view, setView }: { view: ServicesView; setView: (v: ServicesView) => void }) {
+export default function ServicesDashPageContent({ view, setView, profile, onProfileSaved, profileIncomplete }: { view: ServicesView; setView: (v: ServicesView) => void; profile: BusinessProfile | null; onProfileSaved: (profile: BusinessProfile) => void; profileIncomplete: boolean }) {
   const { data: session } = useSession();
   const { convert } = useCurrency();
 
@@ -309,6 +333,19 @@ export default function ServicesDashPageContent({ view, setView }: { view: Servi
     fetchData();
   };
 
+  if (view === "settings") {
+    return (
+      <BusinessProfileSettings
+        profile={profile}
+        onSaved={onProfileSaved}
+        title="Provider Profile"
+        incompleteMessage="Complete your provider profile so clients can find and trust your services."
+        imageLabel="Provider Logo / Image"
+        descriptionPlaceholder="Tell clients about your service business..."
+      />
+    );
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--purple)" }} />
@@ -337,5 +374,5 @@ export default function ServicesDashPageContent({ view, setView }: { view: Servi
   if (view === "bookings") return <BookingsView bookings={bookings} convert={convert} />;
   if (view === "earnings") return <EarningsView bookings={bookings} convert={convert} />;
 
-  return <Overview services={services} bookings={bookings} onViewChange={setView} convert={convert} />;
+  return <Overview services={services} bookings={bookings} onViewChange={setView} convert={convert} profileIncomplete={profileIncomplete} />;
 }
