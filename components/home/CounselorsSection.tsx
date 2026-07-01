@@ -58,7 +58,9 @@ export default function CounselorsSection() {
                     {/* Image */}
                     <div className="relative overflow-hidden">
                       <img
-                        src={c.user?.image || "/images/placeholder.png"}
+                        src={
+                          c.user?.image || "https://unsplash.com/random?sig=1"
+                        }
                         alt={c.user.name || "Counselor"}
                         className="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-105"
                         style={{ objectPosition: "center 15%" }}
