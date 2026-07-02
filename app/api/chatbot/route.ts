@@ -35,7 +35,9 @@ const CONTACT_DETAILS = {
   hours: "Monday-Friday 8:00 AM-6:00 PM; Saturday 9:00 AM-4:00 PM",
 };
 
-const DEFAULT_SITE_URL = "https://gracyglobal.com";
+const LOCAL_SITE_URL = "http://localhost:3000";
+const PRODUCTION_SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://gracyglobal.com";
 
 const STOP_WORDS = new Set([
   "a",
@@ -595,26 +597,9 @@ ${counselorLines.length ? counselorLines.join("\n") : "- No matching counselors 
 `.trim();
 }
 
-function getBaseUrl(req: Request) {
-  const envUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXTAUTH_URL ||
-    process.env.APP_URL;
-  if (envUrl) return envUrl.endsWith("/") ? envUrl : `${envUrl}/`;
-
-  const url = new URL(req.url);
-  const host = url.hostname.toLowerCase();
-
-  if (
-    host.includes("vercel.app") ||
-    host.includes("localhost") ||
-    host.includes("127.0.0.1")
-  ) {
-    return `${DEFAULT_SITE_URL}/`;
-  }
-
-  return `${url.protocol}//${url.host}/`;
+function getBaseUrl(_req: Request) {
+  const isProduction = process.env.NODE_ENV === "production";
+  return isProduction ? `${PRODUCTION_SITE_URL}/` : `${LOCAL_SITE_URL}/`;
 }
 
 function getAssistantText(data: unknown) {
