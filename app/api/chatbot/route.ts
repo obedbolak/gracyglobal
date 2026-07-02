@@ -35,6 +35,8 @@ const CONTACT_DETAILS = {
   hours: "Monday-Friday 8:00 AM-6:00 PM; Saturday 9:00 AM-4:00 PM",
 };
 
+const DEFAULT_SITE_URL = "https://gracyglobal.com";
+
 const STOP_WORDS = new Set([
   "a",
   "about",
@@ -168,7 +170,11 @@ async function getWebsiteContext(message: string, baseUrl: string) {
         ...(productSearch ?? {}),
       },
       take: 8,
-      orderBy: [{ featured: "desc" }, { rating: "desc" }, { createdAt: "desc" }],
+      orderBy: [
+        { featured: "desc" },
+        { rating: "desc" },
+        { createdAt: "desc" },
+      ],
       select: {
         id: true,
         name: true,
@@ -214,7 +220,11 @@ async function getWebsiteContext(message: string, baseUrl: string) {
         ...(serviceSearch ?? {}),
       },
       take: 8,
-      orderBy: [{ featured: "desc" }, { rating: "desc" }, { createdAt: "desc" }],
+      orderBy: [
+        { featured: "desc" },
+        { rating: "desc" },
+        { createdAt: "desc" },
+      ],
       select: {
         id: true,
         name: true,
@@ -254,11 +264,23 @@ async function getWebsiteContext(message: string, baseUrl: string) {
         ...(terms.length
           ? {
               OR: terms.flatMap((term) => [
-                { businessName: { contains: term, mode: "insensitive" as const } },
-                { businessType: { contains: term, mode: "insensitive" as const } },
+                {
+                  businessName: {
+                    contains: term,
+                    mode: "insensitive" as const,
+                  },
+                },
+                {
+                  businessType: {
+                    contains: term,
+                    mode: "insensitive" as const,
+                  },
+                },
                 { location: { contains: term, mode: "insensitive" as const } },
                 { quarter: { contains: term, mode: "insensitive" as const } },
-                { description: { contains: term, mode: "insensitive" as const } },
+                {
+                  description: { contains: term, mode: "insensitive" as const },
+                },
               ]),
             }
           : {}),
@@ -302,7 +324,9 @@ async function getWebsiteContext(message: string, baseUrl: string) {
               OR: terms.flatMap((term) => [
                 { title: { contains: term, mode: "insensitive" as const } },
                 { company: { contains: term, mode: "insensitive" as const } },
-                { description: { contains: term, mode: "insensitive" as const } },
+                {
+                  description: { contains: term, mode: "insensitive" as const },
+                },
               ]),
             }
           : {}),
@@ -348,7 +372,11 @@ async function getWebsiteContext(message: string, baseUrl: string) {
               OR: terms.flatMap((term) => [
                 { specialty: { contains: term, mode: "insensitive" as const } },
                 { bio: { contains: term, mode: "insensitive" as const } },
-                { user: { name: { contains: term, mode: "insensitive" as const } } },
+                {
+                  user: {
+                    name: { contains: term, mode: "insensitive" as const },
+                  },
+                },
               ]),
             }
           : {}),
@@ -385,7 +413,8 @@ async function getWebsiteContext(message: string, baseUrl: string) {
 
   const productLines = products.map((product) => {
     const store = product.seller?.store;
-    const seller = store?.businessName || product.seller?.name || "GracyGlobal seller";
+    const seller =
+      store?.businessName || product.seller?.name || "GracyGlobal seller";
     const storeContact = [
       store?.phone ? `phone ${store.phone}` : "",
       store?.whatsapp ? `WhatsApp ${store.whatsapp}` : "",
@@ -397,11 +426,17 @@ async function getWebsiteContext(message: string, baseUrl: string) {
       `- ${product.name} (${formatCurrency(product.price)}, ${product.stock} in stock)`,
       `  Link: ${absoluteUrl(baseUrl, `/marketplace/${product.id}`)}`,
       `  Category: ${product.category?.name ?? "Marketplace"}; seller: ${seller}`,
-      store?.slug ? `  Store: ${absoluteUrl(baseUrl, `/stores/${store.slug}`)}` : "",
+      store?.slug
+        ? `  Store: ${absoluteUrl(baseUrl, `/stores/${store.slug}`)}`
+        : "",
       storeContact ? `  Seller contact: ${storeContact}` : "",
-      product.rating ? `  Rating: ${product.rating.toFixed(1)} (${product.reviews} reviews)` : "",
+      product.rating
+        ? `  Rating: ${product.rating.toFixed(1)} (${product.reviews} reviews)`
+        : "",
       product.badge ? `  Badge: ${product.badge}` : "",
-      product.benefits.length ? `  Benefits: ${product.benefits.slice(0, 3).join(", ")}` : "",
+      product.benefits.length
+        ? `  Benefits: ${product.benefits.slice(0, 3).join(", ")}`
+        : "",
       `  Description: ${shortText(product.description)}`,
     ]
       .filter(Boolean)
@@ -427,10 +462,14 @@ async function getWebsiteContext(message: string, baseUrl: string) {
       `- ${service.name}${startingPrice ? ` (from ${formatCurrency(startingPrice)})` : ""}`,
       `  Link: ${absoluteUrl(baseUrl, `/services/${service.id}`)}`,
       `  Category: ${service.category?.name ?? service.group}; provider: ${store?.businessName || service.seller?.name || "Service provider"}`,
-      store?.slug ? `  Provider services: ${absoluteUrl(baseUrl, `/stores/${store.slug}/services`)}` : "",
+      store?.slug
+        ? `  Provider services: ${absoluteUrl(baseUrl, `/stores/${store.slug}/services`)}`
+        : "",
       storeContact ? `  Provider contact: ${storeContact}` : "",
       service.availability ? `  Availability: ${service.availability}` : "",
-      service.includes.length ? `  Includes: ${service.includes.slice(0, 4).join(", ")}` : "",
+      service.includes.length
+        ? `  Includes: ${service.includes.slice(0, 4).join(", ")}`
+        : "",
       `  Description: ${shortText(service.description)}`,
     ]
       .filter(Boolean)
@@ -440,8 +479,12 @@ async function getWebsiteContext(message: string, baseUrl: string) {
   const storeLines = stores.map((store) =>
     [
       `- ${store.businessName} (${store.businessType ?? "Business"})`,
-      store.slug ? `  Link: ${absoluteUrl(baseUrl, `/stores/${store.slug}`)}` : "",
-      store.slug ? `  Services: ${absoluteUrl(baseUrl, `/stores/${store.slug}/services`)}` : "",
+      store.slug
+        ? `  Link: ${absoluteUrl(baseUrl, `/stores/${store.slug}`)}`
+        : "",
+      store.slug
+        ? `  Services: ${absoluteUrl(baseUrl, `/stores/${store.slug}/services`)}`
+        : "",
       [store.quarter, store.location].filter(Boolean).length
         ? `  Location: ${[store.quarter, store.location].filter(Boolean).join(", ")}`
         : "",
@@ -555,11 +598,22 @@ ${counselorLines.length ? counselorLines.join("\n") : "- No matching counselors 
 function getBaseUrl(req: Request) {
   const envUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXTAUTH_URL ||
     process.env.APP_URL;
   if (envUrl) return envUrl.endsWith("/") ? envUrl : `${envUrl}/`;
 
   const url = new URL(req.url);
+  const host = url.hostname.toLowerCase();
+
+  if (
+    host.includes("vercel.app") ||
+    host.includes("localhost") ||
+    host.includes("127.0.0.1")
+  ) {
+    return `${DEFAULT_SITE_URL}/`;
+  }
+
   return `${url.protocol}//${url.host}/`;
 }
 
@@ -648,7 +702,10 @@ ${siteContext}
     if (!response.ok) {
       console.error("Azure OpenAI chatbot error:", data);
       return NextResponse.json(
-        { reply: "I could not reach the AI assistant right now. Please try again shortly." },
+        {
+          reply:
+            "I could not reach the AI assistant right now. Please try again shortly.",
+        },
         { status: 502 },
       );
     }
