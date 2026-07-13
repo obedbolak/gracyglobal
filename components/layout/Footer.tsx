@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import CurrencySelector from "@/components/shared/CurrencySelector";
 
@@ -41,16 +42,6 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--purple), var(--blue))",
-                  boxShadow: "0 4px 14px rgba(123,47,190,0.40)",
-                }}
-              >
-                G
-              </div>
               <span
                 className="font-extrabold text-lg tracking-tight"
                 style={{
@@ -61,7 +52,7 @@ export default function Footer() {
                   backgroundClip: "text",
                 }}
               >
-                GRACY GLOBAL
+                <Image src="/favicon.ico" alt="Logo" width={32} height={32} />
               </span>
             </div>
             <p

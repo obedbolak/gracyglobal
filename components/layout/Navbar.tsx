@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, X, ShoppingBag, User, LogOut, Search } from "lucide-react";
@@ -88,7 +89,7 @@ export default function Navbar() {
                   backgroundClip: "text",
                 }}
               >
-                GRACY GLOBAL
+                <Image src="/favicon.ico" alt="Logo" width={32} height={32} />
               </span>
             </Link>
 
