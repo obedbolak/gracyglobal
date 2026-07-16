@@ -16,23 +16,27 @@ export default function HomePage() {
       <HeroSection />
       <StatsBar />
 
-      {/* Two-column layout for Counselors + Jobs (mirrors the reference design) */}
-      <div className="max-w-7xl mx-auto">
-        {/* On large screens, side by side */}
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
-          <CounselorsSection />
-          <JobsSection />
-        </div>
-
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
-          <CommunitySection />
-          <MarketplaceSection />
-        </div>
-
-        {/* Learn + Services side by side on large screens */}
-        <div className="lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-50">
-          <LearnSection />
-          <ServicesSection />
+      {/* Two-column row-aligned layout for home sections */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="mb-6">
+            <CounselorsSection />
+          </div>
+          <div className="mb-6">
+            <JobsSection />
+          </div>
+          <div className="mb-6">
+            <CommunitySection />
+          </div>
+          <div className="mb-6">
+            <MarketplaceSection />
+          </div>
+          <div className="mb-6">
+            <LearnSection />
+          </div>
+          <div className="mb-6">
+            <ServicesSection />
+          </div>
         </div>
       </div>
     </main>

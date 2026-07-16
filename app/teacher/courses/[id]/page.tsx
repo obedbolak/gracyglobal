@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import ImageUpload from "@/components/shared/ImageUpload";
 import { useCategories } from "@/hooks/useCategories";
@@ -17,7 +16,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-const LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
+const LEVELS = [
+  { value: "BEGINNER", label: "Beginner" },
+  { value: "INTERMEDIATE", label: "Intermediate" },
+  { value: "ADVANCED", label: "Advanced" },
+];
 
 interface CourseData {
   id: string;
@@ -36,8 +39,6 @@ interface CourseData {
 
 export default function EditCoursePage() {
   const params = useParams();
-  const router = useRouter();
-  const { data: session } = useSession();
   const courseId = params.id as string;
 
   const { categories, loading: categoriesLoading } = useCategories("course");
@@ -58,11 +59,7 @@ export default function EditCoursePage() {
   const [isFree, setIsFree] = useState(true);
   const [featured, setFeatured] = useState(false);
 
-  useEffect(() => {
-    fetchCourse();
-  }, [courseId]);
-
-  const fetchCourse = async () => {
+  const fetchCourse = useCallback(async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`);
       const json = await res.json();
@@ -79,12 +76,16 @@ export default function EditCoursePage() {
         setIsFree(c.isFree);
         setFeatured(c.featured);
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load course");
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    void fetchCourse();
+  }, [fetchCourse]);
 
   const handleSave = async () => {
     if (!categoryId) {
@@ -118,8 +119,10 @@ export default function EditCoursePage() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update course";
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -289,15 +292,14 @@ export default function EditCoursePage() {
       )}
 
       {/* Form */}
-      <div
-        className="p-6 rounded-2xl space-y-5"
-        style={{
-          background: "var(--glass-bg)",
-          border: "1px solid var(--glass-border)",
-        }}
-      >
-        {/* Thumbnail */}
-        <div>
+      <div className="space-y-6">
+        <div
+          className="p-6 rounded-2xl"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
           <ImageUpload
             folder="courses"
             label="Course Thumbnail"
@@ -306,172 +308,220 @@ export default function EditCoursePage() {
             onUploadComplete={(url) => setThumbnail(url)}
             onRemove={() => setThumbnail("")}
           />
+          <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
+            Recommended size: 1280x720 pixels (16:9 aspect ratio)
+          </p>
         </div>
 
-        {/* Title */}
-        <div>
-          <label
-            className="block text-sm font-semibold mb-2"
+        <div
+          className="p-6 rounded-2xl space-y-5"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <h3
+            className="text-lg font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            Title
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-3 rounded-xl glass-input text-sm"
-          />
-        </div>
+            Course Information
+          </h3>
 
-        {/* Description */}
-        <div>
-          <label
-            className="block text-sm font-semibold mb-2"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-            className="w-full p-3 rounded-xl glass-input text-sm resize-none"
-          />
-        </div>
-
-        {/* Category + Level */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label
               className="block text-sm font-semibold mb-2"
               style={{ color: "var(--text-primary)" }}
             >
-              Category
+              Title <span style={{ color: "var(--scarlet)" }}>*</span>
             </label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              disabled={categoriesLoading}
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Introduction to Meditation"
               className="w-full p-3 rounded-xl glass-input text-sm"
-            >
-              <option value="">
-                {categoriesLoading ? "Loading..." : "Select a category"}
-              </option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
+
           <div>
             <label
               className="block text-sm font-semibold mb-2"
               style={{ color: "var(--text-primary)" }}
             >
-              Level
+              Description <span style={{ color: "var(--scarlet)" }}>*</span>
             </label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="w-full p-3 rounded-xl glass-input text-sm"
-            >
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l}
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe what students will learn..."
+              rows={5}
+              className="w-full p-3 rounded-xl glass-input text-sm resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Category
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                disabled={categoriesLoading}
+                className="w-full p-3 rounded-xl glass-input text-sm"
+              >
+                <option value="">
+                  {categoriesLoading ? "Loading..." : "Select a category"}
                 </option>
-              ))}
-            </select>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Level
+              </label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full p-3 rounded-xl glass-input text-sm"
+              >
+                {LEVELS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Pricing */}
-        <div>
-          <label
-            className="block text-sm font-semibold mb-2"
+        <div
+          className="p-6 rounded-2xl space-y-4"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <h3
+            className="text-lg font-bold"
             style={{ color: "var(--text-primary)" }}
           >
             Pricing
-          </label>
-          <div className="flex items-center gap-3 mb-3">
+          </h3>
+
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setIsFree(true)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
               style={{
                 background: isFree
                   ? "linear-gradient(135deg, var(--purple), var(--blue))"
                   : "var(--glass-bg)",
                 color: isFree ? "#fff" : "var(--text-secondary)",
                 border: isFree ? "none" : "1px solid var(--glass-border)",
+                boxShadow: isFree
+                  ? "0 4px 12px rgba(123,47,190,0.3)"
+                  : "none",
               }}
             >
-              Free
+              Free Course
             </button>
             <button
               type="button"
               onClick={() => setIsFree(false)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
               style={{
                 background: !isFree
                   ? "linear-gradient(135deg, var(--purple), var(--blue))"
                   : "var(--glass-bg)",
                 color: !isFree ? "#fff" : "var(--text-secondary)",
                 border: !isFree ? "none" : "1px solid var(--glass-border)",
+                boxShadow: !isFree
+                  ? "0 4px 12px rgba(123,47,190,0.3)"
+                  : "none",
               }}
             >
-              Paid
+              Paid Course
             </button>
           </div>
+
           {!isFree && (
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
-              min={0}
-              placeholder="Price in XAF"
-              className="w-full p-3 rounded-xl glass-input text-sm"
-            />
+            <div>
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Price (XAF)
+              </label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                min={0}
+                placeholder="5000"
+                className="w-full p-3 rounded-xl glass-input text-sm"
+              />
+            </div>
           )}
         </div>
 
-        {/* Toggles */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        <div
+          className="p-6 rounded-2xl space-y-4"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <h3
+            className="text-lg font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Settings
+          </h3>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setFeatured(!featured)}
+              className="relative w-10 h-6 rounded-full transition-colors"
+              style={{
+                background: featured
+                  ? "linear-gradient(135deg, var(--purple), var(--blue))"
+                  : "var(--glass-bg-strong)",
+                border: featured ? "none" : "1px solid var(--glass-border)",
+              }}
+            >
+              <span
+                className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                style={{
+                  left: featured ? "calc(100% - 1.375rem)" : "0.125rem",
+                }}
+              />
+            </div>
             <div>
               <p
                 className="text-sm font-semibold"
                 style={{ color: "var(--text-primary)" }}
               >
-                Featured
+                Featured Course
               </p>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Show prominently on the courses page
+                Display prominently on the courses page
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setFeatured(!featured)}
-              className="w-12 h-7 rounded-full transition-all duration-300 relative"
-              style={{
-                background: featured
-                  ? "linear-gradient(135deg, var(--purple), var(--blue))"
-                  : "var(--glass-bg-subtle)",
-                border: featured ? "none" : "1px solid var(--glass-border)",
-              }}
-            >
-              <span
-                className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
-                style={{
-                  left: featured ? "calc(100% - 1.625rem)" : "0.125rem",
-                }}
-              />
-            </button>
-          </div>
+          </label>
         </div>
 
-        {/* Save */}
         <button
           onClick={handleSave}
           disabled={saving || !categoryId}

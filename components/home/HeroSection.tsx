@@ -1040,7 +1040,6 @@ function StoriesStrip({
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
   const goTo = useCallback((section: StorySection) => {
     setActive(section);
@@ -1080,80 +1079,12 @@ function StoriesStrip({
     };
   }, [paused, active, goNext]);
 
-  // ── Voice narration ──────────────────────────────────────────────
-  const speak = useCallback((text: string) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1.05;
-    utterance.volume = 1;
-    utterance.lang = "en-US";
-
-    const trySpeak = () => {
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(
-        (v) =>
-          v.name === "Google US English" ||
-          v.name === "Samantha" ||
-          v.name === "Karen" ||
-          v.name.includes("Female") ||
-          (v.lang.startsWith("en") && v.localService),
-      );
-      if (preferred) utterance.voice = preferred;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      // voices already loaded
-      trySpeak();
-    } else {
-      // wait for voices to load then speak
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.onvoiceschanged = null;
-        trySpeak();
-      };
-    }
-  }, []);
-
-  const stopSpeaking = useCallback(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!voiceEnabled) return;
-
-    // Build a short description based on active section + first item
-    let text = "";
-
-    if (active === "products" && products.length > 0) {
-      const p = products[0];
-      text = `Featured product: ${p.name}. ${p.description ?? ""} Priced at ${(p.price ?? 0).toLocaleString()} CFA francs.`;
-    } else if (active === "jobs" && jobs.length > 0) {
-      const j = jobs[0];
-      text = `Job opportunity: ${j.title} at ${j.company}. ${j.type?.replace("_", " ") ?? ""}. ${j.location ? `Located in ${j.location}.` : ""} ${j.description ?? ""}`;
-    } else if (active === "communities" && communities.length > 0) {
-      const c = communities[0];
-      text = `Community spotlight: ${c.name}. ${c.description ?? ""} ${c.memberCount ?? 0} members have already joined.`;
-    } else if (active === "courses" && courses.length > 0) {
-      const c = courses[0];
-      text = `Course available: ${c.title}. Level: ${c.level ?? "all levels"}. ${c.price === 0 ? "This course is free." : `Priced at ${(c.price ?? 0).toLocaleString()} CFA francs.`}`;
-    }
-
-    if (text) speak(text);
-
-    return () => stopSpeaking();
-  }, [active, voiceEnabled]);
 
   const renderCards = (section: StorySection) => {
     if (section === "products") {
       return products.slice(0, 6).map((p, i) => (
         <Link
-          href="/marketplace"
+          href={`/marketplace/${p.id}`}
           key={`sp-${i}`}
           className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
           style={{
@@ -1225,7 +1156,7 @@ function StoriesStrip({
     if (section === "jobs") {
       return jobs.slice(0, 6).map((job, i) => (
         <Link
-          href="/jobs"
+          href={`/jobs/${job.id}`}
           key={`sj-${i}`}
           className="flex-shrink-0 w-[400px] rounded-2xl p-5 flex flex-col gap-3 transition-transform hover:scale-[1.02]"
           style={{
@@ -1321,7 +1252,7 @@ function StoriesStrip({
     if (section === "communities") {
       return communities.slice(0, 6).map((c, i) => (
         <Link
-          href="/community"
+          href={`/community/${c.slug}`}
           key={`sc-${i}`}
           className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
           style={{
@@ -1405,7 +1336,7 @@ function StoriesStrip({
           ) ?? 0;
         return (
           <Link
-            href="/learn"
+            href={`/learn/${course.id}`}
             key={`sco-${i}`}
             className="flex-shrink-0 w-[400px] rounded-2xl overflow-hidden transition-transform hover:scale-[1.02]"
             style={{
@@ -1497,37 +1428,6 @@ function StoriesStrip({
       {/* Story progress bars + section tabs */}
       {/* Story progress bars + section tabs */}
       <div className="flex items-center gap-2 mb-3">
-        {/* Voice toggle */}
-        <button
-          onClick={() => {
-            const next = !voiceEnabled;
-            setVoiceEnabled(next);
-            if (!next) stopSpeaking();
-          }}
-          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-          style={{
-            background: voiceEnabled
-              ? "linear-gradient(135deg, var(--purple), var(--scarlet))"
-              : "var(--glass-bg)",
-            border: "1px solid var(--glass-border)",
-          }}
-          title={voiceEnabled ? "Mute narration" : "Enable voice narration"}
-        >
-          {voiceEnabled ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
-            </svg>
-          ) : (
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="var(--text-muted)"
-            >
-              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-            </svg>
-          )}
-        </button>
         {STORY_SECTIONS.map((section) => {
           const meta = STORY_META[section];
           const isActive = section === active;
