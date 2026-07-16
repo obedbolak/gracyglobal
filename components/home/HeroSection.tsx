@@ -1079,7 +1079,6 @@ function StoriesStrip({
     };
   }, [paused, active, goNext]);
 
-
   const renderCards = (section: StorySection) => {
     if (section === "products") {
       return products.slice(0, 6).map((p, i) => (
