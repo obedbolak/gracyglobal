@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
-import { Eye, X, Download, Menu } from "lucide-react";
+import { Eye, X, Download } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1744,7 +1744,7 @@ function HubTabs({
 }) {
   return (
     <div
-      className={`glass p-1.5 flex gap-1 ${vertical ? "flex-col" : "overflow-x-auto"}`}
+      className={`glass p-1.5 flex gap-1 ${vertical ? "flex-col" : "flex-wrap sm:flex-nowrap sm:overflow-x-auto"}`}
       style={{ scrollbarWidth: "none" }}
     >
       {HUB_TABS.map((tab) => {
@@ -1753,7 +1753,7 @@ function HubTabs({
           <button
             key={tab.view}
             onClick={() => onNavigate(tab.view)}
-            className="px-4 py-2.5 text-sm font-semibold rounded-lg whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0"
+            className="px-4 py-2.5 text-sm font-semibold rounded-lg whitespace-nowrap transition-all flex items-center justify-center gap-2 flex-shrink-0 flex-1 sm:flex-none"
             style={
               active
                 ? { background: "var(--accent-primary)", color: "#fff" }
@@ -3132,7 +3132,7 @@ export default function JobsPage() {
   const [type, setType] = useState<JobType | "ALL">("ALL");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
 
   // ── useJobs hook — single source of truth ──
   const {
@@ -3255,191 +3255,71 @@ export default function JobsPage() {
         {view === "jobs" && (
           <>
             {/* Header */}
-            <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto">
-              <div className="mb-6">
-                <h1
-                  className="text-3xl sm:text-4xl font-bold mb-2"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Find Your Dream Job
-                </h1>
-                <p
-                  className="text-sm max-w-2xl"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Post a job, discover qualified talent, or apply to
-                  opportunities — all in one place. Whether you&apos;re hiring,
-                  searching, or ready to work, Gracy Global connects
-                  professionals, businesses, and job seekers to real
-                  opportunities.
-                </p>
-              </div>
-
-              {/* Mobile Top Bar (Search + Menu Toggle) */}
-              <div className="sm:hidden flex gap-2 mb-4">
-                <button
-                  onClick={() => setShowMobileSidebar(true)}
-                  className="btn-secondary flex items-center justify-center p-2"
-                  aria-label="Open menu"
-                >
-                  <Menu size={20} />
-                </button>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search jobs…"
-                  className="glass-input flex-1 px-4 py-2 text-sm"
-                />
-              </div>
-
-              {/* Mobile Sidebar Overlay */}
-              {showMobileSidebar && (
-                <div className="fixed inset-0 z-[100] sm:hidden flex">
-                  <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                    onClick={() => setShowMobileSidebar(false)}
+            <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto flex flex-col gap-6">
+              
+              {/* Unified Toolbar */}
+              <div className="glass p-2 sm:p-3 flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="w-full sm:w-auto">
+                  <HubTabs
+                    current={view}
+                    onNavigate={goTo}
+                    applicationsCount={applications.length}
                   />
-                  <div
-                    className="relative w-4/5 max-w-sm h-full flex flex-col gap-6 p-6 overflow-y-auto"
-                    style={{ backgroundColor: "var(--bg-default)" }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold">Menu</h2>
-                      <button
-                        onClick={() => setShowMobileSidebar(false)}
-                        className="btn-secondary p-2 rounded-full"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                        Navigation
-                      </h3>
-                      <HubTabs
-                        current={view}
-                        onNavigate={(v) => {
-                          goTo(v);
-                          setShowMobileSidebar(false);
-                        }}
-                        applicationsCount={applications.length}
-                        vertical={true}
-                      />
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                        Filters
-                      </h3>
-                      <div className="flex flex-col gap-3">
-                        <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
-                          className="glass-input px-3 py-2.5 text-sm"
-                        >
-                          {CATEGORIES.map((c) => (
-                            <option key={c.value} value={c.value}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={type}
-                          onChange={(e) => setType(e.target.value as JobType | "ALL")}
-                          className="glass-input px-3 py-2.5 text-sm"
-                        >
-                          {JOB_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => setFeaturedOnly((v) => !v)}
-                          className={featuredOnly ? "btn-primary" : "btn-secondary"}
-                          style={{
-                            padding: "0.625rem 1rem",
-                            fontSize: "0.875rem",
-                            fontWeight: 600,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          ★ Featured
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              )}
 
-              {/* Desktop Hub navigation */}
-              <div className="hidden sm:block mb-6">
-                <HubTabs
-                  current={view}
-                  onNavigate={goTo}
-                  applicationsCount={applications.length}
-                />
-              </div>
+                <div className="hidden h-6 w-px bg-gray-200 dark:bg-gray-800 sm:block" />
 
-              {/* Desktop Search + Filters */}
-              <div className="hidden sm:flex glass p-4 flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search jobs, companies, skills…"
-                  className="glass-input flex-1 px-4 py-2.5 text-sm"
-                  style={{ minWidth: 0 }}
+                  placeholder="Search jobs..."
+                  className="glass-input px-4 py-2 text-sm w-full sm:w-48"
                 />
+
                 <select
                   value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as JobCategory | "ALL")
-                  }
-                  className="glass-input px-3 py-2.5 text-sm"
+                  onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
+                  className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
                 >
                   {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
+                    <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
+
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as JobType | "ALL")}
-                  className="glass-input px-3 py-2.5 text-sm"
+                  className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
                 >
                   {JOB_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
+
                 <button
                   onClick={() => setFeaturedOnly((v) => !v)}
-                  className={featuredOnly ? "btn-primary" : "btn-secondary"}
-                  style={{
-                    padding: "0.625rem 1rem",
-                    fontSize: "0.875rem",
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
+                  className={`w-full sm:w-auto ${featuredOnly ? "btn-primary" : "btn-secondary"}`}
+                  style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
                 >
                   ★ Featured
                 </button>
               </div>
 
-              {!jobsLoading && (
-                <p
-                  className="text-xs mt-3 px-1"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {filtered.length} job{filtered.length !== 1 ? "s" : ""} found
-                  {search && ` for "${search}"`}
+              {/* Page Title & Intro */}
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                  Find Your Dream Job
+                </h1>
+                <p className="text-sm max-w-2xl" style={{ color: "var(--text-muted)" }}>
+                  Post a job, discover qualified talent, or apply to opportunities — all in one place. Whether you're hiring, searching, or ready to work, Gracy Global connects professionals, businesses, and job seekers to real opportunities.
                 </p>
-              )}
+                {!jobsLoading && (
+                  <p className="text-xs mt-3 font-medium" style={{ color: "var(--accent-primary)" }}>
+                    {filtered.length} job{filtered.length !== 1 ? "s" : ""} found {search && ` for "${search}"`}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Success toast */}

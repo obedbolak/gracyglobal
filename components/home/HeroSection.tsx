@@ -1932,7 +1932,7 @@ export default function HeroSection() {
 
           <div className="relative z-10 grid lg:grid-cols-2 gap-0 min-h-[400px] lg:min-h-[420px]">
             {/* LEFT — text */}
-            <div className="flex flex-col justify-between p-6 sm:p-8 lg:p-10">
+            <div className="hidden lg:flex flex-col justify-between p-6 sm:p-8 lg:p-10">
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div
                   key={slide.id + "-text"}
@@ -2068,7 +2068,7 @@ export default function HeroSection() {
 
             {/* RIGHT — rotating showcase */}
             <div
-              className="hidden lg:flex flex-col p-8 lg:p-10"
+              className="flex flex-col p-8 lg:p-10"
               style={{ borderLeft: "1px solid var(--glass-border-subtle)" }}
             >
               {slide.preview !== "counselors" && (
