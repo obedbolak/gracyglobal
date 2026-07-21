@@ -7,6 +7,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
+import ProfileUpload from "@/components/shared/ProfileUpload";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,8 @@ type PageView =
 
 // Shape returned by /api/jobs/resume (kept in sync with the route handler).
 export interface GeneratedResume {
-  name: string;
+  photoUrl?: string;
+  name?: string;
   title: string;
   contact: {
     email?: string;
@@ -2020,6 +2022,7 @@ const RESUME_TEMPLATES: { id: ResumeTemplate; label: string; desc: string; accen
 
 interface ResumeForm {
   template: ResumeTemplate;
+  photoUrl: string;
   fullName: string;
   email: string;
   phone: string;
@@ -2037,6 +2040,7 @@ interface ResumeForm {
 
 const EMPTY_RESUME_FORM: ResumeForm = {
   template: "classic",
+  photoUrl: "",
   fullName: "",
   email: "",
   phone: "",
@@ -2101,7 +2105,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to generate resume");
-      setResume(data.resume as GeneratedResume);
+      const generated = data.resume as GeneratedResume;
+      generated.photoUrl = form.photoUrl;
+      setResume(generated);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -2126,6 +2132,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
   const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
   const reviewSections = [
     { label: "Template", value: selectedTemplate ? `${selectedTemplate.icon} ${selectedTemplate.label}` : form.template },
+    { label: "Photo", value: form.photoUrl ? "Uploaded" : "None" },
     { label: "Full Name", value: form.fullName },
     { label: "Target Role", value: form.targetRole },
     { label: "Email", value: form.email },
@@ -2311,6 +2318,14 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div className="mb-4">
+                    <ProfileUpload
+                      folder="resumes"
+                      currentImage={form.photoUrl}
+                      onUploadComplete={(url) => update("photoUrl", url)}
+                      onRemove={() => update("photoUrl", "")}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2731,29 +2746,39 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
   return (
     <div className="glass p-8 flex flex-col gap-6">
       {/* Header */}
-      <div style={headerStyles[template]}>
-        <h2
-          className={`font-bold ${template === "bold" ? "text-3xl" : "text-2xl"}`}
-          style={{ color: nameColor[template] }}
-        >
-          {resume.name}
-        </h2>
-        {resume.title && (
-          <p
-            className={`font-semibold mt-0.5 ${template === "bold" ? "text-base" : "text-sm"}`}
-            style={{ color: titleColor[template] }}
-          >
-            {resume.title}
-          </p>
+      <div style={headerStyles[template]} className="flex items-center gap-6">
+        {resume.photoUrl && (
+          <img
+            src={resume.photoUrl}
+            alt="Profile"
+            className="w-24 h-24 rounded-full object-cover border-4"
+            style={{ borderColor: accent }}
+          />
         )}
-        {contactParts.length > 0 && (
-          <p
-            className="text-xs mt-2"
-            style={{ color: contactColor[template] }}
+        <div>
+          <h2
+            className={`font-bold ${template === "bold" ? "text-3xl" : "text-2xl"}`}
+            style={{ color: nameColor[template] }}
           >
-            {contactParts.join("  ·  ")}
-          </p>
-        )}
+            {resume.name}
+          </h2>
+          {resume.title && (
+            <p
+              className={`font-semibold mt-0.5 ${template === "bold" ? "text-base" : "text-sm"}`}
+              style={{ color: titleColor[template] }}
+            >
+              {resume.title}
+            </p>
+          )}
+          {contactParts.length > 0 && (
+            <p
+              className="text-xs mt-2"
+              style={{ color: contactColor[template] }}
+            >
+              {contactParts.join("  ·  ")}
+            </p>
+          )}
+        </div>
       </div>
 
       {resume.summary && (
