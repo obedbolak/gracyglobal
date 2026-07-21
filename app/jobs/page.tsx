@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
+import { Eye, X, Download } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2063,7 +2064,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<GeneratedResume | null>(null);
   const [step, setStep] = useState(0);
+  const [builderMode, setBuilderMode] = useState<"select" | "ai" | "manual">("select");
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   const update = (field: keyof ResumeForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -2128,6 +2131,19 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     }
   }
 
+  const mapFormToResume = (): GeneratedResume => ({
+    name: form.fullName,
+    title: form.targetRole,
+    photoUrl: form.photoUrl,
+    contact: { email: form.email, phone: form.phone, location: form.location, links: form.links ? form.links.split(",").map(s=>s.trim()).filter(Boolean) : [] },
+    summary: form.summary,
+    experience: form.workExperience ? [{ role: "Experience", company: form.yearsExperience ? `${form.yearsExperience} Years` : "", period: "", bullets: form.workExperience.split("\n").filter(s=>s.trim()) }] : [],
+    education: form.education ? [{ degree: "Education", institution: "", period: "", details: form.education }] : [],
+    skills: form.skills ? form.skills.split(",").map(s=>s.trim()).filter(Boolean) : [],
+    certifications: form.certifications ? form.certifications.split(",").map(s=>s.trim()).filter(Boolean) : [],
+    languages: form.languages ? form.languages.split(",").map(s=>s.trim()).filter(Boolean) : [],
+  });
+
   // Summary helper for review step
   const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
   const reviewSections = [
@@ -2148,11 +2164,56 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     { label: "Links", value: form.links },
   ];
 
+  if (builderMode === "select") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8" style={{ animation: "fade-up 0.35s ease both" }}>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
+          style={{ color: "var(--text-muted)" }}
+        >
+          ← Back to Jobs
+        </button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <span>📄</span> Create Your Resume
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Choose how you want to build your resume.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={() => setBuilderMode("ai")}
+            className="glass p-6 rounded-2xl flex flex-col items-start gap-4 hover:border-[var(--purple)] transition-all text-left"
+          >
+            <span className="text-3xl">✨</span>
+            <div>
+              <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>Build with AI</h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Let AI write your professional summary and polish your experience points.</p>
+            </div>
+          </button>
+          <button
+            onClick={() => setBuilderMode("manual")}
+            className="glass p-6 rounded-2xl flex flex-col items-start gap-4 hover:border-[var(--blue)] transition-all text-left"
+          >
+            <span className="text-3xl">✍️</span>
+            <div>
+              <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>Choose a Template</h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Write it yourself with a live preview of your chosen template.</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="max-w-3xl mx-auto px-4 py-8"
+      className={`mx-auto px-4 py-8 ${builderMode === "manual" ? "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start" : "max-w-3xl"}`}
       style={{ animation: "fade-up 0.35s ease both" }}
     >
+      <div className="flex flex-col">
       <style>{`
         @keyframes rb-slide-left {
           from { opacity: 0; transform: translateX(40px); }
@@ -2174,19 +2235,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
         ← Back to Jobs
       </button>
 
-      {step === 0 && (
-      <div className="mb-8">
-        <h1
-          className="text-3xl font-bold mb-2 flex items-center gap-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          <span>✨</span> AI Resume Builder
-        </h1>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          Fill in your details step by step, then let AI craft a polished resume.
-        </p>
-      </div>
-      )}
+
 
       {!resume ? (
         <>
@@ -2268,6 +2317,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                   </p>
 
                   {/* Template Selector */}
+                  {builderMode === "manual" && (
                   <div>
                     <p
                       className="text-sm font-medium mb-3"
@@ -2319,6 +2369,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                       ))}
                     </div>
                   </div>
+                  )}
                   <div className="mb-4">
                     <ProfileUpload
                       folder="resumes"
@@ -2572,6 +2623,26 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 >
                   Next →
                 </button>
+              ) : builderMode === "manual" ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const tempResume = mapFormToResume();
+                    setResume(tempResume);
+                    setDownloading(true);
+                    try {
+                      await downloadResumePdf(tempResume, form.template);
+                    } catch (e: any) {
+                      setError(e.message || "Could not generate the PDF.");
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  disabled={downloading || !canProceed()}
+                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
+                >
+                  {downloading ? "Preparing…" : "Download PDF ↓"}
+                </button>
               ) : (
                 <button
                   type="button"
@@ -2633,6 +2704,78 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
           <ResumePreview resume={resume} template={form.template} />
         </div>
       )}
+      </div>
+
+      {builderMode === "manual" && !resume && (
+        <div className="sticky top-8 hidden lg:block overflow-y-auto overflow-x-hidden max-h-[calc(100vh-4rem)] pb-12 w-full">
+          <A4ScaleWrapper>
+            <ResumePreview resume={mapFormToResume()} template={form.template} />
+          </A4ScaleWrapper>
+        </div>
+      )}
+
+      {/* Mobile Preview FAB */}
+      {builderMode === "manual" && !showMobilePreview && (
+        <button
+          onClick={() => setShowMobilePreview(true)}
+          className="fixed bottom-6 right-6 lg:hidden bg-[var(--purple)] text-white p-4 rounded-full shadow-2xl flex items-center gap-2 z-40 hover:scale-105 transition-transform"
+        >
+          <Eye size={24} />
+        </button>
+      )}
+
+      {/* Mobile Preview Modal */}
+      {showMobilePreview && builderMode === "manual" && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col p-4 lg:hidden overflow-hidden">
+          {/* Top Bar */}
+          <div className="flex justify-between items-center mb-6">
+            <button onClick={() => setShowMobilePreview(false)} className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"><X size={24} /></button>
+            <button
+              onClick={async () => {
+                const temp = mapFormToResume();
+                setDownloading(true);
+                try { await downloadResumePdf(temp, form.template); }
+                catch(e) {}
+                setDownloading(false);
+              }}
+              className="bg-[var(--purple)] text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2"
+            >
+              {downloading ? "Wait..." : <><Download size={18} /> Download PDF</>}
+            </button>
+          </div>
+          
+          {/* Preview Container - Scaled to fit screen width */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden w-full pb-20">
+            <A4ScaleWrapper>
+              <ResumePreview resume={mapFormToResume()} template={form.template} />
+            </A4ScaleWrapper>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function A4ScaleWrapper({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        const width = entries[0].contentRect.width;
+        setScale(width / 794);
+      }
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="w-full relative overflow-hidden rounded-xl shadow-2xl bg-white" style={{ height: 794 * 1.41428 * scale }}>
+      <div className="absolute top-0 left-0 origin-top-left" style={{ width: "794px", height: "1123px", transform: `scale(${scale})` }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -2655,10 +2798,10 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
   
   if (template === "minimal") {
     return (
-      <div className="mb-3 pb-1" style={{ borderBottom: `1px solid var(--divider)` }}>
+      <div className="mb-3 pb-1" style={{ borderBottom: `1px solid #e5e7eb` }}>
         <span
           className="text-[11px] font-medium uppercase tracking-[0.15em]"
-          style={{ color: "var(--text-muted)" }}
+          style={{ color: "#555" }}
         >
           {children}
         </span>
@@ -2675,7 +2818,7 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
         />
         <span
           className="text-sm font-black uppercase tracking-wider"
-          style={{ color: "var(--text-primary)" }}
+          style={{ color: "#111" }}
         >
           {children}
         </span>
@@ -2688,11 +2831,11 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
     <div className="flex items-center gap-3 mb-3">
       <span
         className="text-xs font-bold uppercase tracking-wider"
-        style={{ color: "var(--text-primary)" }}
+        style={{ color: "#111" }}
       >
         {children}
       </span>
-      <span className="h-px flex-1" style={{ background: "var(--divider)" }} />
+      <span className="h-px flex-1" style={{ background: "#e5e7eb" }} />
     </div>
   );
 }
@@ -2709,12 +2852,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
   // Template-specific header styles
   const headerStyles: Record<ResumeTemplate, React.CSSProperties> = {
     classic: {},
-    modern: {
-      background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 70%, #000))`,
-      margin: "-2rem -2rem 1.5rem -2rem",
-      padding: "2rem",
-      borderRadius: "var(--card-radius) var(--card-radius) 0 0",
-    },
+    modern: {},
     minimal: {},
     bold: {
       borderLeft: `4px solid ${accent}`,
@@ -2723,70 +2861,88 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
   };
 
   const nameColor: Record<ResumeTemplate, string> = {
-    classic: "var(--text-primary)",
-    modern: "#ffffff",
-    minimal: "var(--text-primary)",
-    bold: "var(--text-primary)",
+    classic: "#111",
+    modern: "#111",
+    minimal: "#111",
+    bold: "#111",
   };
 
   const titleColor: Record<ResumeTemplate, string> = {
-    classic: "var(--accent-primary)",
-    modern: "rgba(255,255,255,0.85)",
-    minimal: "var(--text-muted)",
+    classic: accent,
+    modern: accent,
+    minimal: "#555",
     bold: accent,
   };
 
   const contactColor: Record<ResumeTemplate, string> = {
-    classic: "var(--text-muted)",
-    modern: "rgba(255,255,255,0.7)",
-    minimal: "var(--text-muted)",
-    bold: "var(--text-muted)",
+    classic: "#555",
+    modern: "#555",
+    minimal: "#555",
+    bold: "#555",
   };
 
-  return (
-    <div className="glass p-8 flex flex-col gap-6">
-      {/* Header */}
-      <div style={headerStyles[template]} className="flex items-center gap-6">
-        {resume.photoUrl && (
-          <img
-            src={resume.photoUrl}
-            alt="Profile"
-            className="w-24 h-24 rounded-full object-cover border-4"
-            style={{ borderColor: accent }}
-          />
-        )}
-        <div>
-          <h2
-            className={`font-bold ${template === "bold" ? "text-3xl" : "text-2xl"}`}
-            style={{ color: nameColor[template] }}
-          >
-            {resume.name}
-          </h2>
-          {resume.title && (
-            <p
-              className={`font-semibold mt-0.5 ${template === "bold" ? "text-base" : "text-sm"}`}
-              style={{ color: titleColor[template] }}
-            >
-              {resume.title}
-            </p>
-          )}
-          {contactParts.length > 0 && (
-            <p
-              className="text-xs mt-2"
-              style={{ color: contactColor[template] }}
-            >
-              {contactParts.join("  ·  ")}
-            </p>
-          )}
-        </div>
-      </div>
+  const renderPhoto = (size = "w-24 h-24") => (
+    resume.photoUrl && (
+      <img
+        src={resume.photoUrl}
+        alt="Profile"
+        className={`${size} rounded-full object-cover border-4`}
+        style={{ borderColor: accent }}
+      />
+    )
+  );
 
+  const renderContact = () => {
+    if (contactParts.length === 0) return null;
+    if (template === "modern") {
+      return (
+        <div className="flex flex-col gap-1.5 mt-2">
+          {contactParts.map((part, i) => (
+            <span key={i} className="text-xs" style={{ color: contactColor[template] }}>
+              {part}
+            </span>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <p className="text-xs mt-2" style={{ color: contactColor[template] }}>
+        {contactParts.join("  ·  ")}
+      </p>
+    );
+  };
+
+  const renderHeader = () => (
+    <div style={headerStyles[template]} className="flex items-center gap-6">
+      {renderPhoto()}
+      <div>
+        <h2
+          className={`font-bold ${template === "bold" ? "text-3xl" : "text-2xl"}`}
+          style={{ color: nameColor[template] }}
+        >
+          {resume.name}
+        </h2>
+        {resume.title && (
+          <p
+            className={`font-semibold mt-0.5 ${template === "bold" ? "text-base" : "text-sm"}`}
+            style={{ color: titleColor[template] }}
+          >
+            {resume.title}
+          </p>
+        )}
+        {renderContact()}
+      </div>
+    </div>
+  );
+
+  const renderContent = () => (
+    <>
       {resume.summary && (
         <div>
           <ResumeSectionTitle template={template}>Summary</ResumeSectionTitle>
           <p
-            className="text-sm leading-relaxed"
-            style={{ color: "var(--text-secondary)" }}
+            className="text-[13px] leading-relaxed"
+            style={{ color: "#333" }}
           >
             {resume.summary}
           </p>
@@ -2802,14 +2958,14 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                 <div className="flex items-baseline justify-between gap-3">
                   <p
                     className="text-sm font-semibold"
-                    style={{ color: "var(--text-primary)" }}
+                    style={{ color: "#111" }}
                   >
                     {[exp.role, exp.company].filter(Boolean).join(" — ")}
                   </p>
                   {exp.period && (
                     <span
                       className="text-xs flex-shrink-0"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: "#555" }}
                     >
                       {exp.period}
                     </span>
@@ -2818,7 +2974,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                 {exp.location && (
                   <p
                     className="text-xs italic mt-0.5"
-                    style={{ color: "var(--text-muted)" }}
+                    style={{ color: "#555" }}
                   >
                     {exp.location}
                   </p>
@@ -2828,8 +2984,8 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                     {exp.bullets.map((b, j) => (
                       <li
                         key={j}
-                        className="text-sm leading-relaxed flex gap-2"
-                        style={{ color: "var(--text-secondary)" }}
+                        className="text-[13px] leading-relaxed flex gap-2"
+                        style={{ color: "#333" }}
                       >
                         <span style={{ color: accent }}>•</span>
                         <span>{b}</span>
@@ -2852,14 +3008,14 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                 <div className="flex items-baseline justify-between gap-3">
                   <p
                     className="text-sm font-semibold"
-                    style={{ color: "var(--text-primary)" }}
+                    style={{ color: "#111" }}
                   >
                     {[ed.degree, ed.institution].filter(Boolean).join(" — ")}
                   </p>
                   {ed.period && (
                     <span
                       className="text-xs flex-shrink-0"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: "#555" }}
                     >
                       {ed.period}
                     </span>
@@ -2868,7 +3024,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                 {ed.details && (
                   <p
                     className="text-xs mt-0.5"
-                    style={{ color: "var(--text-muted)" }}
+                    style={{ color: "#555" }}
                   >
                     {ed.details}
                   </p>
@@ -2878,7 +3034,11 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
           </div>
         </div>
       )}
+    </>
+  );
 
+  const renderSidebar = () => (
+    <>
       {resume.skills?.length > 0 && (
         <div>
           <ResumeSectionTitle template={template}>Skills</ResumeSectionTitle>
@@ -2906,8 +3066,8 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
             {resume.certifications.map((c, i) => (
               <li
                 key={i}
-                className="text-sm flex gap-2"
-                style={{ color: "var(--text-secondary)" }}
+                className="text-[13px] flex gap-2"
+                style={{ color: "#333" }}
               >
                 <span style={{ color: accent }}>•</span>
                 <span>{c}</span>
@@ -2920,10 +3080,39 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
       {resume.languages?.length > 0 && (
         <div>
           <ResumeSectionTitle template={template}>Languages</ResumeSectionTitle>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          <p className="text-[13px]" style={{ color: "#333" }}>
             {resume.languages.join("  ·  ")}
           </p>
         </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="bg-white p-12 relative w-full h-full flex flex-col gap-6 text-[13px]" style={{ color: "#333", overflow: "hidden" }}>
+      {template === "modern" ? (
+        <div className="grid grid-cols-[1fr_2fr] gap-8 h-full">
+          <div className="border-r pr-6 flex flex-col gap-6" style={{ borderColor: "#e5e7eb" }}>
+            {renderPhoto("w-32 h-32 mx-auto")}
+            {renderContact()}
+            {renderSidebar()}
+          </div>
+          <div className="flex flex-col gap-6">
+            <div>
+              <h2 className="font-bold text-3xl" style={{ color: nameColor.modern }}>{resume.name}</h2>
+              {resume.title && (
+                <p className="font-semibold mt-1 text-base" style={{ color: titleColor.modern }}>{resume.title}</p>
+              )}
+            </div>
+            {renderContent()}
+          </div>
+        </div>
+      ) : (
+        <>
+          {renderHeader()}
+          {renderContent()}
+          {renderSidebar()}
+        </>
       )}
     </div>
   );
