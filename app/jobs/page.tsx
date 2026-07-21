@@ -23,7 +23,41 @@ export type JobCategory =
 
 export type JobType = "REMOTE" | "HYBRID" | "CONTRACT" | "FREELANCE";
 
-type PageView = "jobs" | "post-job" | "job-seeker" | "applied";
+type PageView =
+  | "jobs"
+  | "post-job"
+  | "job-seeker"
+  | "applied"
+  | "resume-builder";
+
+// Shape returned by /api/jobs/resume (kept in sync with the route handler).
+export interface GeneratedResume {
+  name: string;
+  title: string;
+  contact: {
+    email?: string;
+    phone?: string;
+    location?: string;
+    links: string[];
+  };
+  summary: string;
+  experience: {
+    role: string;
+    company: string;
+    period: string;
+    location?: string;
+    bullets: string[];
+  }[];
+  education: {
+    degree: string;
+    institution: string;
+    period: string;
+    details?: string;
+  }[];
+  skills: string[];
+  certifications: string[];
+  languages: string[];
+}
 
 export interface Job {
   id: string;
@@ -1678,10 +1712,1203 @@ function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
   );
 }
 
+// ─── Hub Navigation Tabs ──────────────────────────────────────────────────────
+
+const HUB_TABS: { view: PageView; label: string; icon: string; auth?: boolean }[] =
+  [
+    { view: "jobs", label: "Browse Jobs", icon: "🔎" },
+    { view: "post-job", label: "Post a Job", icon: "➕", auth: true },
+    { view: "job-seeker", label: "Job Seeker Profile", icon: "💼", auth: true },
+    {
+      view: "resume-builder",
+      label: "AI Resume Builder",
+      icon: "✨",
+      auth: true,
+    },
+    { view: "applied", label: "My Applications", icon: "📋", auth: true },
+  ];
+
+function HubTabs({
+  current,
+  onNavigate,
+  applicationsCount,
+}: {
+  current: PageView;
+  onNavigate: (view: PageView) => void;
+  applicationsCount: number;
+}) {
+  return (
+    <div
+      className="glass p-1.5 flex gap-1 overflow-x-auto"
+      style={{ scrollbarWidth: "none" }}
+    >
+      {HUB_TABS.map((tab) => {
+        const active = tab.view === current;
+        return (
+          <button
+            key={tab.view}
+            onClick={() => onNavigate(tab.view)}
+            className="px-4 py-2.5 text-sm font-semibold rounded-lg whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0"
+            style={
+              active
+                ? { background: "var(--accent-primary)", color: "#fff" }
+                : { color: "var(--text-secondary)", background: "transparent" }
+            }
+            onMouseEnter={(e) => {
+              if (!active)
+                e.currentTarget.style.background = "var(--glass-bg-subtle)";
+            }}
+            onMouseLeave={(e) => {
+              if (!active) e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <span aria-hidden>{tab.icon}</span>
+            {tab.label}
+            {tab.view === "applied" && applicationsCount > 0 && (
+              <span
+                className="ml-0.5 px-1.5 py-0.5 rounded-full font-bold"
+                style={{
+                  background: active ? "rgba(255,255,255,0.25)" : "var(--purple)",
+                  color: "#fff",
+                  fontSize: "0.65rem",
+                }}
+              >
+                {applicationsCount}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── AI Resume Builder ────────────────────────────────────────────────────────
+
+// Loads jsPDF from a CDN at runtime so no build-time dependency is required.
+// To use a bundled dependency instead, run `npm install jspdf` and replace the
+// body of this function with: return (await import("jspdf")).jsPDF;
+function loadJsPDF(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const w = window as any;
+    if (w.jspdf?.jsPDF) return resolve(w.jspdf.jsPDF);
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
+    script.async = true;
+    script.onload = () => {
+      if (w.jspdf?.jsPDF) resolve(w.jspdf.jsPDF);
+      else reject(new Error("PDF library failed to initialise"));
+    };
+    script.onerror = () => reject(new Error("Could not load the PDF library"));
+    document.body.appendChild(script);
+  });
+}
+
+async function downloadResumePdf(resume: GeneratedResume, template: ResumeTemplate = "classic") {
+  const JsPDF = await loadJsPDF();
+  const doc = new JsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Template accent colors (RGB)
+  const accentColors: Record<string, [number, number, number]> = {
+    classic: [120, 90, 220],
+    modern: [37, 99, 235],
+    minimal: [55, 65, 81],
+    bold: [220, 38, 38],
+  };
+  const [aR, aG, aB] = accentColors[template] || accentColors.classic;
+
+  const ensure = (needed: number) => {
+    if (y + needed > pageH - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const sectionHeader = (label: string) => {
+    ensure(34);
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    doc.text(label.toUpperCase(), margin, y);
+    y += 5;
+    doc.setDrawColor(aR, aG, aB);
+    doc.setLineWidth(1.5);
+    doc.line(margin, y, margin + 34, y);
+    doc.setLineWidth(1);
+    y += 15;
+  };
+
+  // Name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(20, 20, 20);
+  doc.text(resume.name || "", margin, y);
+  y += 22;
+
+  // Title
+  if (resume.title) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(aR, aG, aB);
+    doc.text(resume.title, margin, y);
+    y += 15;
+  }
+
+  // Contact line
+  const contactParts = [
+    resume.contact?.email,
+    resume.contact?.phone,
+    resume.contact?.location,
+    ...(resume.contact?.links || []),
+  ].filter(Boolean) as string[];
+  if (contactParts.length) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(110, 110, 110);
+    const lines = doc.splitTextToSize(contactParts.join("   |   "), contentW);
+    doc.text(lines, margin, y);
+    y += lines.length * 12 + 4;
+  }
+
+  doc.setDrawColor(210, 210, 210);
+  doc.line(margin, y, pageW - margin, y);
+  y += 4;
+
+  // Summary
+  if (resume.summary) {
+    sectionHeader("Summary");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
+    const lines = doc.splitTextToSize(resume.summary, contentW);
+    ensure(lines.length * 13);
+    doc.text(lines, margin, y);
+    y += lines.length * 13 + 6;
+  }
+
+  // Experience
+  if (resume.experience?.length) {
+    sectionHeader("Experience");
+    resume.experience.forEach((exp) => {
+      ensure(46);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 30, 30);
+      const roleCompany = [exp.role, exp.company].filter(Boolean).join(" — ");
+      doc.text(roleCompany, margin, y);
+      if (exp.period) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text(exp.period, pageW - margin, y, { align: "right" });
+      }
+      y += 13;
+      if (exp.location) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.setTextColor(130, 130, 130);
+        doc.text(exp.location, margin, y);
+        y += 12;
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(70, 70, 70);
+      (exp.bullets || []).forEach((b) => {
+        const bl = doc.splitTextToSize("•  " + b, contentW - 10);
+        ensure(bl.length * 13);
+        doc.text(bl, margin + 8, y);
+        y += bl.length * 13 + 1;
+      });
+      y += 8;
+    });
+  }
+
+  // Education
+  if (resume.education?.length) {
+    sectionHeader("Education");
+    resume.education.forEach((ed) => {
+      ensure(30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 30, 30);
+      doc.text(
+        [ed.degree, ed.institution].filter(Boolean).join(" — "),
+        margin,
+        y,
+      );
+      if (ed.period) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text(ed.period, pageW - margin, y, { align: "right" });
+      }
+      y += 13;
+      if (ed.details) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(90, 90, 90);
+        const dl = doc.splitTextToSize(ed.details, contentW);
+        ensure(dl.length * 12);
+        doc.text(dl, margin, y);
+        y += dl.length * 12 + 1;
+      }
+      y += 8;
+    });
+  }
+
+  // Skills
+  if (resume.skills?.length) {
+    sectionHeader("Skills");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
+    const sl = doc.splitTextToSize(resume.skills.join("   •   "), contentW);
+    ensure(sl.length * 13);
+    doc.text(sl, margin, y);
+    y += sl.length * 13 + 6;
+  }
+
+  // Certifications
+  if (resume.certifications?.length) {
+    sectionHeader("Certifications");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
+    resume.certifications.forEach((c) => {
+      const cl = doc.splitTextToSize("•  " + c, contentW - 10);
+      ensure(cl.length * 13);
+      doc.text(cl, margin + 8, y);
+      y += cl.length * 13 + 1;
+    });
+    y += 6;
+  }
+
+  // Languages
+  if (resume.languages?.length) {
+    sectionHeader("Languages");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
+    const ll = doc.splitTextToSize(resume.languages.join("   •   "), contentW);
+    ensure(ll.length * 13);
+    doc.text(ll, margin, y);
+    y += ll.length * 13 + 4;
+  }
+
+  const safe = (resume.name || "resume")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  doc.save(`${safe || "resume"}-resume.pdf`);
+}
+
+type ResumeTemplate = "classic" | "modern" | "minimal" | "bold";
+
+const RESUME_TEMPLATES: { id: ResumeTemplate; label: string; desc: string; accent: string; icon: string }[] = [
+  { id: "classic", label: "Classic", desc: "Traditional and professional", accent: "#7b5ade", icon: "📄" },
+  { id: "modern", label: "Modern", desc: "Clean with bold accents", accent: "#2563eb", icon: "✨" },
+  { id: "minimal", label: "Minimal", desc: "Simple and elegant", accent: "#374151", icon: "◻️" },
+  { id: "bold", label: "Bold", desc: "Strong visual impact", accent: "#dc2626", icon: "🔥" },
+];
+
+interface ResumeForm {
+  template: ResumeTemplate;
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  targetRole: string;
+  yearsExperience: string;
+  summary: string;
+  workExperience: string;
+  education: string;
+  skills: string;
+  certifications: string;
+  languages: string;
+  links: string;
+}
+
+const EMPTY_RESUME_FORM: ResumeForm = {
+  template: "classic",
+  fullName: "",
+  email: "",
+  phone: "",
+  location: "",
+  targetRole: "",
+  yearsExperience: "",
+  summary: "",
+  workExperience: "",
+  education: "",
+  skills: "",
+  certifications: "",
+  languages: "",
+  links: "",
+};
+
+function ResumeBuilder({ onBack }: { onBack: () => void }) {
+  const [form, setForm] = useState<ResumeForm>(EMPTY_RESUME_FORM);
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resume, setResume] = useState<GeneratedResume | null>(null);
+  const [step, setStep] = useState(0);
+  const [slideDir, setSlideDir] = useState<"left" | "right">("left");
+
+  const update = (field: keyof ResumeForm, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const STEPS = [
+    { label: "Personal Info", icon: "👤" },
+    { label: "Experience", icon: "💼" },
+    { label: "Skills & Extras", icon: "🎯" },
+    { label: "Review", icon: "✨" },
+  ];
+
+  // Per-step validation
+  function canProceed(): boolean {
+    if (step === 0) return !!(form.fullName.trim() && form.targetRole.trim());
+    if (step === 1) return !!form.workExperience.trim();
+    return true;
+  }
+
+  function goNext() {
+    if (!canProceed()) return;
+    setSlideDir("left");
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  }
+
+  function goBack() {
+    setSlideDir("right");
+    setStep((s) => Math.max(s - 1, 0));
+  }
+
+  async function handleGenerate(e?: React.FormEvent) {
+    e?.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/jobs/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate resume");
+      setResume(data.resume as GeneratedResume);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDownload() {
+    if (!resume) return;
+    setDownloading(true);
+    setError(null);
+    try {
+      await downloadResumePdf(resume, form.template);
+    } catch (e: any) {
+      setError(e.message || "Could not generate the PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  // Summary helper for review step
+  const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
+  const reviewSections = [
+    { label: "Template", value: selectedTemplate ? `${selectedTemplate.icon} ${selectedTemplate.label}` : form.template },
+    { label: "Full Name", value: form.fullName },
+    { label: "Target Role", value: form.targetRole },
+    { label: "Email", value: form.email },
+    { label: "Phone", value: form.phone },
+    { label: "Location", value: form.location },
+    { label: "Years of Experience", value: form.yearsExperience },
+    { label: "Summary", value: form.summary },
+    { label: "Work Experience", value: form.workExperience },
+    { label: "Education", value: form.education },
+    { label: "Skills", value: form.skills },
+    { label: "Certifications", value: form.certifications },
+    { label: "Languages", value: form.languages },
+    { label: "Links", value: form.links },
+  ];
+
+  return (
+    <div
+      className="max-w-3xl mx-auto px-4 py-8"
+      style={{ animation: "fade-up 0.35s ease both" }}
+    >
+      <style>{`
+        @keyframes rb-slide-left {
+          from { opacity: 0; transform: translateX(40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes rb-slide-right {
+          from { opacity: 0; transform: translateX(-40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .rb-slide-left  { animation: rb-slide-left  0.3s ease both; }
+        .rb-slide-right { animation: rb-slide-right 0.3s ease both; }
+      `}</style>
+
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
+        style={{ color: "var(--text-muted)" }}
+      >
+        ← Back to Jobs
+      </button>
+
+      {step === 0 && (
+      <div className="mb-8">
+        <h1
+          className="text-3xl font-bold mb-2 flex items-center gap-2"
+          style={{ color: "var(--text-primary)" }}
+        >
+          <span>✨</span> AI Resume Builder
+        </h1>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          Fill in your details step by step, then let AI craft a polished resume.
+        </p>
+      </div>
+      )}
+
+      {!resume ? (
+        <>
+          {/* ── Stepper ── */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              {STEPS.map((s, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col items-center gap-1.5 flex-1"
+                  style={{ cursor: i <= step ? "pointer" : "default" }}
+                  onClick={() => {
+                    if (i < step) {
+                      setSlideDir(i < step ? "right" : "left");
+                      setStep(i);
+                    }
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300"
+                    style={{
+                      background:
+                        i <= step
+                          ? "linear-gradient(135deg, var(--purple), var(--blue))"
+                          : "var(--glass-bg)",
+                      color: i <= step ? "#fff" : "var(--text-muted)",
+                      border:
+                        i <= step
+                          ? "none"
+                          : "2px solid var(--divider)",
+                      boxShadow:
+                        i === step
+                          ? "0 0 0 4px color-mix(in srgb, var(--purple) 25%, transparent)"
+                          : "none",
+                    }}
+                  >
+                    {i < step ? "✓" : s.icon}
+                  </div>
+                  <span
+                    className="text-[11px] font-semibold text-center leading-tight hidden sm:block"
+                    style={{
+                      color: i <= step ? "var(--text-primary)" : "var(--text-muted)",
+                    }}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* Progress bar */}
+            <div
+              className="h-1 rounded-full overflow-hidden"
+              style={{ background: "var(--divider)" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${((step + 1) / STEPS.length) * 100}%`,
+                  background: "linear-gradient(90deg, var(--purple), var(--blue))",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Step Content ── */}
+          <div className="glass p-8">
+            <div
+              key={step}
+              className={slideDir === "left" ? "rb-slide-left" : "rb-slide-right"}
+            >
+              {/* Step 0: Personal Info */}
+              {step === 0 && (
+                <div className="flex flex-col gap-5">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Step 1 — Personal Information
+                  </p>
+
+                  {/* Template Selector */}
+                  <div>
+                    <p
+                      className="text-sm font-medium mb-3"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Choose a template
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {RESUME_TEMPLATES.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => update("template", t.id)}
+                          className="relative rounded-xl p-4 text-left transition-all duration-200 group"
+                          style={{
+                            background: form.template === t.id
+                              ? `color-mix(in srgb, ${t.accent} 12%, transparent)`
+                              : "var(--glass-bg)",
+                            border: form.template === t.id
+                              ? `2px solid ${t.accent}`
+                              : "2px solid var(--divider)",
+                            boxShadow: form.template === t.id
+                              ? `0 0 0 3px color-mix(in srgb, ${t.accent} 15%, transparent)`
+                              : "none",
+                          }}
+                        >
+                          {form.template === t.id && (
+                            <span
+                              className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                              style={{ background: t.accent }}
+                            >
+                              ✓
+                            </span>
+                          )}
+                          <span className="text-xl mb-1.5 block">{t.icon}</span>
+                          <span
+                            className="text-sm font-semibold block"
+                            style={{ color: form.template === t.id ? t.accent : "var(--text-primary)" }}
+                          >
+                            {t.label}
+                          </span>
+                          <span
+                            className="text-[11px] block mt-0.5"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {t.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField label="Full Name" required>
+                      <input
+                        type="text"
+                        value={form.fullName}
+                        onChange={(e) => update("fullName", e.target.value)}
+                        placeholder="John Doe"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                    <FormField label="Target Role" required>
+                      <input
+                        type="text"
+                        value={form.targetRole}
+                        onChange={(e) => update("targetRole", e.target.value)}
+                        placeholder="e.g. Senior Frontend Engineer"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField label="Email" optional>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => update("email", e.target.value)}
+                        placeholder="john@example.com"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                    <FormField label="Phone" optional>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(e) => update("phone", e.target.value)}
+                        placeholder="+237 6 00 00 00 00"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                    <FormField label="Location" optional>
+                      <input
+                        type="text"
+                        value={form.location}
+                        onChange={(e) => update("location", e.target.value)}
+                        placeholder="e.g. Yaoundé, Cameroon"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1: Experience & Background */}
+              {step === 1 && (
+                <div className="flex flex-col gap-5">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Step 2 — Experience & Background
+                  </p>
+                  <FormField label="Years of Experience" optional>
+                    <input
+                      type="text"
+                      value={form.yearsExperience}
+                      onChange={(e) => update("yearsExperience", e.target.value)}
+                      placeholder="e.g. 5"
+                      className="glass-input w-full px-4 py-2.5 text-sm"
+                    />
+                  </FormField>
+                  <FormField label="Professional Summary" optional>
+                    <textarea
+                      value={form.summary}
+                      onChange={(e) => update("summary", e.target.value)}
+                      rows={3}
+                      placeholder="A rough summary of who you are — the AI will polish it."
+                      className="glass-input w-full px-4 py-3 text-sm resize-none"
+                    />
+                  </FormField>
+                  <FormField label="Work Experience" required>
+                    <textarea
+                      value={form.workExperience}
+                      onChange={(e) => update("workExperience", e.target.value)}
+                      rows={7}
+                      placeholder={`List roles, companies, dates and what you did — rough notes are fine.\n\nExample:\nFrontend Developer, Acme Corp (2021 - Present)\n- Built the customer dashboard in React\n- Led migration to TypeScript\n\nJunior Developer, StartupXYZ (2019 - 2021)\n- Maintained the marketing site`}
+                      className="glass-input w-full px-4 py-3 text-sm resize-none"
+                    />
+                  </FormField>
+                  <FormField label="Education" optional>
+                    <textarea
+                      value={form.education}
+                      onChange={(e) => update("education", e.target.value)}
+                      rows={3}
+                      placeholder={`e.g. B.Sc. Computer Science, University of Yaoundé I (2015 - 2019)`}
+                      className="glass-input w-full px-4 py-3 text-sm resize-none"
+                    />
+                  </FormField>
+                </div>
+              )}
+
+              {/* Step 2: Skills & Extras */}
+              {step === 2 && (
+                <div className="flex flex-col gap-5">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Step 3 — Skills & Extras
+                  </p>
+                  <FormField label="Skills" optional>
+                    <input
+                      type="text"
+                      value={form.skills}
+                      onChange={(e) => update("skills", e.target.value)}
+                      placeholder="e.g. React, TypeScript, Node.js (comma-separated)"
+                      className="glass-input w-full px-4 py-2.5 text-sm"
+                    />
+                  </FormField>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField label="Certifications" optional>
+                      <input
+                        type="text"
+                        value={form.certifications}
+                        onChange={(e) => update("certifications", e.target.value)}
+                        placeholder="e.g. AWS Certified, PMP"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                    <FormField label="Languages" optional>
+                      <input
+                        type="text"
+                        value={form.languages}
+                        onChange={(e) => update("languages", e.target.value)}
+                        placeholder="e.g. English, French"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                  </div>
+                  <FormField label="Links (portfolio, LinkedIn, GitHub)" optional>
+                    <input
+                      type="text"
+                      value={form.links}
+                      onChange={(e) => update("links", e.target.value)}
+                      placeholder="e.g. github.com/you, linkedin.com/in/you"
+                      className="glass-input w-full px-4 py-2.5 text-sm"
+                    />
+                  </FormField>
+                </div>
+              )}
+
+              {/* Step 3: Review */}
+              {step === 3 && (
+                <div className="flex flex-col gap-5">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Step 4 — Review Your Details
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    Everything look good? Hit <strong>Generate</strong> to build your AI-powered resume.
+                    You can go back to any step to make edits.
+                  </p>
+                  <div
+                    className="rounded-xl p-5 flex flex-col gap-3"
+                    style={{
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--divider)",
+                    }}
+                  >
+                    {reviewSections
+                      .filter((r) => r.value?.trim())
+                      .map((r) => (
+                        <div key={r.label} className="flex flex-col gap-0.5">
+                          <span
+                            className="text-[11px] font-semibold uppercase tracking-wider"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            {r.label}
+                          </span>
+                          <span
+                            className="text-sm whitespace-pre-line"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {r.value}
+                          </span>
+                        </div>
+                      ))}
+                    {reviewSections.every((r) => !r.value?.trim()) && (
+                      <p
+                        className="text-sm italic"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        No details filled in yet. Go back to add your information.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Error */}
+            {error && (
+              <p
+                className="text-sm px-4 py-3 rounded-lg mt-5"
+                style={{
+                  background: "var(--error-bg)",
+                  color: "var(--error-text)",
+                  border: "1px solid var(--error-border)",
+                }}
+              >
+                ⚠ {error}
+              </p>
+            )}
+
+            {/* ── Navigation Buttons ── */}
+            <div className="flex gap-3 pt-6 mt-2" style={{ borderTop: "1px solid var(--divider)" }}>
+              {step === 0 ? (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
+                >
+                  ← Back
+                </button>
+              )}
+
+              {step < STEPS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!canProceed()}
+                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleGenerate()}
+                  disabled={loading || !canProceed()}
+                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
+                >
+                  {loading ? "Generating…" : "Generate Resume ✨"}
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {/* Action bar */}
+          <div className="glass p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              ✓ Your resume is ready. Review it below, then download.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setResume(null); setStep(0); }}
+                className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg"
+              >
+                Edit details
+              </button>
+              <button
+                onClick={() => handleGenerate()}
+                disabled={loading}
+                className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
+              >
+                {loading ? "Regenerating…" : "Regenerate"}
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
+              >
+                {downloading ? "Preparing…" : "Download PDF ↓"}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <p
+              className="text-sm px-4 py-3 rounded-lg"
+              style={{
+                background: "var(--error-bg)",
+                color: "var(--error-text)",
+                border: "1px solid var(--error-border)",
+              }}
+            >
+              ⚠ {error}
+            </p>
+          )}
+
+          {/* Resume preview */}
+          <ResumePreview resume={resume} template={form.template} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResumeSectionTitle({ children, template }: { children: React.ReactNode; template?: ResumeTemplate }) {
+  const accent = RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
+  
+  if (template === "modern") {
+    return (
+      <div className="mb-3">
+        <span
+          className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded"
+          style={{ color: "#fff", background: accent }}
+        >
+          {children}
+        </span>
+      </div>
+    );
+  }
+  
+  if (template === "minimal") {
+    return (
+      <div className="mb-3 pb-1" style={{ borderBottom: `1px solid var(--divider)` }}>
+        <span
+          className="text-[11px] font-medium uppercase tracking-[0.15em]"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {children}
+        </span>
+      </div>
+    );
+  }
+  
+  if (template === "bold") {
+    return (
+      <div className="flex items-center gap-3 mb-3">
+        <span
+          className="w-1 h-5 rounded-full"
+          style={{ background: accent }}
+        />
+        <span
+          className="text-sm font-black uppercase tracking-wider"
+          style={{ color: "var(--text-primary)" }}
+        >
+          {children}
+        </span>
+      </div>
+    );
+  }
+  
+  // classic (default)
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <span
+        className="text-xs font-bold uppercase tracking-wider"
+        style={{ color: "var(--text-primary)" }}
+      >
+        {children}
+      </span>
+      <span className="h-px flex-1" style={{ background: "var(--divider)" }} />
+    </div>
+  );
+}
+
+function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResume; template?: ResumeTemplate }) {
+  const contactParts = [
+    resume.contact?.email,
+    resume.contact?.phone,
+    resume.contact?.location,
+    ...(resume.contact?.links || []),
+  ].filter(Boolean) as string[];
+  const accent = RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
+
+  // Template-specific header styles
+  const headerStyles: Record<ResumeTemplate, React.CSSProperties> = {
+    classic: {},
+    modern: {
+      background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 70%, #000))`,
+      margin: "-2rem -2rem 1.5rem -2rem",
+      padding: "2rem",
+      borderRadius: "var(--card-radius) var(--card-radius) 0 0",
+    },
+    minimal: {},
+    bold: {
+      borderLeft: `4px solid ${accent}`,
+      paddingLeft: "1rem",
+    },
+  };
+
+  const nameColor: Record<ResumeTemplate, string> = {
+    classic: "var(--text-primary)",
+    modern: "#ffffff",
+    minimal: "var(--text-primary)",
+    bold: "var(--text-primary)",
+  };
+
+  const titleColor: Record<ResumeTemplate, string> = {
+    classic: "var(--accent-primary)",
+    modern: "rgba(255,255,255,0.85)",
+    minimal: "var(--text-muted)",
+    bold: accent,
+  };
+
+  const contactColor: Record<ResumeTemplate, string> = {
+    classic: "var(--text-muted)",
+    modern: "rgba(255,255,255,0.7)",
+    minimal: "var(--text-muted)",
+    bold: "var(--text-muted)",
+  };
+
+  return (
+    <div className="glass p-8 flex flex-col gap-6">
+      {/* Header */}
+      <div style={headerStyles[template]}>
+        <h2
+          className={`font-bold ${template === "bold" ? "text-3xl" : "text-2xl"}`}
+          style={{ color: nameColor[template] }}
+        >
+          {resume.name}
+        </h2>
+        {resume.title && (
+          <p
+            className={`font-semibold mt-0.5 ${template === "bold" ? "text-base" : "text-sm"}`}
+            style={{ color: titleColor[template] }}
+          >
+            {resume.title}
+          </p>
+        )}
+        {contactParts.length > 0 && (
+          <p
+            className="text-xs mt-2"
+            style={{ color: contactColor[template] }}
+          >
+            {contactParts.join("  ·  ")}
+          </p>
+        )}
+      </div>
+
+      {resume.summary && (
+        <div>
+          <ResumeSectionTitle template={template}>Summary</ResumeSectionTitle>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {resume.summary}
+          </p>
+        </div>
+      )}
+
+      {resume.experience?.length > 0 && (
+        <div>
+          <ResumeSectionTitle template={template}>Experience</ResumeSectionTitle>
+          <div className="flex flex-col gap-4">
+            {resume.experience.map((exp, i) => (
+              <div key={i}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {[exp.role, exp.company].filter(Boolean).join(" — ")}
+                  </p>
+                  {exp.period && (
+                    <span
+                      className="text-xs flex-shrink-0"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {exp.period}
+                    </span>
+                  )}
+                </div>
+                {exp.location && (
+                  <p
+                    className="text-xs italic mt-0.5"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {exp.location}
+                  </p>
+                )}
+                {exp.bullets?.length > 0 && (
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {exp.bullets.map((b, j) => (
+                      <li
+                        key={j}
+                        className="text-sm leading-relaxed flex gap-2"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        <span style={{ color: accent }}>•</span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {resume.education?.length > 0 && (
+        <div>
+          <ResumeSectionTitle template={template}>Education</ResumeSectionTitle>
+          <div className="flex flex-col gap-3">
+            {resume.education.map((ed, i) => (
+              <div key={i}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {[ed.degree, ed.institution].filter(Boolean).join(" — ")}
+                  </p>
+                  {ed.period && (
+                    <span
+                      className="text-xs flex-shrink-0"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {ed.period}
+                    </span>
+                  )}
+                </div>
+                {ed.details && (
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {ed.details}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {resume.skills?.length > 0 && (
+        <div>
+          <ResumeSectionTitle template={template}>Skills</ResumeSectionTitle>
+          <div className="flex flex-wrap gap-1.5">
+            {resume.skills.map((s, i) => (
+              <span
+                key={i}
+                className="px-2.5 py-0.5 rounded-full text-xs font-medium"
+                style={{
+                  background: `color-mix(in srgb, ${accent} 15%, transparent)`,
+                  color: accent,
+                }}
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {resume.certifications?.length > 0 && (
+        <div>
+          <ResumeSectionTitle template={template}>Certifications</ResumeSectionTitle>
+          <ul className="flex flex-col gap-1">
+            {resume.certifications.map((c, i) => (
+              <li
+                key={i}
+                className="text-sm flex gap-2"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <span style={{ color: accent }}>•</span>
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {resume.languages?.length > 0 && (
+        <div>
+          <ResumeSectionTitle template={template}>Languages</ResumeSectionTitle>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            {resume.languages.join("  ·  ")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function JobsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   const [view, setView] = useState<PageView>("jobs");
   const [search, setSearch] = useState("");
@@ -1738,6 +2965,16 @@ export default function JobsPage() {
     setTimeout(() => setSuccessId(null), 4000);
   }
 
+  // Gated tabs redirect to login when the visitor isn't signed in.
+  function goTo(target: PageView) {
+    const tab = HUB_TABS.find((t) => t.view === target);
+    if (tab?.auth && !session?.user) {
+      router.push("/login");
+      return;
+    }
+    setView(target);
+  }
+
   return (
     <>
       <style>{`
@@ -1792,67 +3029,42 @@ export default function JobsPage() {
           />
         )}
 
+        {/* ── RESUME BUILDER VIEW ── */}
+        {view === "resume-builder" && (
+          <ResumeBuilder onBack={() => setView("jobs")} />
+        )}
+
         {/* ── JOBS VIEW ── */}
         {view === "jobs" && (
           <>
             {/* Header */}
             <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto">
-              <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h1
-                    className="text-3xl font-bold mb-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Find Your Dream Job
-                  </h1>
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    Looking for a job, remote opportunities, or on-site
-                    employment? Gracy Global gives you the platform to post a
-                    job, find qualified workers, or apply for available
-                    opportunities with ease. Whether you are hiring, searching,
-                    or ready to work, this space connects professionals,
-                    businesses, and job seekers to real opportunities for growth
-                    and success.
-                  </p>
-                </div>
+              <div className="mb-6">
+                <h1
+                  className="text-3xl sm:text-4xl font-bold mb-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Find Your Dream Job
+                </h1>
+                <p
+                  className="text-sm max-w-2xl"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Post a job, discover qualified talent, or apply to
+                  opportunities — all in one place. Whether you&apos;re hiring,
+                  searching, or ready to work, Gracy Global connects
+                  professionals, businesses, and job seekers to real
+                  opportunities.
+                </p>
+              </div>
 
-                {session?.user && (
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => setView("post-job")}
-                      className="btn-primary px-5 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 whitespace-nowrap"
-                    >
-                      <span className="text-lg leading-none">+</span>
-                      Post a Job
-                    </button>
-                    <button
-                      onClick={() => setView("job-seeker")}
-                      className="btn-secondary px-5 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 whitespace-nowrap"
-                    >
-                      <span className="text-lg leading-none">💼</span>
-                      Need a Job?
-                    </button>
-                    <button
-                      onClick={() => setView("applied")}
-                      className="btn-secondary px-5 py-2.5 text-sm font-semibold rounded-lg flex items-center gap-2 whitespace-nowrap"
-                    >
-                      <span className="text-lg leading-none">📋</span>
-                      My Applications
-                      {applications.length > 0 && (
-                        <span
-                          className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold"
-                          style={{
-                            background: "var(--purple)",
-                            color: "white",
-                            fontSize: "0.65rem",
-                          }}
-                        >
-                          {applications.length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                )}
+              {/* Hub navigation */}
+              <div className="mb-6">
+                <HubTabs
+                  current={view}
+                  onNavigate={goTo}
+                  applicationsCount={applications.length}
+                />
               </div>
 
               {/* Search + Filters */}

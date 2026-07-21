@@ -26,6 +26,7 @@ model User {
 
   postedJobs       Job[]            @relation("PostedJobs") // ← ADD
 jobSeekerProfile JobSeeker?       // ← ADD
+resume           Resume?
  store  Store?
 
   // Relations
@@ -1152,4 +1153,34 @@ model Store {
     @@index([slug])                        // ← ADD
 
   @@map("stores")
+}
+
+// ─── RESUME BUILDER ─────────────────────────────────────────────────
+
+model Resume {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  template        String   @default("classic")
+  photoUrl        String?
+  fullName        String   @default("")
+  email           String   @default("")
+  phone           String   @default("")
+  location        String   @default("")
+  targetRole      String   @default("")
+  yearsExperience String   @default("")
+  summary         String   @default("") @db.Text
+  workExperience  String   @default("") @db.Text
+  education       String   @default("") @db.Text
+  skills          String   @default("")
+  certifications  String   @default("")
+  languages       String   @default("")
+  links           String   @default("")
+  generated       Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("resumes")
 }
