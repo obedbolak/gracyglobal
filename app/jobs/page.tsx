@@ -1707,7 +1707,11 @@ function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
         href={`/jobs/${job.id}`}
         onClick={(e) => e.stopPropagation()}
         className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-        style={{ color: "var(--accent-primary)", background: "var(--glass-bg-subtle)", border: "1px solid var(--glass-border)" }}
+        style={{
+          color: "var(--accent-primary)",
+          background: "var(--glass-bg-subtle)",
+          border: "1px solid var(--glass-border)",
+        }}
       >
         View Details →
       </Link>
@@ -1717,19 +1721,23 @@ function JobCard({ job, isSelected, hasApplied, onClick }: JobCardProps) {
 
 // ─── Hub Navigation Tabs ──────────────────────────────────────────────────────
 
-const HUB_TABS: { view: PageView; label: string; icon: string; auth?: boolean }[] =
-  [
-    { view: "jobs", label: "Browse Jobs", icon: "🔎" },
-    { view: "post-job", label: "Post a Job", icon: "➕", auth: true },
-    { view: "job-seeker", label: "Job Seeker Profile", icon: "💼", auth: true },
-    {
-      view: "resume-builder",
-      label: "AI Resume Builder",
-      icon: "✨",
-      auth: true,
-    },
-    { view: "applied", label: "My Applications", icon: "📋", auth: true },
-  ];
+const HUB_TABS: {
+  view: PageView;
+  label: string;
+  icon: string;
+  auth?: boolean;
+}[] = [
+  { view: "jobs", label: "Browse Jobs", icon: "🔎" },
+  { view: "post-job", label: "Post a Job", icon: "➕", auth: true },
+  { view: "job-seeker", label: "Job Seeker Profile", icon: "💼", auth: true },
+  {
+    view: "resume-builder",
+    label: "AI Resume Builder",
+    icon: "✨",
+    auth: true,
+  },
+  { view: "applied", label: "My Applications", icon: "📋", auth: true },
+];
 
 function HubTabs({
   current,
@@ -1773,7 +1781,9 @@ function HubTabs({
               <span
                 className="ml-0.5 px-1.5 py-0.5 rounded-full font-bold"
                 style={{
-                  background: active ? "rgba(255,255,255,0.25)" : "var(--purple)",
+                  background: active
+                    ? "rgba(255,255,255,0.25)"
+                    : "var(--purple)",
                   color: "#fff",
                   fontSize: "0.65rem",
                 }}
@@ -1810,7 +1820,10 @@ function loadJsPDF(): Promise<any> {
   });
 }
 
-async function downloadResumePdf(resume: GeneratedResume, template: ResumeTemplate = "classic") {
+async function downloadResumePdf(
+  resume: GeneratedResume,
+  template: ResumeTemplate = "classic",
+) {
   const JsPDF = await loadJsPDF();
   const doc = new JsPDF({ unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -2016,11 +2029,41 @@ async function downloadResumePdf(resume: GeneratedResume, template: ResumeTempla
 
 type ResumeTemplate = "classic" | "modern" | "minimal" | "bold";
 
-const RESUME_TEMPLATES: { id: ResumeTemplate; label: string; desc: string; accent: string; icon: string }[] = [
-  { id: "classic", label: "Classic", desc: "Traditional and professional", accent: "#7b5ade", icon: "📄" },
-  { id: "modern", label: "Modern", desc: "Clean with bold accents", accent: "#2563eb", icon: "✨" },
-  { id: "minimal", label: "Minimal", desc: "Simple and elegant", accent: "#374151", icon: "◻️" },
-  { id: "bold", label: "Bold", desc: "Strong visual impact", accent: "#dc2626", icon: "🔥" },
+const RESUME_TEMPLATES: {
+  id: ResumeTemplate;
+  label: string;
+  desc: string;
+  accent: string;
+  icon: string;
+}[] = [
+  {
+    id: "classic",
+    label: "Classic",
+    desc: "Traditional and professional",
+    accent: "#7b5ade",
+    icon: "📄",
+  },
+  {
+    id: "modern",
+    label: "Modern",
+    desc: "Clean with bold accents",
+    accent: "#2563eb",
+    icon: "✨",
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    desc: "Simple and elegant",
+    accent: "#374151",
+    icon: "◻️",
+  },
+  {
+    id: "bold",
+    label: "Bold",
+    desc: "Strong visual impact",
+    accent: "#dc2626",
+    icon: "🔥",
+  },
 ];
 
 interface ResumeForm {
@@ -2066,7 +2109,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<GeneratedResume | null>(null);
   const [step, setStep] = useState(0);
-  const [builderMode, setBuilderMode] = useState<"select" | "ai" | "manual">("select");
+  const [builderMode, setBuilderMode] = useState<"select" | "ai" | "manual">(
+    "select",
+  );
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
@@ -2137,19 +2182,69 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     name: form.fullName,
     title: form.targetRole,
     photoUrl: form.photoUrl,
-    contact: { email: form.email, phone: form.phone, location: form.location, links: form.links ? form.links.split(",").map(s=>s.trim()).filter(Boolean) : [] },
+    contact: {
+      email: form.email,
+      phone: form.phone,
+      location: form.location,
+      links: form.links
+        ? form.links
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+    },
     summary: form.summary,
-    experience: form.workExperience ? [{ role: "Experience", company: form.yearsExperience ? `${form.yearsExperience} Years` : "", period: "", bullets: form.workExperience.split("\n").filter(s=>s.trim()) }] : [],
-    education: form.education ? [{ degree: "Education", institution: "", period: "", details: form.education }] : [],
-    skills: form.skills ? form.skills.split(",").map(s=>s.trim()).filter(Boolean) : [],
-    certifications: form.certifications ? form.certifications.split(",").map(s=>s.trim()).filter(Boolean) : [],
-    languages: form.languages ? form.languages.split(",").map(s=>s.trim()).filter(Boolean) : [],
+    experience: form.workExperience
+      ? [
+          {
+            role: "Experience",
+            company: form.yearsExperience
+              ? `${form.yearsExperience} Years`
+              : "",
+            period: "",
+            bullets: form.workExperience.split("\n").filter((s) => s.trim()),
+          },
+        ]
+      : [],
+    education: form.education
+      ? [
+          {
+            degree: "Education",
+            institution: "",
+            period: "",
+            details: form.education,
+          },
+        ]
+      : [],
+    skills: form.skills
+      ? form.skills
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+    certifications: form.certifications
+      ? form.certifications
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+    languages: form.languages
+      ? form.languages
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
   });
 
   // Summary helper for review step
   const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
   const reviewSections = [
-    { label: "Template", value: selectedTemplate ? `${selectedTemplate.icon} ${selectedTemplate.label}` : form.template },
+    {
+      label: "Template",
+      value: selectedTemplate
+        ? `${selectedTemplate.icon} ${selectedTemplate.label}`
+        : form.template,
+    },
     { label: "Photo", value: form.photoUrl ? "Uploaded" : "None" },
     { label: "Full Name", value: form.fullName },
     { label: "Target Role", value: form.targetRole },
@@ -2168,7 +2263,10 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
 
   if (builderMode === "select") {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8" style={{ animation: "fade-up 0.35s ease both" }}>
+      <div
+        className="max-w-3xl mx-auto px-4 py-8"
+        style={{ animation: "fade-up 0.35s ease both" }}
+      >
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
@@ -2177,7 +2275,10 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
           ← Back to Jobs
         </button>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+          <h1
+            className="text-3xl font-bold mb-2 flex items-center gap-2"
+            style={{ color: "var(--text-primary)" }}
+          >
             <span>📄</span> Create Your Resume
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -2191,8 +2292,16 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
           >
             <span className="text-3xl">✨</span>
             <div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>Build with AI</h3>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Let AI write your professional summary and polish your experience points.</p>
+              <h3
+                className="font-bold text-lg mb-1"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Build with AI
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Let AI write your professional summary and polish your
+                experience points.
+              </p>
             </div>
           </button>
           <button
@@ -2201,8 +2310,15 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
           >
             <span className="text-3xl">✍️</span>
             <div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>Choose a Template</h3>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Write it yourself with a live preview of your chosen template.</p>
+              <h3
+                className="font-bold text-lg mb-1"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Choose a Template
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Write it yourself with a live preview of your chosen template.
+              </p>
             </div>
           </button>
         </div>
@@ -2216,7 +2332,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
       style={{ animation: "fade-up 0.35s ease both" }}
     >
       <div className="flex flex-col">
-      <style>{`
+        <style>{`
         @keyframes rb-slide-left {
           from { opacity: 0; transform: translateX(40px); }
           to   { opacity: 1; transform: translateX(0); }
@@ -2229,363 +2345,500 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
         .rb-slide-right { animation: rb-slide-right 0.3s ease both; }
       `}</style>
 
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
-        style={{ color: "var(--text-muted)" }}
-      >
-        ← Back to Jobs
-      </button>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition-opacity"
+          style={{ color: "var(--text-muted)" }}
+        >
+          ← Back to Jobs
+        </button>
 
-
-
-      {!resume ? (
-        <>
-          {/* ── Stepper ── */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              {STEPS.map((s, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-1.5 flex-1"
-                  style={{ cursor: i <= step ? "pointer" : "default" }}
-                  onClick={() => {
-                    if (i < step) {
-                      setSlideDir(i < step ? "right" : "left");
-                      setStep(i);
-                    }
-                  }}
-                >
+        {!resume ? (
+          <>
+            {/* ── Stepper ── */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                {STEPS.map((s, i) => (
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300"
-                    style={{
-                      background:
-                        i <= step
-                          ? "linear-gradient(135deg, var(--purple), var(--blue))"
-                          : "var(--glass-bg)",
-                      color: i <= step ? "#fff" : "var(--text-muted)",
-                      border:
-                        i <= step
-                          ? "none"
-                          : "2px solid var(--divider)",
-                      boxShadow:
-                        i === step
-                          ? "0 0 0 4px color-mix(in srgb, var(--purple) 25%, transparent)"
-                          : "none",
+                    key={i}
+                    className="flex flex-col items-center gap-1.5 flex-1"
+                    style={{ cursor: i <= step ? "pointer" : "default" }}
+                    onClick={() => {
+                      if (i < step) {
+                        setSlideDir(i < step ? "right" : "left");
+                        setStep(i);
+                      }
                     }}
                   >
-                    {i < step ? "✓" : s.icon}
-                  </div>
-                  <span
-                    className="text-[11px] font-semibold text-center leading-tight hidden sm:block"
-                    style={{
-                      color: i <= step ? "var(--text-primary)" : "var(--text-muted)",
-                    }}
-                  >
-                    {s.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {/* Progress bar */}
-            <div
-              className="h-1 rounded-full overflow-hidden"
-              style={{ background: "var(--divider)" }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${((step + 1) / STEPS.length) * 100}%`,
-                  background: "linear-gradient(90deg, var(--purple), var(--blue))",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Step Content ── */}
-          <div className="glass p-8">
-            <div
-              key={step}
-              className={slideDir === "left" ? "rb-slide-left" : "rb-slide-right"}
-            >
-              {/* Step 0: Personal Info */}
-              {step === 0 && (
-                <div className="flex flex-col gap-5">
-                  <p
-                    className="text-xs font-semibold uppercase tracking-wider mb-1"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    Step 1 — Personal Information
-                  </p>
-
-                  {/* Template Selector */}
-                  {builderMode === "manual" && (
-                  <div>
-                    <p
-                      className="text-sm font-medium mb-3"
-                      style={{ color: "var(--text-secondary)" }}
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300"
+                      style={{
+                        background:
+                          i <= step
+                            ? "linear-gradient(135deg, var(--purple), var(--blue))"
+                            : "var(--glass-bg)",
+                        color: i <= step ? "#fff" : "var(--text-muted)",
+                        border: i <= step ? "none" : "2px solid var(--divider)",
+                        boxShadow:
+                          i === step
+                            ? "0 0 0 4px color-mix(in srgb, var(--purple) 25%, transparent)"
+                            : "none",
+                      }}
                     >
-                      Choose a template
+                      {i < step ? "✓" : s.icon}
+                    </div>
+                    <span
+                      className="text-[11px] font-semibold text-center leading-tight hidden sm:block"
+                      style={{
+                        color:
+                          i <= step
+                            ? "var(--text-primary)"
+                            : "var(--text-muted)",
+                      }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Progress bar */}
+              <div
+                className="h-1 rounded-full overflow-hidden"
+                style={{ background: "var(--divider)" }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${((step + 1) / STEPS.length) * 100}%`,
+                    background:
+                      "linear-gradient(90deg, var(--purple), var(--blue))",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* ── Step Content ── */}
+            <div className="glass p-8">
+              <div
+                key={step}
+                className={
+                  slideDir === "left" ? "rb-slide-left" : "rb-slide-right"
+                }
+              >
+                {/* Step 0: Personal Info */}
+                {step === 0 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 1 — Personal Information
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {RESUME_TEMPLATES.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => update("template", t.id)}
-                          className="relative rounded-xl p-4 text-left transition-all duration-200 group"
-                          style={{
-                            background: form.template === t.id
-                              ? `color-mix(in srgb, ${t.accent} 12%, transparent)`
-                              : "var(--glass-bg)",
-                            border: form.template === t.id
-                              ? `2px solid ${t.accent}`
-                              : "2px solid var(--divider)",
-                            boxShadow: form.template === t.id
-                              ? `0 0 0 3px color-mix(in srgb, ${t.accent} 15%, transparent)`
-                              : "none",
-                          }}
+
+                    {/* Template Selector */}
+                    {builderMode === "manual" && (
+                      <div>
+                        <p
+                          className="text-sm font-medium mb-3"
+                          style={{ color: "var(--text-secondary)" }}
                         >
-                          {form.template === t.id && (
-                            <span
-                              className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
-                              style={{ background: t.accent }}
+                          Choose a template
+                        </p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {RESUME_TEMPLATES.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => update("template", t.id)}
+                              className="relative rounded-xl p-4 text-left transition-all duration-200 group"
+                              style={{
+                                background:
+                                  form.template === t.id
+                                    ? `color-mix(in srgb, ${t.accent} 12%, transparent)`
+                                    : "var(--glass-bg)",
+                                border:
+                                  form.template === t.id
+                                    ? `2px solid ${t.accent}`
+                                    : "2px solid var(--divider)",
+                                boxShadow:
+                                  form.template === t.id
+                                    ? `0 0 0 3px color-mix(in srgb, ${t.accent} 15%, transparent)`
+                                    : "none",
+                              }}
                             >
-                              ✓
-                            </span>
-                          )}
-                          <span className="text-xl mb-1.5 block">{t.icon}</span>
-                          <span
-                            className="text-sm font-semibold block"
-                            style={{ color: form.template === t.id ? t.accent : "var(--text-primary)" }}
-                          >
-                            {t.label}
-                          </span>
-                          <span
-                            className="text-[11px] block mt-0.5"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            {t.desc}
-                          </span>
-                        </button>
-                      ))}
+                              {form.template === t.id && (
+                                <span
+                                  className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                                  style={{ background: t.accent }}
+                                >
+                                  ✓
+                                </span>
+                              )}
+                              <span className="text-xl mb-1.5 block">
+                                {t.icon}
+                              </span>
+                              <span
+                                className="text-sm font-semibold block"
+                                style={{
+                                  color:
+                                    form.template === t.id
+                                      ? t.accent
+                                      : "var(--text-primary)",
+                                }}
+                              >
+                                {t.label}
+                              </span>
+                              <span
+                                className="text-[11px] block mt-0.5"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {t.desc}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="mb-4">
+                      <ProfileUpload
+                        folder="resumes"
+                        currentImage={form.photoUrl}
+                        onUploadComplete={(url) => update("photoUrl", url)}
+                        onRemove={() => update("photoUrl", "")}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField label="Full Name" required>
+                        <input
+                          type="text"
+                          value={form.fullName}
+                          onChange={(e) => update("fullName", e.target.value)}
+                          placeholder="John Doe"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                      <FormField label="Target Role" required>
+                        <input
+                          type="text"
+                          value={form.targetRole}
+                          onChange={(e) => update("targetRole", e.target.value)}
+                          placeholder="e.g. Senior Frontend Engineer"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField label="Email" optional>
+                        <input
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => update("email", e.target.value)}
+                          placeholder="john@example.com"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                      <FormField label="Phone" optional>
+                        <input
+                          type="tel"
+                          value={form.phone}
+                          onChange={(e) => update("phone", e.target.value)}
+                          placeholder="+237 6 00 00 00 00"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                      <FormField label="Location" optional>
+                        <input
+                          type="text"
+                          value={form.location}
+                          onChange={(e) => update("location", e.target.value)}
+                          placeholder="e.g. Yaoundé, Cameroon"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
                     </div>
                   </div>
-                  )}
-                  <div className="mb-4">
-                    <ProfileUpload
-                      folder="resumes"
-                      currentImage={form.photoUrl}
-                      onUploadComplete={(url) => update("photoUrl", url)}
-                      onRemove={() => update("photoUrl", "")}
-                    />
-                  </div>
+                )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField label="Full Name" required>
+                {/* Step 1: Experience & Background */}
+                {step === 1 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 2 — Experience & Background
+                    </p>
+                    <FormField label="Years of Experience" optional>
                       <input
                         type="text"
-                        value={form.fullName}
-                        onChange={(e) => update("fullName", e.target.value)}
-                        placeholder="John Doe"
+                        value={form.yearsExperience}
+                        onChange={(e) =>
+                          update("yearsExperience", e.target.value)
+                        }
+                        placeholder="e.g. 5"
                         className="glass-input w-full px-4 py-2.5 text-sm"
                       />
                     </FormField>
-                    <FormField label="Target Role" required>
+                    <FormField label="Professional Summary" optional>
+                      <textarea
+                        value={form.summary}
+                        onChange={(e) => update("summary", e.target.value)}
+                        rows={3}
+                        placeholder="A rough summary of who you are — the AI will polish it."
+                        className="glass-input w-full px-4 py-3 text-sm resize-none"
+                      />
+                    </FormField>
+                    <FormField label="Work Experience" required>
+                      <textarea
+                        value={form.workExperience}
+                        onChange={(e) =>
+                          update("workExperience", e.target.value)
+                        }
+                        rows={7}
+                        placeholder={`List roles, companies, dates and what you did — rough notes are fine.\n\nExample:\nFrontend Developer, Acme Corp (2021 - Present)\n- Built the customer dashboard in React\n- Led migration to TypeScript\n\nJunior Developer, StartupXYZ (2019 - 2021)\n- Maintained the marketing site`}
+                        className="glass-input w-full px-4 py-3 text-sm resize-none"
+                      />
+                    </FormField>
+                    <FormField label="Education" optional>
+                      <textarea
+                        value={form.education}
+                        onChange={(e) => update("education", e.target.value)}
+                        rows={3}
+                        placeholder={`e.g. B.Sc. Computer Science, University of Yaoundé I (2015 - 2019)`}
+                        className="glass-input w-full px-4 py-3 text-sm resize-none"
+                      />
+                    </FormField>
+                  </div>
+                )}
+
+                {/* Step 2: Skills & Extras */}
+                {step === 2 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 3 — Skills & Extras
+                    </p>
+                    <FormField label="Skills" optional>
                       <input
                         type="text"
-                        value={form.targetRole}
-                        onChange={(e) => update("targetRole", e.target.value)}
-                        placeholder="e.g. Senior Frontend Engineer"
+                        value={form.skills}
+                        onChange={(e) => update("skills", e.target.value)}
+                        placeholder="e.g. React, TypeScript, Node.js (comma-separated)"
+                        className="glass-input w-full px-4 py-2.5 text-sm"
+                      />
+                    </FormField>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField label="Certifications" optional>
+                        <input
+                          type="text"
+                          value={form.certifications}
+                          onChange={(e) =>
+                            update("certifications", e.target.value)
+                          }
+                          placeholder="e.g. AWS Certified, PMP"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                      <FormField label="Languages" optional>
+                        <input
+                          type="text"
+                          value={form.languages}
+                          onChange={(e) => update("languages", e.target.value)}
+                          placeholder="e.g. English, French"
+                          className="glass-input w-full px-4 py-2.5 text-sm"
+                        />
+                      </FormField>
+                    </div>
+                    <FormField
+                      label="Links (portfolio, LinkedIn, GitHub)"
+                      optional
+                    >
+                      <input
+                        type="text"
+                        value={form.links}
+                        onChange={(e) => update("links", e.target.value)}
+                        placeholder="e.g. github.com/you, linkedin.com/in/you"
                         className="glass-input w-full px-4 py-2.5 text-sm"
                       />
                     </FormField>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField label="Email" optional>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => update("email", e.target.value)}
-                        placeholder="john@example.com"
-                        className="glass-input w-full px-4 py-2.5 text-sm"
-                      />
-                    </FormField>
-                    <FormField label="Phone" optional>
-                      <input
-                        type="tel"
-                        value={form.phone}
-                        onChange={(e) => update("phone", e.target.value)}
-                        placeholder="+237 6 00 00 00 00"
-                        className="glass-input w-full px-4 py-2.5 text-sm"
-                      />
-                    </FormField>
-                    <FormField label="Location" optional>
-                      <input
-                        type="text"
-                        value={form.location}
-                        onChange={(e) => update("location", e.target.value)}
-                        placeholder="e.g. Yaoundé, Cameroon"
-                        className="glass-input w-full px-4 py-2.5 text-sm"
-                      />
-                    </FormField>
+                )}
+
+                {/* Step 3: Review */}
+                {step === 3 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 4 — Review Your Details
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Everything look good? Hit <strong>Generate</strong> to
+                      build your AI-powered resume. You can go back to any step
+                      to make edits.
+                    </p>
+                    <div
+                      className="rounded-xl p-5 flex flex-col gap-3"
+                      style={{
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--divider)",
+                      }}
+                    >
+                      {reviewSections
+                        .filter((r) => r.value?.trim())
+                        .map((r) => (
+                          <div key={r.label} className="flex flex-col gap-0.5">
+                            <span
+                              className="text-[11px] font-semibold uppercase tracking-wider"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {r.label}
+                            </span>
+                            <span
+                              className="text-sm whitespace-pre-line"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              {r.value}
+                            </span>
+                          </div>
+                        ))}
+                      {reviewSections.every((r) => !r.value?.trim()) && (
+                        <p
+                          className="text-sm italic"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          No details filled in yet. Go back to add your
+                          information.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+
+              {/* Error */}
+              {error && (
+                <p
+                  className="text-sm px-4 py-3 rounded-lg mt-5"
+                  style={{
+                    background: "var(--error-bg)",
+                    color: "var(--error-text)",
+                    border: "1px solid var(--error-border)",
+                  }}
+                >
+                  ⚠ {error}
+                </p>
               )}
 
-              {/* Step 1: Experience & Background */}
-              {step === 1 && (
-                <div className="flex flex-col gap-5">
-                  <p
-                    className="text-xs font-semibold uppercase tracking-wider mb-1"
-                    style={{ color: "var(--text-muted)" }}
+              {/* ── Navigation Buttons ── */}
+              <div
+                className="flex gap-3 pt-6 mt-2"
+                style={{ borderTop: "1px solid var(--divider)" }}
+              >
+                {step === 0 ? (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
                   >
-                    Step 2 — Experience & Background
-                  </p>
-                  <FormField label="Years of Experience" optional>
-                    <input
-                      type="text"
-                      value={form.yearsExperience}
-                      onChange={(e) => update("yearsExperience", e.target.value)}
-                      placeholder="e.g. 5"
-                      className="glass-input w-full px-4 py-2.5 text-sm"
-                    />
-                  </FormField>
-                  <FormField label="Professional Summary" optional>
-                    <textarea
-                      value={form.summary}
-                      onChange={(e) => update("summary", e.target.value)}
-                      rows={3}
-                      placeholder="A rough summary of who you are — the AI will polish it."
-                      className="glass-input w-full px-4 py-3 text-sm resize-none"
-                    />
-                  </FormField>
-                  <FormField label="Work Experience" required>
-                    <textarea
-                      value={form.workExperience}
-                      onChange={(e) => update("workExperience", e.target.value)}
-                      rows={7}
-                      placeholder={`List roles, companies, dates and what you did — rough notes are fine.\n\nExample:\nFrontend Developer, Acme Corp (2021 - Present)\n- Built the customer dashboard in React\n- Led migration to TypeScript\n\nJunior Developer, StartupXYZ (2019 - 2021)\n- Maintained the marketing site`}
-                      className="glass-input w-full px-4 py-3 text-sm resize-none"
-                    />
-                  </FormField>
-                  <FormField label="Education" optional>
-                    <textarea
-                      value={form.education}
-                      onChange={(e) => update("education", e.target.value)}
-                      rows={3}
-                      placeholder={`e.g. B.Sc. Computer Science, University of Yaoundé I (2015 - 2019)`}
-                      className="glass-input w-full px-4 py-3 text-sm resize-none"
-                    />
-                  </FormField>
-                </div>
-              )}
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
+                  >
+                    ← Back
+                  </button>
+                )}
 
-              {/* Step 2: Skills & Extras */}
-              {step === 2 && (
-                <div className="flex flex-col gap-5">
-                  <p
-                    className="text-xs font-semibold uppercase tracking-wider mb-1"
-                    style={{ color: "var(--text-muted)" }}
+                {step < STEPS.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={!canProceed()}
+                    className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Step 3 — Skills & Extras
-                  </p>
-                  <FormField label="Skills" optional>
-                    <input
-                      type="text"
-                      value={form.skills}
-                      onChange={(e) => update("skills", e.target.value)}
-                      placeholder="e.g. React, TypeScript, Node.js (comma-separated)"
-                      className="glass-input w-full px-4 py-2.5 text-sm"
-                    />
-                  </FormField>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField label="Certifications" optional>
-                      <input
-                        type="text"
-                        value={form.certifications}
-                        onChange={(e) => update("certifications", e.target.value)}
-                        placeholder="e.g. AWS Certified, PMP"
-                        className="glass-input w-full px-4 py-2.5 text-sm"
-                      />
-                    </FormField>
-                    <FormField label="Languages" optional>
-                      <input
-                        type="text"
-                        value={form.languages}
-                        onChange={(e) => update("languages", e.target.value)}
-                        placeholder="e.g. English, French"
-                        className="glass-input w-full px-4 py-2.5 text-sm"
-                      />
-                    </FormField>
-                  </div>
-                  <FormField label="Links (portfolio, LinkedIn, GitHub)" optional>
-                    <input
-                      type="text"
-                      value={form.links}
-                      onChange={(e) => update("links", e.target.value)}
-                      placeholder="e.g. github.com/you, linkedin.com/in/you"
-                      className="glass-input w-full px-4 py-2.5 text-sm"
-                    />
-                  </FormField>
-                </div>
-              )}
-
-              {/* Step 3: Review */}
-              {step === 3 && (
-                <div className="flex flex-col gap-5">
-                  <p
-                    className="text-xs font-semibold uppercase tracking-wider mb-1"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    Step 4 — Review Your Details
-                  </p>
-                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                    Everything look good? Hit <strong>Generate</strong> to build your AI-powered resume.
-                    You can go back to any step to make edits.
-                  </p>
-                  <div
-                    className="rounded-xl p-5 flex flex-col gap-3"
-                    style={{
-                      background: "var(--glass-bg)",
-                      border: "1px solid var(--divider)",
+                    Next →
+                  </button>
+                ) : builderMode === "manual" ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const tempResume = mapFormToResume();
+                      setResume(tempResume);
+                      setDownloading(true);
+                      try {
+                        await downloadResumePdf(tempResume, form.template);
+                      } catch (e: any) {
+                        setError(e.message || "Could not generate the PDF.");
+                      } finally {
+                        setDownloading(false);
+                      }
                     }}
+                    disabled={downloading || !canProceed()}
+                    className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
                   >
-                    {reviewSections
-                      .filter((r) => r.value?.trim())
-                      .map((r) => (
-                        <div key={r.label} className="flex flex-col gap-0.5">
-                          <span
-                            className="text-[11px] font-semibold uppercase tracking-wider"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            {r.label}
-                          </span>
-                          <span
-                            className="text-sm whitespace-pre-line"
-                            style={{ color: "var(--text-primary)" }}
-                          >
-                            {r.value}
-                          </span>
-                        </div>
-                      ))}
-                    {reviewSections.every((r) => !r.value?.trim()) && (
-                      <p
-                        className="text-sm italic"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        No details filled in yet. Go back to add your information.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+                    {downloading ? "Preparing…" : "Download PDF ↓"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleGenerate()}
+                    disabled={loading || !canProceed()}
+                    className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
+                  >
+                    {loading ? "Generating…" : "Generate Resume ✨"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* Action bar */}
+            <div className="glass p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                ✓ Your resume is ready. Review it below, then download.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setResume(null);
+                    setStep(0);
+                  }}
+                  className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg"
+                >
+                  Edit details
+                </button>
+                <button
+                  onClick={() => handleGenerate()}
+                  disabled={loading}
+                  className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
+                >
+                  {loading ? "Regenerating…" : "Regenerate"}
+                </button>
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
+                >
+                  {downloading ? "Preparing…" : "Download PDF ↓"}
+                </button>
+              </div>
             </div>
 
-            {/* Error */}
             {error && (
               <p
-                className="text-sm px-4 py-3 rounded-lg mt-5"
+                className="text-sm px-4 py-3 rounded-lg"
                 style={{
                   background: "var(--error-bg)",
                   color: "var(--error-text)",
@@ -2596,122 +2849,19 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
               </p>
             )}
 
-            {/* ── Navigation Buttons ── */}
-            <div className="flex gap-3 pt-6 mt-2" style={{ borderTop: "1px solid var(--divider)" }}>
-              {step === 0 ? (
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
-                >
-                  Cancel
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={goBack}
-                  className="btn-secondary flex-1 px-4 py-3 text-sm font-medium"
-                >
-                  ← Back
-                </button>
-              )}
-
-              {step < STEPS.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={goNext}
-                  disabled={!canProceed()}
-                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next →
-                </button>
-              ) : builderMode === "manual" ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const tempResume = mapFormToResume();
-                    setResume(tempResume);
-                    setDownloading(true);
-                    try {
-                      await downloadResumePdf(tempResume, form.template);
-                    } catch (e: any) {
-                      setError(e.message || "Could not generate the PDF.");
-                    } finally {
-                      setDownloading(false);
-                    }
-                  }}
-                  disabled={downloading || !canProceed()}
-                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
-                >
-                  {downloading ? "Preparing…" : "Download PDF ↓"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleGenerate()}
-                  disabled={loading || !canProceed()}
-                  className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
-                >
-                  {loading ? "Generating…" : "Generate Resume ✨"}
-                </button>
-              )}
-            </div>
+            {/* Resume preview */}
+            <ResumePreview resume={resume} template={form.template} />
           </div>
-        </>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* Action bar */}
-          <div className="glass p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              ✓ Your resume is ready. Review it below, then download.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setResume(null); setStep(0); }}
-                className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg"
-              >
-                Edit details
-              </button>
-              <button
-                onClick={() => handleGenerate()}
-                disabled={loading}
-                className="btn-secondary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
-              >
-                {loading ? "Regenerating…" : "Regenerate"}
-              </button>
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="btn-primary px-4 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-70"
-              >
-                {downloading ? "Preparing…" : "Download PDF ↓"}
-              </button>
-            </div>
-          </div>
-
-          {error && (
-            <p
-              className="text-sm px-4 py-3 rounded-lg"
-              style={{
-                background: "var(--error-bg)",
-                color: "var(--error-text)",
-                border: "1px solid var(--error-border)",
-              }}
-            >
-              ⚠ {error}
-            </p>
-          )}
-
-          {/* Resume preview */}
-          <ResumePreview resume={resume} template={form.template} />
-        </div>
-      )}
+        )}
       </div>
 
       {builderMode === "manual" && !resume && (
         <div className="sticky top-8 hidden lg:block overflow-y-auto overflow-x-hidden max-h-[calc(100vh-4rem)] pb-12 w-full">
           <A4ScaleWrapper>
-            <ResumePreview resume={mapFormToResume()} template={form.template} />
+            <ResumePreview
+              resume={mapFormToResume()}
+              template={form.template}
+            />
           </A4ScaleWrapper>
         </div>
       )}
@@ -2731,25 +2881,40 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col p-4 lg:hidden overflow-hidden">
           {/* Top Bar */}
           <div className="flex justify-between items-center mb-6">
-            <button onClick={() => setShowMobilePreview(false)} className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"><X size={24} /></button>
+            <button
+              onClick={() => setShowMobilePreview(false)}
+              className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+            >
+              <X size={24} />
+            </button>
             <button
               onClick={async () => {
                 const temp = mapFormToResume();
                 setDownloading(true);
-                try { await downloadResumePdf(temp, form.template); }
-                catch(e) {}
+                try {
+                  await downloadResumePdf(temp, form.template);
+                } catch (e) {}
                 setDownloading(false);
               }}
               className="bg-[var(--purple)] text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2"
             >
-              {downloading ? "Wait..." : <><Download size={18} /> Download PDF</>}
+              {downloading ? (
+                "Wait..."
+              ) : (
+                <>
+                  <Download size={18} /> Download PDF
+                </>
+              )}
             </button>
           </div>
-          
+
           {/* Preview Container - Scaled to fit screen width */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden w-full pb-20">
             <A4ScaleWrapper>
-              <ResumePreview resume={mapFormToResume()} template={form.template} />
+              <ResumePreview
+                resume={mapFormToResume()}
+                template={form.template}
+              />
             </A4ScaleWrapper>
           </div>
         </div>
@@ -2774,17 +2939,35 @@ function A4ScaleWrapper({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full relative overflow-hidden rounded-xl shadow-2xl bg-white" style={{ height: 794 * 1.41428 * scale }}>
-      <div className="absolute top-0 left-0 origin-top-left" style={{ width: "794px", height: "1123px", transform: `scale(${scale})` }}>
+    <div
+      ref={containerRef}
+      className="w-full relative overflow-hidden rounded-xl shadow-2xl bg-white"
+      style={{ height: 794 * 1.41428 * scale }}
+    >
+      <div
+        className="absolute top-0 left-0 origin-top-left"
+        style={{
+          width: "794px",
+          height: "1123px",
+          transform: `scale(${scale})`,
+        }}
+      >
         {children}
       </div>
     </div>
   );
 }
 
-function ResumeSectionTitle({ children, template }: { children: React.ReactNode; template?: ResumeTemplate }) {
-  const accent = RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
-  
+function ResumeSectionTitle({
+  children,
+  template,
+}: {
+  children: React.ReactNode;
+  template?: ResumeTemplate;
+}) {
+  const accent =
+    RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
+
   if (template === "modern") {
     return (
       <div className="mb-3">
@@ -2797,7 +2980,7 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
       </div>
     );
   }
-  
+
   if (template === "minimal") {
     return (
       <div className="mb-3 pb-1" style={{ borderBottom: `1px solid #e5e7eb` }}>
@@ -2810,14 +2993,11 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
       </div>
     );
   }
-  
+
   if (template === "bold") {
     return (
       <div className="flex items-center gap-3 mb-3">
-        <span
-          className="w-1 h-5 rounded-full"
-          style={{ background: accent }}
-        />
+        <span className="w-1 h-5 rounded-full" style={{ background: accent }} />
         <span
           className="text-sm font-black uppercase tracking-wider"
           style={{ color: "#111" }}
@@ -2827,7 +3007,7 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
       </div>
     );
   }
-  
+
   // classic (default)
   return (
     <div className="flex items-center gap-3 mb-3">
@@ -2842,14 +3022,21 @@ function ResumeSectionTitle({ children, template }: { children: React.ReactNode;
   );
 }
 
-function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResume; template?: ResumeTemplate }) {
+function ResumePreview({
+  resume,
+  template = "classic",
+}: {
+  resume: GeneratedResume;
+  template?: ResumeTemplate;
+}) {
   const contactParts = [
     resume.contact?.email,
     resume.contact?.phone,
     resume.contact?.location,
     ...(resume.contact?.links || []),
   ].filter(Boolean) as string[];
-  const accent = RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
+  const accent =
+    RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
 
   // Template-specific header styles
   const headerStyles: Record<ResumeTemplate, React.CSSProperties> = {
@@ -2883,7 +3070,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
     bold: "#555",
   };
 
-  const renderPhoto = (size = "w-24 h-24") => (
+  const renderPhoto = (size = "w-24 h-24") =>
     resume.photoUrl && (
       <img
         src={resume.photoUrl}
@@ -2891,8 +3078,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
         className={`${size} rounded-full object-cover border-4`}
         style={{ borderColor: accent }}
       />
-    )
-  );
+    );
 
   const renderContact = () => {
     if (contactParts.length === 0) return null;
@@ -2900,7 +3086,11 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
       return (
         <div className="flex flex-col gap-1.5 mt-2">
           {contactParts.map((part, i) => (
-            <span key={i} className="text-xs" style={{ color: contactColor[template] }}>
+            <span
+              key={i}
+              className="text-xs"
+              style={{ color: contactColor[template] }}
+            >
               {part}
             </span>
           ))}
@@ -2942,10 +3132,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
       {resume.summary && (
         <div>
           <ResumeSectionTitle template={template}>Summary</ResumeSectionTitle>
-          <p
-            className="text-[13px] leading-relaxed"
-            style={{ color: "#333" }}
-          >
+          <p className="text-[13px] leading-relaxed" style={{ color: "#333" }}>
             {resume.summary}
           </p>
         </div>
@@ -2953,7 +3140,9 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
 
       {resume.experience?.length > 0 && (
         <div>
-          <ResumeSectionTitle template={template}>Experience</ResumeSectionTitle>
+          <ResumeSectionTitle template={template}>
+            Experience
+          </ResumeSectionTitle>
           <div className="flex flex-col gap-4">
             {resume.experience.map((exp, i) => (
               <div key={i}>
@@ -3024,10 +3213,7 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
                   )}
                 </div>
                 {ed.details && (
-                  <p
-                    className="text-xs mt-0.5"
-                    style={{ color: "#555" }}
-                  >
+                  <p className="text-xs mt-0.5" style={{ color: "#555" }}>
                     {ed.details}
                   </p>
                 )}
@@ -3063,7 +3249,9 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
 
       {resume.certifications?.length > 0 && (
         <div>
-          <ResumeSectionTitle template={template}>Certifications</ResumeSectionTitle>
+          <ResumeSectionTitle template={template}>
+            Certifications
+          </ResumeSectionTitle>
           <ul className="flex flex-col gap-1">
             {resume.certifications.map((c, i) => (
               <li
@@ -3091,19 +3279,35 @@ function ResumePreview({ resume, template = "classic" }: { resume: GeneratedResu
   );
 
   return (
-    <div className="bg-white p-12 relative w-full h-full flex flex-col gap-6 text-[13px]" style={{ color: "#333", overflow: "hidden" }}>
+    <div
+      className="bg-white p-12 relative w-full h-full flex flex-col gap-6 text-[13px]"
+      style={{ color: "#333", overflow: "hidden" }}
+    >
       {template === "modern" ? (
         <div className="grid grid-cols-[1fr_2fr] gap-8 h-full">
-          <div className="border-r pr-6 flex flex-col gap-6" style={{ borderColor: "#e5e7eb" }}>
+          <div
+            className="border-r pr-6 flex flex-col gap-6"
+            style={{ borderColor: "#e5e7eb" }}
+          >
             {renderPhoto("w-32 h-32 mx-auto")}
             {renderContact()}
             {renderSidebar()}
           </div>
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="font-bold text-3xl" style={{ color: nameColor.modern }}>{resume.name}</h2>
+              <h2
+                className="font-bold text-3xl"
+                style={{ color: nameColor.modern }}
+              >
+                {resume.name}
+              </h2>
               {resume.title && (
-                <p className="font-semibold mt-1 text-base" style={{ color: titleColor.modern }}>{resume.title}</p>
+                <p
+                  className="font-semibold mt-1 text-base"
+                  style={{ color: titleColor.modern }}
+                >
+                  {resume.title}
+                </p>
               )}
             </div>
             {renderContent()}
@@ -3132,7 +3336,6 @@ export default function JobsPage() {
   const [type, setType] = useState<JobType | "ALL">("ALL");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
-
 
   // ── useJobs hook — single source of truth ──
   const {
@@ -3256,7 +3459,6 @@ export default function JobsPage() {
           <>
             {/* Header */}
             <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto flex flex-col gap-6">
-              
               {/* Unified Toolbar */}
               <div className="glass p-2 sm:p-3 flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="w-full sm:w-auto">
@@ -3279,11 +3481,15 @@ export default function JobsPage() {
 
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
+                  onChange={(e) =>
+                    setCategory(e.target.value as JobCategory | "ALL")
+                  }
                   className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
                 >
                   {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
 
@@ -3293,14 +3499,20 @@ export default function JobsPage() {
                   className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
                 >
                   {JOB_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
                   ))}
                 </select>
 
                 <button
                   onClick={() => setFeaturedOnly((v) => !v)}
                   className={`w-full sm:w-auto ${featuredOnly ? "btn-primary" : "btn-secondary"}`}
-                  style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                  }}
                 >
                   ★ Featured
                 </button>
@@ -3308,15 +3520,29 @@ export default function JobsPage() {
 
               {/* Page Title & Intro */}
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                <h1
+                  className="text-3xl sm:text-4xl font-bold mb-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Find Your Dream Job
                 </h1>
-                <p className="text-sm max-w-2xl" style={{ color: "var(--text-muted)" }}>
-                  Post a job, discover qualified talent, or apply to opportunities — all in one place. Whether you're hiring, searching, or ready to work, Gracy Global connects professionals, businesses, and job seekers to real opportunities.
+                <p
+                  className="text-sm max-w-2xl"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Post a job, discover qualified talent, or apply to
+                  opportunities — all in one place. Whether you're hiring,
+                  searching, or ready to work, Gracy Global connects
+                  professionals, businesses, and job seekers to real
+                  opportunities.
                 </p>
                 {!jobsLoading && (
-                  <p className="text-xs mt-3 font-medium" style={{ color: "var(--accent-primary)" }}>
-                    {filtered.length} job{filtered.length !== 1 ? "s" : ""} found {search && ` for "${search}"`}
+                  <p
+                    className="text-xs mt-3 font-medium"
+                    style={{ color: "var(--accent-primary)" }}
+                  >
+                    {filtered.length} job{filtered.length !== 1 ? "s" : ""}{" "}
+                    found {search && ` for "${search}"`}
                   </p>
                 )}
               </div>
@@ -3345,37 +3571,42 @@ export default function JobsPage() {
             {/* Jobs Grid */}
             <section className="px-4 pb-16 max-w-6xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {jobsLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <JobCardSkeleton key={i} />
-                    ))
-                  ) : filtered.length === 0 ? (
-                    <div className="col-span-full glass p-12 text-center">
-                      <div className="text-4xl mb-3">🔍</div>
-                      <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                        No jobs found
-                      </p>
-                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                        Try adjusting your filters or search terms
-                      </p>
-                    </div>
-                  ) : (
-                    filtered.map((job) => (
-                      <JobCard
-                        key={job.id}
-                        job={job}
-                        isSelected={false}
-                        hasApplied={appliedIds.has(job.id)}
-                        onClick={() => {}}
-                      />
-                    ))
-                  )}
+                {jobsLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <JobCardSkeleton key={i} />
+                  ))
+                ) : filtered.length === 0 ? (
+                  <div className="col-span-full glass p-12 text-center">
+                    <div className="text-4xl mb-3">🔍</div>
+                    <p
+                      className="font-semibold mb-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      No jobs found
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Try adjusting your filters or search terms
+                    </p>
+                  </div>
+                ) : (
+                  filtered.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      isSelected={false}
+                      hasApplied={appliedIds.has(job.id)}
+                      onClick={() => {}}
+                    />
+                  ))
+                )}
               </div>
             </section>
           </>
         )}
       </div>
-
     </>
   );
 }
