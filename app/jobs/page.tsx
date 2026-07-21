@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
-import { Eye, X, Download } from "lucide-react";
+import { Eye, X, Download, Menu } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1735,14 +1735,16 @@ function HubTabs({
   current,
   onNavigate,
   applicationsCount,
+  vertical,
 }: {
   current: PageView;
   onNavigate: (view: PageView) => void;
   applicationsCount: number;
+  vertical?: boolean;
 }) {
   return (
     <div
-      className="glass p-1.5 flex gap-1 overflow-x-auto"
+      className={`glass p-1.5 flex gap-1 ${vertical ? "flex-col" : "overflow-x-auto"}`}
       style={{ scrollbarWidth: "none" }}
     >
       {HUB_TABS.map((tab) => {
@@ -3130,6 +3132,7 @@ export default function JobsPage() {
   const [type, setType] = useState<JobType | "ALL">("ALL");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // ── useJobs hook — single source of truth ──
   const {
@@ -3272,8 +3275,107 @@ export default function JobsPage() {
                 </p>
               </div>
 
-              {/* Hub navigation */}
-              <div className="mb-6">
+              {/* Mobile Top Bar (Search + Menu Toggle) */}
+              <div className="sm:hidden flex gap-2 mb-4">
+                <button
+                  onClick={() => setShowMobileSidebar(true)}
+                  className="btn-secondary flex items-center justify-center p-2"
+                  aria-label="Open menu"
+                >
+                  <Menu size={20} />
+                </button>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search jobs…"
+                  className="glass-input flex-1 px-4 py-2 text-sm"
+                />
+              </div>
+
+              {/* Mobile Sidebar Overlay */}
+              {showMobileSidebar && (
+                <div className="fixed inset-0 z-[100] sm:hidden flex">
+                  <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setShowMobileSidebar(false)}
+                  />
+                  <div
+                    className="relative w-4/5 max-w-sm h-full flex flex-col gap-6 p-6 overflow-y-auto"
+                    style={{ backgroundColor: "var(--bg-default)" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold">Menu</h2>
+                      <button
+                        onClick={() => setShowMobileSidebar(false)}
+                        className="btn-secondary p-2 rounded-full"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                        Navigation
+                      </h3>
+                      <HubTabs
+                        current={view}
+                        onNavigate={(v) => {
+                          goTo(v);
+                          setShowMobileSidebar(false);
+                        }}
+                        applicationsCount={applications.length}
+                        vertical={true}
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                        Filters
+                      </h3>
+                      <div className="flex flex-col gap-3">
+                        <select
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
+                          className="glass-input px-3 py-2.5 text-sm"
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={type}
+                          onChange={(e) => setType(e.target.value as JobType | "ALL")}
+                          className="glass-input px-3 py-2.5 text-sm"
+                        >
+                          {JOB_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setFeaturedOnly((v) => !v)}
+                          className={featuredOnly ? "btn-primary" : "btn-secondary"}
+                          style={{
+                            padding: "0.625rem 1rem",
+                            fontSize: "0.875rem",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ★ Featured
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Hub navigation */}
+              <div className="hidden sm:block mb-6">
                 <HubTabs
                   current={view}
                   onNavigate={goTo}
@@ -3281,8 +3383,8 @@ export default function JobsPage() {
                 />
               </div>
 
-              {/* Search + Filters */}
-              <div className="glass p-4 flex flex-col sm:flex-row gap-3">
+              {/* Desktop Search + Filters */}
+              <div className="hidden sm:flex glass p-4 flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={search}
