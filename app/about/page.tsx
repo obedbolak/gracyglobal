@@ -181,7 +181,7 @@ export default function AboutPage() {
                 description: "Connect with certified counselors for mental health support, relationship guidance, and life coaching.",
               },
               {
-                title: "Remote Job Opportunities",
+                title: "Job Opportunities",
                 description: "Access vetted remote positions from global companies across various industries.",
               },
               {

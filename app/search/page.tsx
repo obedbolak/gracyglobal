@@ -67,7 +67,7 @@ function SearchResults() {
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 min-h-screen">
       <h1
-        className="text-xl font-bold mb-1 mt-14 "
+        className="text-xl font-bold mb-1 mt-2"
         style={{ color: "var(--text-primary)" }}
       >
         Search results for “{q}”
@@ -210,7 +210,7 @@ function Group({
               </p>
               {it.sub && (
                 <p
-                  className="text-xs truncate"
+                  className="text-xs truncate hidden sm:block"
                   style={{ color: "var(--text-muted)" }}
                 >
                   {it.sub}

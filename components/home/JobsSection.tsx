@@ -25,14 +25,14 @@ export default function JobsSection() {
                 className="text-xs font-semibold uppercase tracking-[0.18em]"
                 style={{ color: "var(--blue)" }}
               >
-                Remote Jobs
+                Jobs
               </span>
             </div>
             <h2
               className="text-3xl md:text-4xl font-bold mb-3"
               style={{ color: "var(--text-primary)" }}
             >
-              Find Remote Jobs
+              Find Jobs
             </h2>
             <p
               className="text-base max-w-2xl"
@@ -145,7 +145,7 @@ export default function JobsSection() {
               className="text-base mb-4"
               style={{ color: "var(--text-secondary)" }}
             >
-              Remote jobs are on their way. Check back soon for curated listings
+              Jobs are on their way. Check back soon for curated listings
               and application support.
             </p>
             <Button asChild size="sm" variant="outline">

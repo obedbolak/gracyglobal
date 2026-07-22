@@ -50,8 +50,8 @@ const slides = [
   {
     id: "jobs",
     icon: Briefcase,
-    label: "Remote Jobs",
-    title: "Find Remote Jobs",
+    label: "Jobs",
+    title: "Find Jobs",
     subtitle: "Work from anywhere, earn globally.",
     description:
       "Browse 500+ vetted remote opportunities from top global companies. Full-time, freelance, and contract roles across tech, design, marketing and more.",
@@ -599,7 +599,7 @@ function JobsShowcase({ jobs, loading }: { jobs: any[]; loading: boolean }) {
             className="text-[11px] font-bold uppercase tracking-widest"
             style={{ color: "var(--text-on-glass)" }}
           >
-            Latest Remote Jobs
+            Latest Jobs
           </span>
         </div>
         <div
@@ -632,7 +632,7 @@ function JobsShowcase({ jobs, loading }: { jobs: any[]; loading: boolean }) {
           className="text-[11px] font-bold uppercase tracking-widest"
           style={{ color: "var(--text-on-glass)" }}
         >
-          Latest Remote Jobs
+          Latest Jobs
         </span>
         <span
           className="ml-auto text-[10px]"

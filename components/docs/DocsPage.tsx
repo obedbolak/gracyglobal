@@ -182,9 +182,9 @@ const SECTIONS: Section[] = [
     subtitle: "Find remote work or buy and sell services with ease.",
     steps: [
       {
-        title: "Browse remote jobs",
+        title: "Browse jobs",
         description:
-          "Go to 'Remote Jobs' in the navigation. Use filters like job type, category, and location to narrow down listings that match your skills.",
+          "Go to 'Jobs' in the navigation. Use filters like job type, category, and location to narrow down listings that match your skills.",
         image:
           "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?auto=format&fit=crop&w=900&q=80",
       },

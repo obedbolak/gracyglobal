@@ -7,7 +7,7 @@ import CurrencySelector from "@/components/shared/CurrencySelector";
 const links = {
   Platform: [
     { label: "Counselors", href: "/counselors" },
-    { label: "Remote Jobs", href: "/jobs" },
+    { label: "Jobs", href: "/jobs" },
     { label: "Marketplace", href: "/marketplace" },
     { label: "Community", href: "/community" },
     { label: "Learn", href: "/learn" },

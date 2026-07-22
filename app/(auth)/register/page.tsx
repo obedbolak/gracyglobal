@@ -507,7 +507,7 @@ function RegisterPageContent() {
             </span>
           </p>
           <p className="text-white/50 text-sm font-light leading-relaxed max-w-sm">
-            Counseling, remote jobs, community, and commerce — all in one place
+            Counseling, jobs, community, and commerce — all in one place
             built for Africa and the world.
           </p>
         </div>
@@ -515,7 +515,7 @@ function RegisterPageContent() {
           {[
             "Free to join — no hidden fees",
             "Book counselors in under 2 minutes",
-            "Browse 500+ remote job listings",
+            "Browse 500+ job listings",
           ].map((item, i) => (
             <div
               key={i}

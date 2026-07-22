@@ -4,17 +4,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, ShoppingBag, User, LogOut, Search } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, Search, ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "next-auth/react";
 
 const navLinks = [
-  { label: "Home", href: "/" },
   { label: "Counselors", href: "/counselors" },
-  { label: "Remote Jobs", href: "/jobs" },
-  { label: "My Nation & I", href: "/community" },
+  { label: "Jobs", href: "/jobs" },
+  { label: "Community", href: "/community" },
   { label: "Marketplace", href: "/marketplace" },
   { label: "Services", href: "/services" },
   { label: "E-learning", href: "/learn" },
@@ -26,8 +25,8 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { count } = useCart();
   const { isAuthenticated, user } = useAuth();
 
@@ -53,7 +52,6 @@ export default function Navbar() {
     const q = query.trim();
     if (!q) return;
     router.push(`/search?q=${encodeURIComponent(q)}`);
-    setSearchOpen(false);
     setOpen(false);
     setQuery("");
   }
@@ -93,8 +91,8 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* Desktop links — only at lg+ (8 links need room) */}
-            <div className="hidden lg:flex items-center gap-0.5">
+            {/* Desktop links — only at lg+ */}
+            <div className="hidden lg:flex items-center justify-center flex-1 gap-1 mx-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -121,20 +119,33 @@ export default function Navbar() {
 
             {/* Desktop right cluster (lg+): search + theme + cart + profile */}
             <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
-              <div className="flex items-center">
-                <button
-                  onClick={() => setSearchOpen(!searchOpen)}
-                  aria-label="Toggle search"
-                  className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
+              <form onSubmit={submitSearch} className="relative flex items-center mr-2">
+                <Search
+                  size={16}
+                  className="absolute left-3 pointer-events-none"
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-48 xl:w-56 py-1.5 pl-9 pr-8 text-sm rounded-full outline-none transition-all duration-300 focus:w-64"
                   style={{
                     background: "var(--glass-bg)",
                     border: "1px solid var(--glass-border)",
-                    color: "var(--text-secondary)",
+                    color: "var(--text-primary)",
                   }}
-                >
-                  <Search size={18} />
-                </button>
-              </div>
+                />
+                {query.trim() && (
+                  <button
+                    type="submit"
+                    className="absolute right-2 p-1 rounded-full transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-border)]"
+                    aria-label="Submit search"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+              </form>
 
               <ThemeToggle size="sm" />
 
@@ -313,60 +324,79 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Mobile / tablet cluster (< lg): inline expandable search + theme + cart + hamburger */}
-            <div className="flex lg:hidden items-center gap-2 flex-shrink-0">
-              <div className="flex items-center">
-                <button
-                  onClick={() => setSearchOpen(!searchOpen)}
-                  aria-label="Toggle search"
-                  className="p-2 rounded-xl transition-all duration-200"
+            {/* Mobile / tablet cluster (< lg): search + theme + cart + hamburger */}
+            <div className={`flex lg:hidden items-center gap-1.5 sm:gap-2 transition-all duration-300 ${isSearchFocused ? "flex-1 ml-4" : "flex-shrink-0"}`}>
+              <form onSubmit={submitSearch} className={`relative flex items-center ${isSearchFocused ? "w-full" : "mr-1"}`}>
+                <Search
+                  size={14}
+                  className="absolute left-2.5 pointer-events-none"
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  placeholder="Search..."
+                  className={`py-1.5 pl-8 pr-8 text-xs rounded-full outline-none transition-all duration-300 ${isSearchFocused ? "w-full" : "w-28 sm:w-36"}`}
                   style={{
                     background: "var(--glass-bg)",
                     border: "1px solid var(--glass-border)",
-                    color: "var(--text-secondary)",
+                    color: "var(--text-primary)",
                   }}
-                >
-                  <Search size={18} />
-                </button>
-              </div>
+                />
+                {query.trim() && (
+                  <button
+                    type="submit"
+                    className="absolute right-1.5 p-1 rounded-full transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-border)]"
+                    aria-label="Submit search"
+                  >
+                    <ArrowRight size={12} />
+                  </button>
+                )}
+              </form>
 
-              <ThemeToggle size="sm" />
+              {!isSearchFocused && (
+                <>
+                  <ThemeToggle size="sm" />
 
-              <Link
-                href="/marketplace/cart"
-                className="relative p-2 rounded-xl transition-all duration-200"
-                style={{
-                  background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <ShoppingBag size={18} />
-                {count > 0 && (
-                  <span
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
+                  <Link
+                    href="/marketplace/cart"
+                    className="relative p-2 rounded-xl transition-all duration-200"
                     style={{
-                      background:
-                        "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-secondary)",
                     }}
                   >
-                    {count > 9 ? "9+" : count}
-                  </span>
-                )}
-              </Link>
+                    <ShoppingBag size={18} />
+                    {count > 0 && (
+                      <span
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                        }}
+                      >
+                        {count > 9 ? "9+" : count}
+                      </span>
+                    )}
+                  </Link>
 
-              <button
-                onClick={() => setOpen(!open)}
-                aria-label="Toggle menu"
-                className="p-2 rounded-xl transition-all duration-200"
-                style={{
-                  background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                {open ? <X size={20} /> : <Menu size={20} />}
-              </button>
+                  <button
+                    onClick={() => setOpen(!open)}
+                    aria-label="Toggle menu"
+                    className="p-2 rounded-xl transition-all duration-200"
+                    style={{
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {open ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -476,59 +506,6 @@ export default function Navbar() {
         )}
       </nav>
 
-      {searchOpen && (
-        <div
-          className="fixed left-0 right-0"
-          style={{
-            top: "4rem",
-            background: "transparent",
-            borderTop: "1px solid var(--glass-border-subtle)",
-            backdropFilter: "var(--var-bg)",
-
-            zIndex: 760,
-            overflowX: "hidden",
-          }}
-        >
-          <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8">
-            <form onSubmit={submitSearch} className="py-2">
-              <div className="relative">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "var(--text-muted)" }}
-                />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search everything…"
-                  className="w-full rounded-xl py-3 pl-10 pr-12 text-sm outline-none"
-                  style={{
-                    background: "var(--glass-bg)",
-                    border: "1px solid var(--glass-border)",
-                    color: "var(--text-primary)",
-                    boxSizing: "border-box",
-                    maxWidth: "100%",
-                  }}
-                />
-
-                <button
-                  type="submit"
-                  aria-label="Submit search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <Search size={18} />
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </>
   );
 }

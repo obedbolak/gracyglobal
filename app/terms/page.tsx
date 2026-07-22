@@ -44,7 +44,7 @@ export default function TermsPage() {
             <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>GracyGlobal provides:</p>
             <ul style={{ color: "var(--text-secondary)", marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
               <li>Professional counseling and mental health services</li>
-              <li>Remote job listings and opportunities</li>
+              <li>Job listings and opportunities</li>
               <li>Community development programs</li>
               <li>E-commerce marketplace for wellness and beauty products</li>
               <li>E-learning courses and educational content</li>

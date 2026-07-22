@@ -11,7 +11,7 @@ const stats = [
   },
   {
     value: "500+",
-    label: "Remote Jobs Shared",
+    label: "Jobs Shared",
     Icon: Briefcase,
     color: "var(--scarlet)",
     glow: "rgba(220,20,60,0.3)",
