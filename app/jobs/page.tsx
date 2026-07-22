@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
-import { Eye, X, Download } from "lucide-react";
+import { Eye, X, Download, SlidersHorizontal, Search } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1727,7 +1727,6 @@ const HUB_TABS: {
   icon: string;
   auth?: boolean;
 }[] = [
-  { view: "jobs", label: "Browse Jobs", icon: "🔎" },
   { view: "post-job", label: "Post a Job", icon: "➕", auth: true },
   { view: "job-seeker", label: "Job Seeker Profile", icon: "💼", auth: true },
   {
@@ -3331,6 +3330,7 @@ export default function JobsPage() {
   const router = useRouter();
 
   const [view, setView] = useState<PageView>("jobs");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<JobCategory | "ALL">("ALL");
   const [type, setType] = useState<JobType | "ALL">("ALL");
@@ -3459,63 +3459,171 @@ export default function JobsPage() {
           <>
             {/* Header */}
             <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto flex flex-col gap-6">
-              {/* Unified Toolbar */}
-              <div className="glass p-2 sm:p-3 flex flex-wrap items-center gap-2 sm:gap-3">
-                <div className="w-full sm:w-auto">
+              {/* Unified Toolbar (Desktop) & Mobile Search Bar */}
+              <div className="glass p-2 sm:p-3 flex items-center gap-2 sm:gap-3 w-full">
+                {/* Search Bar */}
+                <div className="relative flex-1 min-w-0">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <Search size={15} />
+                  </span>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search jobs, skills, or companies..."
+                    className="w-full pl-10 pr-4 py-2 text-sm rounded-lg"
+                    style={{
+                      background: "var(--glass-bg-subtle)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-primary)",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "var(--input-border-focus)";
+                      e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--glass-border)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="lg:hidden p-2.5 rounded-lg flex-shrink-0"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <SlidersHorizontal size={18} />
+                </button>
+
+                {/* Desktop Elements */}
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
+                  
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
+                    className="glass-input px-3 py-2 text-sm min-w-[10rem]"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as JobType | "ALL")}
+                    className="glass-input px-3 py-2 text-sm min-w-[9rem]"
+                  >
+                    {JOB_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => setFeaturedOnly((v) => !v)}
+                    className={featuredOnly ? "btn-primary" : "btn-secondary"}
+                    style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
+                  >
+                    ★ Featured
+                  </button>
+
+                  <div className="h-6 w-px bg-gray-200 dark:bg-gray-800 mx-1" />
+
                   <HubTabs
                     current={view}
                     onNavigate={goTo}
                     applicationsCount={applications.length}
                   />
                 </div>
+              </div>
 
-                <div className="hidden h-6 w-px bg-gray-200 dark:bg-gray-800 sm:block" />
-
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search jobs..."
-                  className="glass-input px-4 py-2 text-sm w-full sm:w-48"
+              {/* Mobile Drawer */}
+              {mobileMenuOpen && (
+                <div
+                  className="fixed inset-0 z-40 lg:hidden"
+                  style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                  onClick={() => setMobileMenuOpen(false)}
                 />
+              )}
+              <div
+                className="fixed top-0 right-0 h-full z-50 lg:hidden overflow-y-auto transition-transform duration-300 shadow-2xl"
+                style={{
+                  width: "280px",
+                  background: "var(--bg-base)",
+                  borderLeft: "1px solid var(--glass-border)",
+                  padding: "20px",
+                  transform: mobileMenuOpen ? "translateX(0)" : "translateX(100%)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-bold text-base" style={{ color: "var(--text-primary)" }}>
+                    Menu & Filters
+                  </h2>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                      Navigation
+                    </label>
+                    <HubTabs
+                      current={view}
+                      onNavigate={(v) => {
+                        goTo(v);
+                        setMobileMenuOpen(false);
+                      }}
+                      applicationsCount={applications.length}
+                      vertical
+                    />
+                  </div>
 
-                <select
-                  value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as JobCategory | "ALL")
-                  }
-                  className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                  <hr style={{ borderColor: "var(--divider)" }} />
 
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as JobType | "ALL")}
-                  className="glass-input px-3 py-2 text-sm w-full sm:w-auto min-w-[10rem]"
-                >
-                  {JOB_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => setFeaturedOnly((v) => !v)}
-                  className={`w-full sm:w-auto ${featuredOnly ? "btn-primary" : "btn-secondary"}`}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    fontSize: "0.875rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  ★ Featured
-                </button>
+                  <div className="flex flex-col gap-3">
+                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                      Filters
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value as JobCategory | "ALL")}
+                      className="glass-input px-3 py-2 text-sm w-full"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value as JobType | "ALL")}
+                      className="glass-input px-3 py-2 text-sm w-full"
+                    >
+                      {JOB_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => setFeaturedOnly((v) => !v)}
+                      className={`w-full ${featuredOnly ? "btn-primary" : "btn-secondary"}`}
+                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
+                    >
+                      ★ Featured Only
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Page Title & Intro */}
