@@ -2124,6 +2124,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const STEPS = [
+    { label: "Template", icon: "📄" },
     { label: "Personal Info", icon: "👤" },
     { label: "Experience", icon: "💼" },
     { label: "Skills & Extras", icon: "🎯" },
@@ -2132,8 +2133,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
 
   // Per-step validation
   function canProceed(): boolean {
-    if (step === 0) return !!(form.fullName.trim() && form.targetRole.trim());
-    if (step === 1) return !!form.workExperience.trim();
+    if (step === 0) return true;
+    if (step === 1) return !!(form.fullName.trim() && form.targetRole.trim());
+    if (step === 2) return !!form.workExperience.trim();
     return true;
   }
 
@@ -2588,7 +2590,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                       className="text-xs font-semibold uppercase tracking-wider mb-1"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      Step 1 — Personal Information
+                      Step 1 — Choose a Template
                     </p>
 
                     {/* Template Selector */}
@@ -2657,6 +2659,18 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Step 1: Personal Info */}
+                {step === 1 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 2 — Personal Information
+                    </p>
                     <div className="mb-4">
                       <ProfileUpload
                         folder="resumes"
@@ -2718,14 +2732,14 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                   </div>
                 )}
 
-                {/* Step 1: Experience & Background */}
-                {step === 1 && (
+                {/* Step 2: Experience & Background */}
+                {step === 2 && (
                   <div className="flex flex-col gap-5">
                     <p
                       className="text-xs font-semibold uppercase tracking-wider mb-1"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      Step 2 — Experience & Background
+                      Step 3 — Experience & Background
                     </p>
                     <FormField label="Years of Experience" optional>
                       <input
@@ -2770,14 +2784,14 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                   </div>
                 )}
 
-                {/* Step 2: Skills & Extras */}
-                {step === 2 && (
+                {/* Step 3: Skills & Extras */}
+                {step === 3 && (
                   <div className="flex flex-col gap-5">
                     <p
                       className="text-xs font-semibold uppercase tracking-wider mb-1"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      Step 3 — Skills & Extras
+                      Step 4 — Skills & Extras
                     </p>
                     <FormField label="Skills" optional>
                       <input
@@ -2825,14 +2839,14 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                   </div>
                 )}
 
-                {/* Step 3: Review */}
-                {step === 3 && (
+                {/* Step 4: Review */}
+                {step === 4 && (
                   <div className="flex flex-col gap-5">
                     <p
                       className="text-xs font-semibold uppercase tracking-wider mb-1"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      Step 4 — Review Your Details
+                      Step 5 — Review Your Details
                     </p>
                     <p
                       className="text-sm"
@@ -3031,7 +3045,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
 
 function A4ScaleWrapper({ children }: { children: React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [innerHeight, setInnerHeight] = useState(1123);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -3044,17 +3060,28 @@ function A4ScaleWrapper({ children }: { children: React.ReactNode }) {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setInnerHeight(Math.max(1123, entries[0].contentRect.height));
+      }
+    });
+    if (innerRef.current) observer.observe(innerRef.current);
+    return () => observer.disconnect();
+  }, [children]);
+
   return (
     <div
       ref={containerRef}
       className="w-full relative overflow-hidden rounded-xl shadow-2xl bg-white"
-      style={{ height: 794 * 1.41428 * scale }}
+      style={{ height: innerHeight * scale }}
     >
       <div
-        className="absolute top-0 left-0 origin-top-left"
+        ref={innerRef}
+        className="absolute top-0 left-0 origin-top-left flex flex-col"
         style={{
           width: "794px",
-          height: "1123px",
+          minHeight: "1123px",
           transform: `scale(${scale})`,
         }}
       >
@@ -3398,23 +3425,44 @@ function ResumePreview({
     </>
   );
 
+  const getLuminanceText = (hexcolor: string) => {
+    if (!hexcolor) return "white";
+    let hex = hexcolor.replace("#", "");
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "#111111" : "white";
+  };
+
+  const sidebarTextMain = getLuminanceText(accent);
+  const sidebarTextSecondary =
+    sidebarTextMain === "white"
+      ? "rgba(255,255,255,0.7)"
+      : "rgba(0,0,0,0.6)";
+  const sidebarBorder =
+    sidebarTextMain === "white"
+      ? "rgba(255,255,255,0.2)"
+      : "rgba(0,0,0,0.15)";
+
   if (template === "classic") {
     return (
-      <div className="flex h-full w-full bg-white text-[#333] m-0 p-0 absolute inset-0 text-[13px]" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="flex min-h-[1123px] w-full bg-white text-[#333] m-0 p-0 relative text-[13px]" style={{ fontFamily: "system-ui, sans-serif" }}>
         {/* Left Sidebar */}
-        <div className="w-[35%] p-8 flex flex-col gap-6 h-full border-none" style={{ backgroundColor: accent, color: "white" }}>
+        <div className="w-[35%] p-8 flex flex-col gap-6 border-none" style={{ backgroundColor: accent, color: sidebarTextMain }}>
           {resume.photoUrl && (
             <img
               src={resume.photoUrl}
               alt="Profile"
               className={`w-36 h-36 mx-auto object-cover border-[3px] shadow-lg ${shapeClass}`}
-              style={{ borderColor: "rgba(255,255,255,0.9)" }}
+              style={{ borderColor: sidebarTextMain === "white" ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.8)" }}
             />
           )}
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-wide mt-2">{resume.name}</h1>
             {resume.title && (
-              <p className="text-sm mt-1" style={{ color: "#8ca8d8" }}>
+              <p className="text-sm mt-1" style={{ color: sidebarTextSecondary }}>
                 {resume.title}
               </p>
             )}
@@ -3423,31 +3471,31 @@ function ResumePreview({
           {/* CONTACT */}
           {(resume.contact?.phone || resume.contact?.email || resume.contact?.location || (resume.contact?.links && resume.contact.links.length > 0)) ? (
             <div className="mt-2">
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
                 Contact
               </h2>
-              <div className="flex flex-col gap-3 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+              <div className="flex flex-col gap-3 text-xs" style={{ color: sidebarTextMain }}>
                 {resume.contact?.phone && (
                   <div className="flex items-center gap-3">
-                    <Phone size={14} className="text-[#8ca8d8]" />
+                    <Phone size={14} style={{ color: sidebarTextSecondary }} />
                     <span>{resume.contact.phone}</span>
                   </div>
                 )}
                 {resume.contact?.email && (
                   <div className="flex items-center gap-3">
-                    <Mail size={14} className="text-[#8ca8d8]" />
+                    <Mail size={14} style={{ color: sidebarTextSecondary }} />
                     <span className="truncate">{resume.contact.email}</span>
                   </div>
                 )}
                 {resume.contact?.location && (
                   <div className="flex items-center gap-3">
-                    <MapPin size={14} className="text-[#8ca8d8]" />
+                    <MapPin size={14} style={{ color: sidebarTextSecondary }} />
                     <span>{resume.contact.location}</span>
                   </div>
                 )}
                 {resume.contact?.links?.map((link, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <span className="text-[#8ca8d8] text-[10px]">🔗</span>
+                    <span className="text-[10px]" style={{ color: sidebarTextSecondary }}>🔗</span>
                     <span className="truncate">{link}</span>
                   </div>
                 ))}
@@ -3458,13 +3506,13 @@ function ResumePreview({
           {/* SKILLS */}
           {resume.skills && resume.skills.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
                 Skills
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {resume.skills.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
-                    <span className="text-[#8ca8d8] text-[10px]">○</span>
+                  <li key={i} className="flex items-center gap-2 text-xs" style={{ color: sidebarTextMain }}>
+                    <span className="text-[10px]" style={{ color: sidebarTextSecondary }}>○</span>
                     {s}
                   </li>
                 ))}
@@ -3475,14 +3523,14 @@ function ResumePreview({
           {/* LANGUAGES */}
           {resume.languages && resume.languages.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
                 Languages
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {resume.languages.map((lang, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  <li key={i} className="flex items-center justify-between text-xs" style={{ color: sidebarTextMain }}>
                     <div className="flex items-center gap-2">
-                      <span className="text-[#8ca8d8] text-[10px]">○</span>
+                      <span className="text-[10px]" style={{ color: sidebarTextSecondary }}>○</span>
                       <span>{lang}</span>
                     </div>
                   </li>
@@ -3494,13 +3542,13 @@ function ResumePreview({
           {/* CERTIFICATIONS / HOBBIES */}
           {resume.certifications && resume.certifications.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
                 Certifications
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {resume.certifications.map((c, i) => (
-                  <li key={i} className="flex gap-2 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
-                    <span className="text-[#8ca8d8] text-[10px] mt-0.5">○</span>
+                  <li key={i} className="flex gap-2 text-xs" style={{ color: sidebarTextMain }}>
+                    <span className="text-[10px] mt-0.5" style={{ color: sidebarTextSecondary }}>○</span>
                     <span>{c}</span>
                   </li>
                 ))}
@@ -3510,7 +3558,7 @@ function ResumePreview({
         </div>
 
         {/* Right Content Area */}
-        <div className="w-[65%] p-10 flex flex-col gap-8 h-full bg-white text-[#111] overflow-hidden">
+        <div className="w-[65%] p-10 flex flex-col gap-8 bg-white text-[#111] overflow-hidden">
           {/* PROFILE */}
           {resume.summary && (
             <div>
@@ -3588,8 +3636,8 @@ function ResumePreview({
 
   return (
     <div
-      className="bg-white p-12 relative w-full h-full flex flex-col gap-6 text-[13px]"
-      style={{ color: "#333", overflow: "hidden" }}
+      className="bg-white p-12 relative w-full min-h-[1123px] flex flex-col gap-6 text-[13px]"
+      style={{ color: "#333" }}
     >
       {template === "modern" ? (
         <div className="grid grid-cols-[1fr_2fr] gap-8 h-full">
