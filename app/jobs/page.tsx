@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
-import { Eye, X, Download, SlidersHorizontal, Search, Phone, Mail, MapPin } from "lucide-react";
+import { Eye, X, Download, SlidersHorizontal, Search, Phone, Mail, MapPin, Settings } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2082,6 +2082,8 @@ interface ResumeForm {
   certifications: string;
   languages: string;
   links: string;
+  customColor?: string;
+  imageShape?: "circle" | "square" | "rounded";
 }
 
 const EMPTY_RESUME_FORM: ResumeForm = {
@@ -2100,6 +2102,8 @@ const EMPTY_RESUME_FORM: ResumeForm = {
   certifications: "",
   languages: "",
   links: "",
+  customColor: "",
+  imageShape: "circle",
 };
 
 function ResumeBuilder({ onBack }: { onBack: () => void }) {
@@ -2113,7 +2117,8 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     "select",
   );
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  const [showSettings, setShowSettings] = useState(false);
 
   const update = (field: keyof ResumeForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -2407,7 +2412,82 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
       className={`mx-auto px-4 py-8 ${builderMode === "manual" ? "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start" : "max-w-3xl"}`}
       style={{ animation: "fade-up 0.35s ease both" }}
     >
-      <div className="flex flex-col">
+      {builderMode === "manual" && !resume && (
+        <div className="col-span-1 lg:col-span-2 flex items-center justify-between mb-4 gap-2">
+          {/* Mobile Toggle */}
+          <div className="lg:hidden flex p-1 rounded-lg border w-full max-w-[200px]" style={{ background: "var(--glass-bg)", borderColor: "var(--divider)" }}>
+            <button
+              onClick={() => setMobileTab("edit")}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                mobileTab === "edit" ? "bg-white text-black shadow-sm" : "text-[var(--text-secondary)] hover:bg-white/5"
+              }`}
+            >
+              Edit Info
+            </button>
+            <button
+              onClick={() => setMobileTab("preview")}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                mobileTab === "preview" ? "bg-[var(--purple)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:bg-white/5"
+              }`}
+            >
+              Preview CV
+            </button>
+          </div>
+
+          {/* Desktop Spacer */}
+          <div className="hidden lg:block flex-1" />
+
+          {/* Toolbar */}
+          <div className={`flex items-center gap-2 ml-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-all border border-gray-200 text-gray-700"
+              >
+                <Settings size={18} />
+              </button>
+              {showSettings && (
+                <div className="absolute top-full right-0 mt-2 p-4 bg-white rounded-xl shadow-xl border border-gray-100 z-50 w-64 flex flex-col gap-4">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 block">Theme Color</span>
+                    <div className="flex flex-wrap gap-2">
+                      {["", "#7b5ade", "#dc2626", "#059669", "#2563eb", "#ea580c"].map(c => (
+                        <button key={c || "default"} onClick={() => update("customColor", c)} className={`w-8 h-8 rounded-full border-2 ${form.customColor === c ? 'border-gray-800' : 'border-transparent'} relative flex items-center justify-center`} style={{ backgroundColor: c || "var(--text-muted)" }}>
+                          {!c && <span className="text-white text-[10px] font-bold">Def</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 block">Photo Shape</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => update("imageShape", "circle")} className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${form.imageShape === 'circle' || !form.imageShape ? 'bg-gray-100 border-gray-300' : 'border-gray-200 text-gray-600'}`}>Circle</button>
+                      <button onClick={() => update("imageShape", "rounded")} className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${form.imageShape === 'rounded' ? 'bg-gray-100 border-gray-300' : 'border-gray-200 text-gray-600'}`}>Rounded</button>
+                      <button onClick={() => update("imageShape", "square")} className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${form.imageShape === 'square' ? 'bg-gray-100 border-gray-300' : 'border-gray-200 text-gray-600'}`}>Square</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={async () => {
+                const temp = mapFormToResume();
+                setDownloading(true);
+                try {
+                  await downloadResumePdf(temp, form.template);
+                } catch (e) {}
+                setDownloading(false);
+              }}
+              disabled={downloading}
+              className="px-3 py-2 rounded-xl bg-[var(--purple)] text-white shadow-sm hover:shadow-md transition-all font-semibold flex items-center gap-1.5 text-sm"
+            >
+              {downloading ? "Wait..." : <><Download size={16} /> <span className="hidden sm:inline">Download</span></>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`flex flex-col ${builderMode === "manual" && !resume && mobileTab === "preview" ? "hidden lg:flex" : "flex"}`}>
         <style>{`
         @keyframes rb-slide-left {
           from { opacity: 0; transform: translateX(40px); }
@@ -2524,8 +2604,10 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                           {RESUME_TEMPLATES.map((t) => (
                             <button
                               key={t.id}
-                              type="button"
-                              onClick={() => update("template", t.id)}
+                              onClick={() => {
+                                update("template", t.id);
+                                setMobileTab("preview");
+                              }}
                               className="relative rounded-xl p-4 text-left transition-all duration-200 group"
                               style={{
                                 background:
@@ -2932,67 +3014,15 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
       </div>
 
       {builderMode === "manual" && !resume && (
-        <div className="sticky top-8 hidden lg:block overflow-y-auto overflow-x-hidden max-h-[calc(100vh-4rem)] pb-12 w-full">
+        <div className={`sticky top-8 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-4rem)] pb-12 w-full flex flex-col gap-3 ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
           <A4ScaleWrapper>
             <ResumePreview
               resume={mapFormToResume()}
               template={form.template}
+              customColor={form.customColor}
+              imageShape={form.imageShape}
             />
           </A4ScaleWrapper>
-        </div>
-      )}
-
-      {/* Mobile Preview FAB */}
-      {builderMode === "manual" && !showMobilePreview && (
-        <button
-          onClick={() => setShowMobilePreview(true)}
-          className="fixed bottom-6 right-6 lg:hidden bg-[var(--purple)] text-white p-4 rounded-full shadow-2xl flex items-center gap-2 z-40 hover:scale-105 transition-transform"
-        >
-          <Eye size={24} />
-        </button>
-      )}
-
-      {/* Mobile Preview Modal */}
-      {showMobilePreview && builderMode === "manual" && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col p-4 lg:hidden overflow-hidden">
-          {/* Top Bar */}
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => setShowMobilePreview(false)}
-              className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
-            >
-              <X size={24} />
-            </button>
-            <button
-              onClick={async () => {
-                const temp = mapFormToResume();
-                setDownloading(true);
-                try {
-                  await downloadResumePdf(temp, form.template);
-                } catch (e) {}
-                setDownloading(false);
-              }}
-              className="bg-[var(--purple)] text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2"
-            >
-              {downloading ? (
-                "Wait..."
-              ) : (
-                <>
-                  <Download size={18} /> Download PDF
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Preview Container - Scaled to fit screen width */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden w-full pb-20">
-            <A4ScaleWrapper>
-              <ResumePreview
-                resume={mapFormToResume()}
-                template={form.template}
-              />
-            </A4ScaleWrapper>
-          </div>
         </div>
       )}
     </div>
@@ -3101,9 +3131,13 @@ function ResumeSectionTitle({
 function ResumePreview({
   resume,
   template = "classic",
+  customColor,
+  imageShape = "circle",
 }: {
   resume: GeneratedResume;
   template?: ResumeTemplate;
+  customColor?: string;
+  imageShape?: "circle" | "square" | "rounded";
 }) {
   const contactParts = [
     resume.contact?.email,
@@ -3111,8 +3145,11 @@ function ResumePreview({
     resume.contact?.location,
     ...(resume.contact?.links || []),
   ].filter(Boolean) as string[];
+  
   const accent =
-    RESUME_TEMPLATES.find((t) => t.id === template)?.accent || "#7b5ade";
+    customColor ||
+    RESUME_TEMPLATES.find((t) => t.id === template)?.accent ||
+    "#7b5ade";
 
   // Template-specific header styles
   const headerStyles: Record<ResumeTemplate, React.CSSProperties> = {
@@ -3146,12 +3183,19 @@ function ResumePreview({
     bold: "#555",
   };
 
+  const shapeClass =
+    imageShape === "square"
+      ? "rounded-none"
+      : imageShape === "rounded"
+        ? "rounded-xl"
+        : "rounded-full";
+
   const renderPhoto = (size = "w-24 h-24") =>
     resume.photoUrl && (
       <img
         src={resume.photoUrl}
         alt="Profile"
-        className={`${size} rounded-full object-cover border-4`}
+        className={`${size} ${shapeClass} object-cover border-4`}
         style={{ borderColor: accent }}
       />
     );
@@ -3358,12 +3402,12 @@ function ResumePreview({
     return (
       <div className="flex h-full w-full bg-white text-[#333] m-0 p-0 absolute inset-0 text-[13px]" style={{ fontFamily: "system-ui, sans-serif" }}>
         {/* Left Sidebar */}
-        <div className="w-[35%] bg-[#252f3b] text-white p-8 flex flex-col gap-6 h-full border-none">
+        <div className="w-[35%] p-8 flex flex-col gap-6 h-full border-none" style={{ backgroundColor: accent, color: "white" }}>
           {resume.photoUrl && (
             <img
               src={resume.photoUrl}
               alt="Profile"
-              className="w-36 h-36 mx-auto rounded-full object-cover border-[3px] shadow-lg"
+              className={`w-36 h-36 mx-auto object-cover border-[3px] shadow-lg ${shapeClass}`}
               style={{ borderColor: "rgba(255,255,255,0.9)" }}
             />
           )}
