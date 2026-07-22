@@ -171,8 +171,9 @@ interface JobSeekerForm {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const CATEGORIES: { value: JobCategory | "ALL"; label: string }[] = [
+const CATEGORIES: { value: JobCategory | "FEATURED" | "ALL"; label: string }[] = [
   { value: "ALL", label: "All Categories" },
+  { value: "FEATURED", label: "★ Featured" },
   { value: "TECH", label: "Tech" },
   { value: "MARKETING", label: "Marketing" },
   { value: "DESIGN", label: "Design" },
@@ -3331,10 +3332,10 @@ export default function JobsPage() {
 
   const [view, setView] = useState<PageView>("jobs");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<JobCategory | "ALL">("ALL");
+  const [category, setCategory] = useState<JobCategory | "FEATURED" | "ALL">("ALL");
   const [type, setType] = useState<JobType | "ALL">("ALL");
-  const [featuredOnly, setFeaturedOnly] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
 
   // ── useJobs hook — single source of truth ──
@@ -3350,7 +3351,11 @@ export default function JobsPage() {
     refreshJobs,
     categories,
     categoriesLoading,
-  } = useJobs({ category, type, featured: featuredOnly });
+  } = useJobs({ 
+    category: category === "FEATURED" ? "ALL" : category, 
+    type, 
+    featured: category === "FEATURED" 
+  });
 
   const filtered = jobs.filter((j) => {
     if (!search.trim()) return true;
@@ -3460,9 +3465,9 @@ export default function JobsPage() {
             {/* Header */}
             <div className="px-4 pt-8 pb-6 max-w-6xl mx-auto flex flex-col gap-6">
               {/* Unified Toolbar (Desktop) & Mobile Search Bar */}
-              <div className="glass p-2 sm:p-3 flex items-center gap-2 sm:gap-3 w-full">
-                {/* Search Bar */}
-                <div className="relative flex-1 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 w-full">
+                {/* Mobile Search Bar (Always Expanded) */}
+                <div className="relative flex-1 min-w-0 lg:hidden">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                     <Search size={15} />
                   </span>
@@ -3470,8 +3475,8 @@ export default function JobsPage() {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search jobs, skills, or companies..."
-                    className="w-full pl-10 pr-4 py-2 text-sm rounded-lg"
+                    placeholder="Search jobs..."
+                    className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg"
                     style={{
                       background: "var(--glass-bg-subtle)",
                       border: "1px solid var(--glass-border)",
@@ -3487,6 +3492,90 @@ export default function JobsPage() {
                       e.currentTarget.style.boxShadow = "none";
                     }}
                   />
+                  {search && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setSearch("");
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Desktop Search Bar / Icon */}
+                <div
+                  className={`relative transition-all duration-300 hidden lg:flex items-center ${
+                    isSearchFocused || search ? "flex-1 min-w-0" : "w-[38px] flex-shrink-0"
+                  }`}
+                >
+                  <button
+                    className={`absolute left-0 top-0 bottom-0 flex items-center justify-center w-[38px] z-10 ${
+                      isSearchFocused || search
+                        ? "text-gray-400 pointer-events-none"
+                        : "cursor-pointer"
+                    }`}
+                    onClick={() => {
+                      setIsSearchFocused(true);
+                      document.getElementById("job-search-input")?.focus();
+                    }}
+                    style={
+                      !(isSearchFocused || search)
+                        ? {
+                            background: "var(--glass-bg-subtle)",
+                            border: "1px solid var(--glass-border)",
+                            borderRadius: "0.5rem",
+                            color: "var(--text-primary)",
+                          }
+                        : {}
+                    }
+                  >
+                    <Search size={isSearchFocused || search ? 15 : 18} />
+                  </button>
+
+                  <input
+                    id="job-search-input"
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search jobs, skills, or companies..."
+                    className={`w-full text-sm rounded-lg transition-all duration-300 ${
+                      isSearchFocused || search
+                        ? "pl-10 pr-10 py-2 opacity-100"
+                        : "p-0 opacity-0 pointer-events-none"
+                    }`}
+                    style={{
+                      background: "var(--glass-bg-subtle)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--text-primary)",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      setIsSearchFocused(true);
+                      e.currentTarget.style.borderColor = "var(--input-border-focus)";
+                      e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
+                    }}
+                    onBlur={(e) => {
+                      setIsSearchFocused(false);
+                      e.currentTarget.style.borderColor = "var(--glass-border)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  />
+
+                  {(isSearchFocused || search) && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // prevent blur
+                        setSearch("");
+                        setIsSearchFocused(false);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Mobile Menu Button */}
@@ -3503,7 +3592,11 @@ export default function JobsPage() {
                 </button>
 
                 {/* Desktop Elements */}
-                <div className="hidden lg:flex items-center gap-3">
+                <div
+                  className={`hidden lg:flex items-center gap-3 transition-all duration-300 overflow-hidden ${
+                    isSearchFocused || search ? "max-w-0 opacity-0" : "max-w-5xl opacity-100"
+                  }`}
+                >
                   <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
                   
                   <select
@@ -3526,13 +3619,7 @@ export default function JobsPage() {
                     ))}
                   </select>
 
-                  <button
-                    onClick={() => setFeaturedOnly((v) => !v)}
-                    className={featuredOnly ? "btn-primary" : "btn-secondary"}
-                    style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
-                  >
-                    ★ Featured
-                  </button>
+
 
                   <div className="h-6 w-px bg-gray-200 dark:bg-gray-800 mx-1" />
 
@@ -3615,13 +3702,7 @@ export default function JobsPage() {
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <button
-                      onClick={() => setFeaturedOnly((v) => !v)}
-                      className={`w-full ${featuredOnly ? "btn-primary" : "btn-secondary"}`}
-                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
-                    >
-                      ★ Featured Only
-                    </button>
+
                   </div>
                 </div>
               </div>
