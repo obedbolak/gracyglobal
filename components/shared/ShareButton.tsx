@@ -8,6 +8,7 @@ interface ShareButtonProps {
   title?: string;
   text?: string;
   className?: string;
+  iconOnly?: boolean;
 }
 
 export default function ShareButton({
@@ -15,6 +16,7 @@ export default function ShareButton({
   title,
   text,
   className,
+  iconOnly,
 }: ShareButtonProps) {
   const [status, setStatus] = useState<"idle" | "copied" | "shared" | "error">(
     "idle",
@@ -72,28 +74,35 @@ export default function ShareButton({
       type="button"
       onClick={handleShare}
       aria-label={label}
-      className={[
-        // Layout
-        "inline-flex items-center justify-center gap-1.5",
-        // Sizing — grows with content, never overflows
-        "min-w-0 w-auto max-w-full",
-        // Padding scales slightly on larger screens
-        "px-3 py-2 sm:px-4",
-        // Typography
-        "text-xs sm:text-sm font-semibold text-white whitespace-nowrap",
-        // Shape & transitions
-        "rounded-xl transition-all duration-200",
-        // Touch target — ensures at least 44px tall on mobile
-        "min-h-[44px] sm:min-h-0",
-        // Active state feedback for touch
-        "active:scale-95",
-        className ?? "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={
+        iconOnly
+          ? [
+              "inline-flex items-center justify-center rounded-full transition-all duration-200 active:scale-95 shadow-md text-white w-9 h-9",
+              className ?? "",
+            ].join(" ")
+          : [
+              // Layout
+              "inline-flex items-center justify-center gap-1.5",
+              // Sizing — grows with content, never overflows
+              "min-w-0 w-auto max-w-full",
+              // Padding scales slightly on larger screens
+              "px-3 py-2 sm:px-4",
+              // Typography
+              "text-xs sm:text-sm font-semibold text-white whitespace-nowrap",
+              // Shape & transitions
+              "rounded-xl transition-all duration-200",
+              // Touch target — ensures at least 44px tall on mobile
+              "min-h-[44px] sm:min-h-0",
+              // Active state feedback for touch
+              "active:scale-95",
+              className ?? "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+      }
       style={{
         background: "linear-gradient(135deg, var(--scarlet), var(--purple))",
-        boxShadow: "0 10px 20px rgba(123, 47, 190, 0.15)",
+        boxShadow: iconOnly ? "0 4px 10px rgba(123, 47, 190, 0.25)" : "0 10px 20px rgba(123, 47, 190, 0.15)",
       }}
     >
       {status === "copied" || status === "shared" ? (
@@ -101,7 +110,7 @@ export default function ShareButton({
       ) : (
         <Share2 size={14} aria-hidden="true" />
       )}
-      <span>{label}</span>
+      {!iconOnly && <span>{label}</span>}
     </button>
   );
 }

@@ -899,7 +899,7 @@ function MarketplacePageContent() {
             )}
 
             {isLoading ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
                   <SkeletonCard key={i} />
                 ))}
@@ -935,7 +935,7 @@ function MarketplacePageContent() {
               </div>
             ) : (
               <>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {products.map((product, i) => (
                     <motion.div
                       key={product.id}
@@ -945,48 +945,59 @@ function MarketplacePageContent() {
                       className="glass flex flex-col overflow-hidden group"
                     >
                       {/* Image */}
-                      <Link
-                        href={`/marketplace/${product.id}`}
-                        className="relative overflow-hidden flex-shrink-0"
-                      >
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-52 object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            background:
-                              "linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.15) 100%)",
-                          }}
-                        />
-                        {product.badge && (
-                          <span
-                            className="absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full text-white"
+                      {/* Image Container */}
+                      <div className="relative overflow-hidden flex-shrink-0 group-hover:scale-[1.02] transition-transform duration-500">
+                        <Link
+                          href={`/marketplace/${product.id}`}
+                          className="block"
+                        >
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-full h-40 sm:h-52 object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div
+                            className="absolute inset-0 pointer-events-none"
                             style={{
                               background:
-                                "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                                "linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.15) 100%)",
                             }}
-                          >
-                            {product.badge}
-                          </span>
-                        )}
-                        {product.category?.name && (
-                          <span
-                            className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                            style={{
-                              background: "var(--glass-bg-strong)",
-                              color: "var(--text-secondary)",
-                              backdropFilter: "blur(8px)",
-                            }}
-                          >
-                            {product.category.icon &&
-                              `${product.category.icon} `}
-                            {product.category.name}
-                          </span>
-                        )}
-                      </Link>
+                          />
+                          {product.badge && (
+                            <span
+                              className="absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full text-white pointer-events-none"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, var(--scarlet), var(--purple))",
+                              }}
+                            >
+                              {product.badge}
+                            </span>
+                          )}
+                          {product.category?.name && (
+                            <span
+                              className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full pointer-events-none"
+                              style={{
+                                background: "var(--glass-bg-strong)",
+                                color: "var(--text-secondary)",
+                                backdropFilter: "blur(8px)",
+                              }}
+                            >
+                              {product.category.icon &&
+                                `${product.category.icon} `}
+                              {product.category.name}
+                            </span>
+                          )}
+                        </Link>
+                        {/* Share Button absolute positioned on bottom right */}
+                        <div className="absolute bottom-3 right-3 z-10">
+                          <ShareButton
+                            href={`/marketplace/${product.id}`}
+                            title={product.name}
+                            iconOnly
+                          />
+                        </div>
+                      </div>
 
                       {/* Card body */}
                       <div className="flex flex-col gap-3 p-5 flex-1">
@@ -1062,11 +1073,11 @@ function MarketplacePageContent() {
                             </span>
                           </div>
 
-                          {/* Share + Add to Cart — side by side */}
+                          {/* Add to Cart */}
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleAddToCart(product)}
-                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
                               style={{
                                 background:
                                   addedId === product.id
@@ -1080,10 +1091,6 @@ function MarketplacePageContent() {
                                 ? "Added!"
                                 : "Add to Cart"}
                             </button>
-                            <ShareButton
-                              href={`/marketplace/${product.id}`}
-                              title={product.name}
-                            />
                           </div>
                         </div>
                       </div>
@@ -1110,7 +1117,7 @@ function MarketplaceLoading() {
     <main className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
         <div className="h-10 rounded-xl mb-4 skeleton" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
             <SkeletonCard key={i} />
           ))}
