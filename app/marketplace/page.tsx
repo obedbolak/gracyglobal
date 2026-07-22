@@ -646,50 +646,26 @@ function MarketplacePageContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
           <h1
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.08] tracking-tight"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.08] tracking-tight"
             style={{ color: "var(--text-primary)" }}
           >
             Gracy Global Marketplace
           </h1>
-          <p
-            className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-8"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Discover trusted products, services, and business opportunities from sellers worldwide. Sell your products and reach the right audience with our powerful marketplace.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href={session?.user ? "/dashboard" : "/login"}
-              className="btn-primary px-6 py-3 text-sm font-semibold rounded-lg flex items-center gap-2"
-            >
-              <ShoppingBag size={16} />
-              Sell on Marketplace
-            </Link>
-            <Link
-              href="/marketplace"
-              className="btn-secondary px-6 py-3 text-sm font-semibold rounded-lg flex items-center gap-2"
-            >
-              Browse Products
-            </Link>
-          </div>
         </motion.div>
 
 
 
         {/* ── Layout ── */}
         <div className="flex gap-7 items-start">
-          {/* Desktop sidebar */}
-          <aside className="hidden lg:block w-60 flex-shrink-0 sticky top-24">
-            <SidebarContent {...sidebarProps} />
-          </aside>
+
 
           {/* Mobile overlay */}
           {mobileSidebarOpen && (
             <div
-              className="fixed inset-0 z-40 lg:hidden"
+              className="fixed inset-0 z-40"
               style={{
                 background: "rgba(0,0,0,0.5)",
                 backdropFilter: "blur(4px)",
@@ -700,7 +676,7 @@ function MarketplacePageContent() {
 
           {/* Mobile drawer */}
           <div
-            className="fixed top-0 left-0 h-full z-50 lg:hidden overflow-y-auto transition-transform duration-300"
+            className="fixed top-0 left-0 h-full z-50 overflow-y-auto transition-transform duration-300"
             style={{
               width: "290px",
               background: "var(--bg-base)",
@@ -769,7 +745,7 @@ function MarketplacePageContent() {
               </div>
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="lg:hidden relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold flex-shrink-0"
+                className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold flex-shrink-0"
                 style={{
                   background: hasActiveFilters
                     ? "linear-gradient(135deg, var(--purple), var(--blue))"
@@ -791,6 +767,10 @@ function MarketplacePageContent() {
                 )}
               </button>
             </div>
+            
+            <p className="text-sm font-light text-center mb-6" style={{ color: "var(--text-muted)" }}>
+              Discover trusted products, services, and business opportunities from sellers worldwide.
+            </p>
 
             {/* ── Active filter chips ── */}
             {hasActiveFilters && (
@@ -919,7 +899,7 @@ function MarketplacePageContent() {
             )}
 
             {isLoading ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
                   <SkeletonCard key={i} />
                 ))}
@@ -955,7 +935,7 @@ function MarketplacePageContent() {
               </div>
             ) : (
               <>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {products.map((product, i) => (
                     <motion.div
                       key={product.id}
