@@ -47,15 +47,17 @@ export default function LearnSection() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="p-4 rounded-2xl animate-pulse"
+                className="relative overflow-hidden rounded-2xl animate-pulse aspect-[4/3]"
                 style={{
                   background: "var(--glass-bg)",
                   border: "1px solid var(--glass-border)",
                 }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gray-300/20 mb-3" />
-                <div className="h-3 bg-gray-300/20 rounded w-3/4 mb-2" />
-                <div className="h-2 bg-gray-300/20 rounded w-1/2" />
+                <div className="absolute inset-0 bg-gray-300/10" />
+                <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                  <div className="h-4 bg-gray-300/20 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-300/20 rounded w-1/2" />
+                </div>
               </div>
             ))}
           </div>

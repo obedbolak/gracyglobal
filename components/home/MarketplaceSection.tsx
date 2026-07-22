@@ -25,34 +25,6 @@ export default function MarketplaceSection() {
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .slice(0, 7);
 
-  // Show loading state
-  if (loading) {
-    return (
-      <section className="py-16 relative overflow-hidden">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center min-h-[300px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--purple)]" />
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <section className="py-16 relative overflow-hidden">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p style={{ color: "var(--error-text)" }}>
-              Failed to load categories
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="py-16 relative overflow-hidden">
       <div
@@ -108,47 +80,77 @@ export default function MarketplaceSection() {
 
         {/* Category cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {featuredCategories.map((category) => {
-            // ✅ Only use color from database
-            const categoryColor = category.color || DEFAULT_COLOR;
+          {loading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden p-0 gap-0 h-full animate-pulse border-[var(--glass-border)] bg-[var(--glass-bg)]">
+                <div className="aspect-square bg-gray-300/20" />
+                <CardContent className="p-3">
+                  <div className="h-4 bg-gray-300/20 rounded w-3/4 mx-auto mb-2" />
+                  <div className="h-3 bg-gray-300/20 rounded w-1/2 mx-auto" />
+                </CardContent>
+              </Card>
+            ))
+          ) : error ? (
+            <div className="col-span-full text-center py-8">
+              <p style={{ color: "var(--error-text)" }}>Failed to load categories</p>
+            </div>
+          ) : (
+            featuredCategories.map((category) => {
+              // ✅ Only use color from database
+              const categoryColor = category.color || DEFAULT_COLOR;
 
-            const background = `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}20)`;
+              const background = `linear-gradient(135deg, ${categoryColor}10, ${categoryColor}20)`;
 
-            // Check if category has an image
-            const hasImage = category.image && category.image.trim() !== "";
+              // Check if category has an image
+              const hasImage = category.image && category.image.trim() !== "";
 
-            return (
-              <Link
-                key={category.id}
-                href={`/marketplace?categoryId=${category.id}`}
-                className="block group"
-              >
-                <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
-                  {/* Image/Icon section */}
-                  <div className="relative aspect-square overflow-hidden">
-                    {hasImage ? (
-                      // Show image if available
-                      <>
-                        <img
-                          src={category.image!} // ✅ Safe because hasImage is true                          alt={category.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                          onError={(e) => {
-                            // Fallback to icon if image fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = "none";
-                            const iconContainer =
-                              target.nextElementSibling as HTMLElement;
-                            if (iconContainer)
-                              iconContainer.style.display = "flex";
-                          }}
-                        />
-                        {/* Fallback icon container (hidden by default) */}
+              return (
+                <Link
+                  key={category.id}
+                  href={`/marketplace?categoryId=${category.id}`}
+                  className="block group"
+                >
+                  <Card className="overflow-hidden hover:-translate-y-1 transition-all duration-300 group p-0 gap-0 h-full">
+                    {/* Image/Icon section */}
+                    <div className="relative aspect-square overflow-hidden">
+                      {hasImage ? (
+                        // Show image if available
+                        <>
+                          <img
+                            src={category.image!} // ✅ Safe because hasImage is true
+                            alt={category.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              const iconContainer =
+                                target.nextElementSibling as HTMLElement;
+                              if (iconContainer)
+                                iconContainer.style.display = "flex";
+                            }}
+                          />
+                          {/* Fallback icon container (hidden by default) */}
+                          <div
+                            className="w-full h-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                            style={{
+                              background: background,
+                              display: "none",
+                            }}
+                          >
+                            <span
+                              className="text-6xl transition-transform duration-300 group-hover:scale-110"
+                              style={{ color: categoryColor }}
+                            >
+                              {category.icon || "📦"}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        // Show icon if no image
                         <div
                           className="w-full h-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                          style={{
-                            background: background,
-                            display: "none",
-                          }}
+                          style={{ background: background }}
                         >
                           <span
                             className="text-6xl transition-transform duration-300 group-hover:scale-110"
@@ -157,51 +159,38 @@ export default function MarketplaceSection() {
                             {category.icon || "📦"}
                           </span>
                         </div>
-                      </>
-                    ) : (
-                      // Show icon if no image
+                      )}
+
+                      {/* Hover overlay */}
                       <div
-                        className="w-full h-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                        style={{ background: background }}
-                      >
-                        <span
-                          className="text-6xl transition-transform duration-300 group-hover:scale-110"
-                          style={{ color: categoryColor }}
-                        >
-                          {category.icon || "📦"}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Hover overlay */}
-                    <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-300"
-                      style={{ background: "#ffffff" }}
-                    />
-                  </div>
-
-                  {/* Info section */}
-                  <CardContent className="p-3">
-                    <div
-                      className="font-bold text-sm mb-1 text-center line-clamp-2 min-h-[40px]"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {category.name}
-                    </div>
-
-                    <div className="flex items-center justify-center gap-1 text-xs font-medium group-hover:gap-1.5 transition-all duration-200">
-                      <span style={{ color: "var(--text-muted)" }}>Browse</span>
-                      <ArrowRight
-                        size={12}
-                        className="transition-transform duration-200 group-hover:translate-x-0.5"
-                        style={{ color: "var(--text-muted)" }}
+                        className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-300"
+                        style={{ background: "#ffffff" }}
                       />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+
+                    {/* Info section */}
+                    <CardContent className="p-3">
+                      <div
+                        className="font-bold text-sm mb-1 text-center line-clamp-2 min-h-[40px]"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {category.name}
+                      </div>
+
+                      <div className="flex items-center justify-center gap-1 text-xs font-medium group-hover:gap-1.5 transition-all duration-200">
+                        <span style={{ color: "var(--text-muted)" }}>Browse</span>
+                        <ArrowRight
+                          size={12}
+                          className="transition-transform duration-200 group-hover:translate-x-0.5"
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })
+          )}
         </div>
 
         {/* Trust badges */}

@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { useCurrency } from "@/hooks/useCurrency";
 import ShareButton from "@/components/shared/ShareButton";
 import ProfileUpload from "@/components/shared/ProfileUpload";
-import { Eye, X, Download, SlidersHorizontal, Search } from "lucide-react";
+import { Eye, X, Download, SlidersHorizontal, Search, Phone, Mail, MapPin } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2178,63 +2178,139 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const mapFormToResume = (): GeneratedResume => ({
-    name: form.fullName,
-    title: form.targetRole,
-    photoUrl: form.photoUrl,
-    contact: {
-      email: form.email,
-      phone: form.phone,
-      location: form.location,
-      links: form.links
-        ? form.links
+  const mapFormToResume = (): GeneratedResume => {
+    const isFormEmpty =
+      !form.fullName &&
+      !form.targetRole &&
+      !form.email &&
+      !form.phone &&
+      !form.location &&
+      !form.summary &&
+      !form.workExperience &&
+      !form.education &&
+      !form.skills &&
+      !form.certifications &&
+      !form.languages &&
+      !form.links &&
+      !form.photoUrl;
+
+    if (isFormEmpty) {
+      return {
+        name: "Your Name",
+        title: "Software Engineer",
+        photoUrl:
+          "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&q=80",
+        contact: {
+          email: "example@gmail.com",
+          phone: "+1 2345 6789",
+          location: "#1 road, city/state-0011",
+          links: [],
+        },
+        summary:
+          "I am a software engineer with experience in a variety of programming languages and a track record of delivering high-quality code. I am skilled in problem-solving and have a strong background in computer science. I am a strong communicator and enjoy working collaboratively with others.",
+        experience: [
+          {
+            role: "Senior Software Developer",
+            company: "Company - Country",
+            period: "Jan 2022 - Dec 2023",
+            bullets: [
+              "Developed and maintained software using Java, Python, and C++",
+              "Led cross-functional teams to deliver successful software projects",
+              "write a work experience of a senior software engineer in bullet points",
+            ],
+          },
+          {
+            role: "Web Developer",
+            company: "Company - Country",
+            period: "Jan 2021 - Dec 2021",
+            bullets: [
+              "Developed and maintained various web applications using languages such as HTML, CSS, JavaScript, and PHP",
+              "Worked with cross-functional teams to gather requirements and design user interfaces",
+            ],
+          },
+        ],
+        education: [
+          {
+            degree: "Masters in Software Engineering",
+            institution: "XYX University, Bangalore",
+            period: "Jan 2019 - Dec 2020",
+          },
+          {
+            degree: "Bachelor in Computer Science",
+            institution: "XYX University, Bangalore",
+            period: "Jan 2015 - Dec 2018",
+          },
+        ],
+        skills: [
+          "SQL Database Management",
+          "Linux/Unix Command line",
+          "Python",
+          "C++",
+          "JAVA",
+        ],
+        languages: ["English: Proficient", "Hindi: Proficient"],
+        certifications: ["Writing", "Cricket", "Music"], // Mapped to hobbies in classic template
+      };
+    }
+
+    return {
+      name: form.fullName,
+      title: form.targetRole,
+      photoUrl: form.photoUrl,
+      contact: {
+        email: form.email,
+        phone: form.phone,
+        location: form.location,
+        links: form.links
+          ? form.links
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+      },
+      summary: form.summary,
+      experience: form.workExperience
+        ? [
+            {
+              role: "Experience",
+              company: form.yearsExperience
+                ? `${form.yearsExperience} Years`
+                : "",
+              period: "",
+              bullets: form.workExperience.split("\n").filter((s) => s.trim()),
+            },
+          ]
+        : [],
+      education: form.education
+        ? [
+            {
+              degree: "Education",
+              institution: "",
+              period: "",
+              details: form.education,
+            },
+          ]
+        : [],
+      skills: form.skills
+        ? form.skills
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
         : [],
-    },
-    summary: form.summary,
-    experience: form.workExperience
-      ? [
-          {
-            role: "Experience",
-            company: form.yearsExperience
-              ? `${form.yearsExperience} Years`
-              : "",
-            period: "",
-            bullets: form.workExperience.split("\n").filter((s) => s.trim()),
-          },
-        ]
-      : [],
-    education: form.education
-      ? [
-          {
-            degree: "Education",
-            institution: "",
-            period: "",
-            details: form.education,
-          },
-        ]
-      : [],
-    skills: form.skills
-      ? form.skills
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [],
-    certifications: form.certifications
-      ? form.certifications
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [],
-    languages: form.languages
-      ? form.languages
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [],
-  });
+      certifications: form.certifications
+        ? form.certifications
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+      languages: form.languages
+        ? form.languages
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+    };
+  };
 
   // Summary helper for review step
   const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
@@ -3277,6 +3353,194 @@ function ResumePreview({
       )}
     </>
   );
+
+  if (template === "classic") {
+    return (
+      <div className="flex h-full w-full bg-white text-[#333] m-0 p-0 absolute inset-0 text-[13px]" style={{ fontFamily: "system-ui, sans-serif" }}>
+        {/* Left Sidebar */}
+        <div className="w-[35%] bg-[#252f3b] text-white p-8 flex flex-col gap-6 h-full border-none">
+          {resume.photoUrl && (
+            <img
+              src={resume.photoUrl}
+              alt="Profile"
+              className="w-36 h-36 mx-auto rounded-full object-cover border-[3px] shadow-lg"
+              style={{ borderColor: "rgba(255,255,255,0.9)" }}
+            />
+          )}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-wide mt-2">{resume.name}</h1>
+            {resume.title && (
+              <p className="text-sm mt-1" style={{ color: "#8ca8d8" }}>
+                {resume.title}
+              </p>
+            )}
+          </div>
+
+          {/* CONTACT */}
+          {(resume.contact?.phone || resume.contact?.email || resume.contact?.location || (resume.contact?.links && resume.contact.links.length > 0)) ? (
+            <div className="mt-2">
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+                Contact
+              </h2>
+              <div className="flex flex-col gap-3 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+                {resume.contact?.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone size={14} className="text-[#8ca8d8]" />
+                    <span>{resume.contact.phone}</span>
+                  </div>
+                )}
+                {resume.contact?.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail size={14} className="text-[#8ca8d8]" />
+                    <span className="truncate">{resume.contact.email}</span>
+                  </div>
+                )}
+                {resume.contact?.location && (
+                  <div className="flex items-center gap-3">
+                    <MapPin size={14} className="text-[#8ca8d8]" />
+                    <span>{resume.contact.location}</span>
+                  </div>
+                )}
+                {resume.contact?.links?.map((link, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-[#8ca8d8] text-[10px]">🔗</span>
+                    <span className="truncate">{link}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* SKILLS */}
+          {resume.skills && resume.skills.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+                Skills
+              </h2>
+              <ul className="flex flex-col gap-1.5">
+                {resume.skills.map((s, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+                    <span className="text-[#8ca8d8] text-[10px]">○</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* LANGUAGES */}
+          {resume.languages && resume.languages.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+                Languages
+              </h2>
+              <ul className="flex flex-col gap-1.5">
+                {resume.languages.map((lang, i) => (
+                  <li key={i} className="flex items-center justify-between text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#8ca8d8] text-[10px]">○</span>
+                      <span>{lang}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* CERTIFICATIONS / HOBBIES */}
+          {resume.certifications && resume.certifications.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+                Certifications
+              </h2>
+              <ul className="flex flex-col gap-1.5">
+                {resume.certifications.map((c, i) => (
+                  <li key={i} className="flex gap-2 text-xs" style={{ color: "rgba(255,255,255,0.9)" }}>
+                    <span className="text-[#8ca8d8] text-[10px] mt-0.5">○</span>
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Right Content Area */}
+        <div className="w-[65%] p-10 flex flex-col gap-8 h-full bg-white text-[#111] overflow-hidden">
+          {/* PROFILE */}
+          {resume.summary && (
+            <div>
+              <h2 className="text-lg font-bold tracking-widest uppercase mb-3 text-black">
+                Profile
+              </h2>
+              <p className="text-[13px] leading-relaxed text-[#333] text-justify">
+                {resume.summary}
+              </p>
+            </div>
+          )}
+
+          {/* WORK EXPERIENCE */}
+          {resume.experience && resume.experience.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold tracking-widest uppercase mb-4 text-black">
+                Work Experience
+              </h2>
+              <div className="flex flex-col gap-5">
+                {resume.experience.map((exp, i) => (
+                  <div key={i}>
+                    <h3 className="font-bold text-[15px] text-black mb-1">
+                      {exp.role}
+                    </h3>
+                    <div className="flex justify-between items-center text-xs text-[#555] mb-2 font-medium">
+                      <span>{[exp.company, exp.location].filter(Boolean).join(" — ")}</span>
+                      <span>{exp.period}</span>
+                    </div>
+                    {exp.bullets && exp.bullets.length > 0 && (
+                      <ul className="flex flex-col gap-1.5 mt-2">
+                        {exp.bullets.map((b, j) => (
+                          <li key={j} className="text-[13px] leading-relaxed text-[#333] flex gap-2">
+                            <span className="text-black text-[14px] leading-none mt-0.5">•</span>
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* EDUCATION */}
+          {resume.education && resume.education.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold tracking-widest uppercase mb-4 text-black">
+                Education
+              </h2>
+              <div className="flex flex-col gap-5">
+                {resume.education.map((ed, i) => (
+                  <div key={i}>
+                    <h3 className="font-bold text-[15px] text-black mb-1">
+                      {ed.degree}
+                    </h3>
+                    <div className="flex justify-between items-center text-xs text-[#555] mb-1 font-medium">
+                      <span>{ed.institution}</span>
+                      <span>{ed.period}</span>
+                    </div>
+                    {ed.details && (
+                      <p className="text-[13px] text-[#333] italic">
+                        {ed.details}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
