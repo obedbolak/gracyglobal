@@ -976,7 +976,7 @@ function MarketplacePageContent() {
                           )}
                           {product.category?.name && (
                             <span
-                              className="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full pointer-events-none"
+                              className="hidden sm:block absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full pointer-events-none"
                               style={{
                                 background: "var(--glass-bg-strong)",
                                 color: "var(--text-secondary)",
@@ -1011,6 +1011,19 @@ function MarketplacePageContent() {
                               {product.name}
                             </h3>
                           </Link>
+                          {product.category?.name && (
+                            <span
+                              className="sm:hidden text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mb-1.5"
+                              style={{
+                                background: "var(--glass-bg-strong)",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
+                              {product.category.icon &&
+                                `${product.category.icon} `}
+                              {product.category.name}
+                            </span>
+                          )}
                           <p
                             className="text-xs leading-relaxed font-light line-clamp-2"
                             style={{ color: "var(--text-muted)" }}
