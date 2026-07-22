@@ -2113,7 +2113,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<GeneratedResume | null>(null);
   const [step, setStep] = useState(0);
-  const [builderMode, setBuilderMode] = useState<"select" | "ai" | "manual">(
+  const [builderMode, setBuilderMode] = useState<"select" | "ai" | "manual" | "cover-letter">(
     "select",
   );
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
@@ -2362,13 +2362,13 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
             className="text-3xl font-bold mb-2 flex items-center gap-2"
             style={{ color: "var(--text-primary)" }}
           >
-            <span>📄</span> Create Your Resume
+            <span>📄</span> Create Your Resume & Cover Letter
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Choose how you want to build your resume.
+            Choose how you want to build your document.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             onClick={() => setBuilderMode("ai")}
             className="glass p-6 rounded-2xl flex flex-col items-start gap-4 hover:border-[var(--purple)] transition-all text-left"
@@ -2404,7 +2404,51 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
               </p>
             </div>
           </button>
+          <button
+            onClick={() => setBuilderMode("cover-letter")}
+            className="glass p-6 rounded-2xl flex flex-col items-start gap-4 hover:border-[var(--green)] transition-all text-left"
+          >
+            <span className="text-3xl">✉️</span>
+            <div>
+              <h3
+                className="font-bold text-lg mb-1"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Write Cover Letter
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Create a customized cover letter to stand out to employers.
+              </p>
+            </div>
+          </button>
         </div>
+      </div>
+    );
+  }
+
+  if (builderMode === "cover-letter") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center" style={{ animation: "fade-up 0.35s ease both" }}>
+        <button
+          onClick={() => setBuilderMode("select")}
+          className="flex items-center gap-2 text-sm font-medium mb-12 hover:opacity-70 transition-opacity mx-auto"
+          style={{ color: "var(--text-muted)" }}
+        >
+          ← Back to Options
+        </button>
+        <span className="text-6xl mb-6 block">✉️</span>
+        <h2 className="text-3xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
+          Cover Letter Builder
+        </h2>
+        <p className="text-lg mb-8" style={{ color: "var(--text-muted)" }}>
+          The Cover Letter builder is currently under construction. Check back soon for AI-powered templates and custom generation!
+        </p>
+        <button
+          onClick={() => setBuilderMode("select")}
+          className="btn-primary px-8 py-3 rounded-lg font-semibold"
+        >
+          Go Back
+        </button>
       </div>
     );
   }
