@@ -4,20 +4,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, ShoppingBag, User, LogOut, Search, ArrowRight } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, Search, ArrowRight, HeartPulse, Briefcase, Users, Layers, GraduationCap, Share2, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "next-auth/react";
 
 const navLinks = [
-  { label: "Counselors", href: "/counselors" },
-  { label: "Jobs", href: "/jobs" },
-  { label: "Community", href: "/community" },
-  { label: "Marketplace", href: "/marketplace" },
-  { label: "Services", href: "/services" },
-  { label: "E-learning", href: "/learn" },
-  { label: "Affiliate", href: "/affiliate" },
+  { label: "Counselors", href: "/counselors", icon: HeartPulse },
+  { label: "Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Community", href: "/community", icon: Users },
+  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+  { label: "Services", href: "/services", icon: Layers },
+  { label: "E-learning", href: "/learn", icon: GraduationCap },
+  { label: "Affiliate", href: "/affiliate", icon: Share2 },
 ];
 
 export default function Navbar() {
@@ -59,7 +59,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="sticky top-0 z-50 transition-all duration-300 relative"
+        className="sticky top-0 z-50 transition-all duration-300"
         style={{
           background: scrolled ? "var(--navbar-bg)" : "transparent",
           borderBottom: scrolled
@@ -404,54 +404,77 @@ export default function Navbar() {
         {/* Mobile / tablet menu (< lg) */}
         {open && (
           <div
-            className="lg:hidden px-4 pb-5 pt-2"
+            className="lg:hidden absolute left-0 right-0 px-4 pb-6 pt-3 shadow-2xl border-t animate-in fade-in slide-in-from-top-2 duration-300"
             style={{
+              top: "100%",
               background: "var(--navbar-bg)",
-              backdropFilter: "var(--navbar-blur)",
-              WebkitBackdropFilter: "var(--navbar-blur)",
-              borderTop: "1px solid var(--glass-border-subtle)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              borderColor: "var(--glass-border-subtle)",
+              zIndex: 40,
             }}
           >
-            <div className="space-y-0.5 mb-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200"
-                  style={{ color: "var(--text-secondary)" }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background =
-                      "var(--btn-ghost-bg-hover)";
-                    (e.currentTarget as HTMLElement).style.color =
-                      "var(--accent-primary)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background =
-                      "transparent";
-                    (e.currentTarget as HTMLElement).style.color =
-                      "var(--text-secondary)";
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="space-y-1 mb-6">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => {
+                      setOpen(false);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-200 group"
+                    style={{ color: "var(--text-secondary)" }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background =
+                        "var(--glass-bg)";
+                      (e.currentTarget as HTMLElement).style.color =
+                        "var(--text-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background =
+                        "transparent";
+                      (e.currentTarget as HTMLElement).style.color =
+                        "var(--text-secondary)";
+                    }}
+                  >
+                    <div className="flex items-center gap-3.5 font-semibold">
+                      <div className="p-2 rounded-xl transition-colors border" style={{
+                        background: "var(--glass-bg)",
+                        borderColor: "var(--glass-border)"
+                      }}>
+                        <Icon size={16} />
+                      </div>
+                      {link.label}
+                    </div>
+                    <ChevronRight
+                      size={16}
+                      className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+                    />
+                  </Link>
+                );
+              })}
             </div>
 
             <div
-              className="flex flex-col gap-2.5 pt-3"
+              className="flex flex-col gap-3 pt-5"
               style={{ borderTop: "1px solid var(--divider)" }}
             >
               {isAuthenticated ? (
                 <>
                   <Link
                     href="/dashboard"
-                    onClick={() => setOpen(false)}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all"
+                    onClick={() => {
+                      setOpen(false);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold rounded-2xl transition-all hover:scale-[1.02]"
                     style={{
                       background: "var(--glass-bg)",
                       border: "1px solid var(--glass-border)",
-                      color: "var(--text-secondary)",
+                      color: "var(--text-primary)",
                     }}
                   >
                     <User size={16} />
@@ -462,7 +485,7 @@ export default function Navbar() {
                       setOpen(false);
                       signOut({ callbackUrl: "/" });
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold rounded-2xl transition-all hover:scale-[1.02]"
                     style={{
                       background: "var(--error-bg)",
                       border: "1px solid var(--error-border)",
@@ -477,24 +500,30 @@ export default function Navbar() {
                 <>
                   <Link
                     href="/login"
-                    onClick={() => setOpen(false)}
-                    className="w-full text-center py-3 text-sm font-semibold rounded-xl transition-all"
+                    onClick={() => {
+                      setOpen(false);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="w-full text-center py-3.5 text-sm font-semibold rounded-2xl transition-all hover:scale-[1.02]"
                     style={{
                       background: "var(--glass-bg)",
                       border: "1px solid var(--glass-border)",
-                      color: "var(--text-secondary)",
+                      color: "var(--text-primary)",
                     }}
                   >
                     Login
                   </Link>
                   <Link
                     href="/register"
-                    onClick={() => setOpen(false)}
-                    className="w-full text-center py-3 text-sm font-bold text-white rounded-xl"
+                    onClick={() => {
+                      setOpen(false);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="w-full text-center py-3.5 text-sm font-bold text-white rounded-2xl transition-all hover:scale-[1.02]"
                     style={{
                       background:
                         "linear-gradient(135deg, var(--scarlet), var(--purple))",
-                      boxShadow: "0 4px 14px rgba(220,20,60,0.3)",
+                      boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
                     }}
                   >
                     Sign Up

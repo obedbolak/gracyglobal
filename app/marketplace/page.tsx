@@ -50,81 +50,7 @@ function CategoryTabBar({
   activeCategory: string | null;
   onSelect: (name: string | null) => void;
 }) {
-  return (
-    <div className="relative mb-6">
-      <div
-        className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10"
-        style={{
-          background: "linear-gradient(to right, var(--bg-base), transparent)",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10"
-        style={{
-          background: "linear-gradient(to left, var(--bg-base), transparent)",
-        }}
-      />
-
-      <div
-        className="flex items-center gap-2 overflow-x-auto pb-1"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        <style>{`div::-webkit-scrollbar{display:none}`}</style>
-
-        <button
-          onClick={() => onSelect(null)}
-          className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
-          style={
-            activeCategory === null
-              ? {
-                  background:
-                    "linear-gradient(135deg, var(--purple), var(--blue))",
-                  color: "#fff",
-                  boxShadow: "0 4px 14px rgba(123,47,190,0.35)",
-                }
-              : {
-                  background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }
-          }
-        >
-          🛍️ All
-        </button>
-
-        {categories.map((cat) => {
-          const isActive = activeCategory === cat.name;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => onSelect(isActive ? null : cat.name)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
-              style={
-                isActive
-                  ? {
-                      background: cat.color
-                        ? `linear-gradient(135deg, ${cat.color}, var(--purple))`
-                        : "linear-gradient(135deg, var(--purple), var(--blue))",
-                      color: "#fff",
-                      boxShadow: cat.color
-                        ? `0 4px 14px ${cat.color}55`
-                        : "0 4px 14px rgba(123,47,190,0.35)",
-                    }
-                  : {
-                      background: "var(--glass-bg)",
-                      border: "1px solid var(--glass-border)",
-                      color: "var(--text-secondary)",
-                    }
-              }
-            >
-              {cat.icon && <span>{cat.icon}</span>}
-              {cat.name}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+  return null;
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -729,15 +655,10 @@ function MarketplacePageContent() {
             Gracy Global Marketplace
           </h1>
           <p
-            className="text-base sm:text-lg max-w-3xl mx-auto font-light leading-relaxed mb-8"
+            className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-8"
             style={{ color: "var(--text-muted)" }}
           >
-            Do you have products to sell, or are you searching for trusted
-            business opportunities? Gracy Global Marketplace connects buyers,
-            sellers, entrepreneurs, and businesses in one powerful platform
-            built for growth and visibility. With our experienced marketers,
-            your products reach the right audience, attract real customers, and
-            generate the value and income your business deserves.
+            Discover trusted products, services, and business opportunities from sellers worldwide. Sell your products and reach the right audience with our powerful marketplace.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -756,145 +677,7 @@ function MarketplacePageContent() {
           </div>
         </motion.div>
 
-        {/* ── Search + mobile filter ── */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="relative flex-1 min-w-0">
-            <Search
-              size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--text-disabled)" }}
-            />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-                outline: "none",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "var(--input-border-focus)";
-                e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "var(--glass-border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            />
-          </div>
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="lg:hidden relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold flex-shrink-0"
-            style={{
-              background: hasActiveFilters
-                ? "linear-gradient(135deg, var(--purple), var(--blue))"
-                : "var(--glass-bg)",
-              border: hasActiveFilters
-                ? "none"
-                : "1px solid var(--glass-border)",
-              color: hasActiveFilters ? "#fff" : "var(--text-secondary)",
-            }}
-          >
-            <SlidersHorizontal size={14} /> Filters
-            {hasActiveFilters && (
-              <span
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
-                style={{ background: "var(--scarlet)" }}
-              >
-                !
-              </span>
-            )}
-          </button>
-        </div>
 
-        {/* ── Category tab bar ── */}
-        {categoriesError ? (
-          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-            Failed to load categories: {categoriesError}
-          </div>
-        ) : categoriesLoading ? (
-          <div className="mb-6 flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
-            Loading categories...
-          </div>
-        ) : categories.length > 0 ? (
-          <CategoryTabBar
-            categories={categories}
-            activeCategory={activeCategory}
-            onSelect={setActiveCategory}
-          />
-        ) : null}
-
-        {/* ── Active filter chips ── */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {activeCategory && (
-              <span
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                style={{
-                  background: "var(--badge-scarlet-bg)",
-                  color: "var(--scarlet-dark)",
-                }}
-              >
-                {categories.find((c) => c.name === activeCategory)?.icon}{" "}
-                {activeCategory}
-                <button onClick={() => setActiveCategory(null)}>
-                  <X size={10} />
-                </button>
-              </span>
-            )}
-            {sort !== "featured" && (
-              <span
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                style={{
-                  background: "var(--badge-purple-bg)",
-                  color: "var(--purple-dark)",
-                }}
-              >
-                {SORT_LABELS[sort]}
-                <button onClick={() => setSort("featured")}>
-                  <X size={10} />
-                </button>
-              </span>
-            )}
-            {(minPriceXAF > XAF_MIN || maxPriceXAF < xafMax) && (
-              <span
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                style={{
-                  background: "var(--badge-blue-bg)",
-                  color: "var(--blue-dark)",
-                }}
-              >
-                {currency.symbol}{" "}
-                {Math.round(minPriceXAF * (rate || 1)).toLocaleString()} –{" "}
-                {Math.round(maxPriceXAF * (rate || 1)).toLocaleString()}
-                <button
-                  onClick={() => {
-                    setMinPriceXAF(XAF_MIN);
-                    setMaxPriceXAF(xafMax);
-                  }}
-                >
-                  <X size={10} />
-                </button>
-              </span>
-            )}
-            <button
-              onClick={clearAll}
-              className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{
-                background: "var(--glass-bg-subtle)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              <X size={10} /> Clear all
-            </button>
-          </div>
-        )}
 
         {/* ── Layout ── */}
         <div className="flex gap-7 items-start">
@@ -954,6 +737,127 @@ function MarketplacePageContent() {
 
           {/* Product grid */}
           <div className="flex-1 min-w-0">
+            {/* ── Search + mobile filter ── */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="relative flex-1 min-w-0">
+                <Search
+                  size={15}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "var(--text-disabled)" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl"
+                  style={{
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-primary)",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "var(--input-border-focus)";
+                    e.currentTarget.style.boxShadow = "var(--input-shadow-focus)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--glass-border)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="lg:hidden relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold flex-shrink-0"
+                style={{
+                  background: hasActiveFilters
+                    ? "linear-gradient(135deg, var(--purple), var(--blue))"
+                    : "var(--glass-bg)",
+                  border: hasActiveFilters
+                    ? "none"
+                    : "1px solid var(--glass-border)",
+                  color: hasActiveFilters ? "#fff" : "var(--text-secondary)",
+                }}
+              >
+                <SlidersHorizontal size={14} /> Filters
+                {hasActiveFilters && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
+                    style={{ background: "var(--scarlet)" }}
+                  >
+                    !
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* ── Active filter chips ── */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {activeCategory && (
+                  <span
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      background: "var(--badge-scarlet-bg)",
+                      color: "var(--scarlet-dark)",
+                    }}
+                  >
+                    {categories.find((c) => c.name === activeCategory)?.icon}{" "}
+                    {activeCategory}
+                    <button onClick={() => setActiveCategory(null)}>
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
+                {sort !== "featured" && (
+                  <span
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      background: "var(--badge-purple-bg)",
+                      color: "var(--purple-dark)",
+                    }}
+                  >
+                    {SORT_LABELS[sort]}
+                    <button onClick={() => setSort("featured")}>
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
+                {(minPriceXAF > XAF_MIN || maxPriceXAF < xafMax) && (
+                  <span
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      background: "var(--badge-blue-bg)",
+                      color: "var(--blue-dark)",
+                    }}
+                  >
+                    {currency.symbol}{" "}
+                    {Math.round(minPriceXAF * (rate || 1)).toLocaleString()} –{" "}
+                    {Math.round(maxPriceXAF * (rate || 1)).toLocaleString()}
+                    <button
+                      onClick={() => {
+                        setMinPriceXAF(XAF_MIN);
+                        setMaxPriceXAF(xafMax);
+                      }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold"
+                  style={{
+                    background: "var(--glass-bg-subtle)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  <X size={10} /> Clear all
+                </button>
+              </div>
+            )}
             {!isLoading && !error && total > 0 && (
               <div className="flex items-center justify-between mb-5">
                 <p
@@ -1015,7 +919,7 @@ function MarketplacePageContent() {
             )}
 
             {isLoading ? (
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
                   <SkeletonCard key={i} />
                 ))}
@@ -1051,7 +955,7 @@ function MarketplacePageContent() {
               </div>
             ) : (
               <>
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {products.map((product, i) => (
                     <motion.div
                       key={product.id}
@@ -1105,7 +1009,7 @@ function MarketplacePageContent() {
                       </Link>
 
                       {/* Card body */}
-                      <div className="flex flex-col gap-3 p-4 flex-1">
+                      <div className="flex flex-col gap-3 p-5 flex-1">
                         {/* Name + description */}
                         <div>
                           <Link href={`/marketplace/${product.id}`}>
