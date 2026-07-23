@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Send,
-  Loader2,
   MessageCircle,
   X,
   Minus,
@@ -13,6 +12,15 @@ import {
 } from "lucide-react";
 
 type Message = { role: string; content: string };
+
+// Shown on the empty state. Tapping one sends it immediately, which gives
+// first-time visitors a way in without having to think of a question.
+const SUGGESTIONS = [
+  "What's on the marketplace right now?",
+  "I need to book a service",
+  "Show me free courses",
+  "How do I reach support?",
+];
 
 const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g;
 const urlRegex =
@@ -108,10 +116,30 @@ export default function ChatWidget() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
   }, [input, open]);
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
+  // On phones the panel covers the whole screen, so the page behind it must
+  // stop scrolling - otherwise dragging the message list scrolls the site.
+  useEffect(() => {
+    if (!open) return;
+    if (!window.matchMedia("(max-width: 639px)").matches) return;
 
-    const newMessages = [...messages, { role: "user", content: input }];
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  // Accepts optional text so the suggestion chips can send without first
+  // round-tripping through the input state.
+  async function sendMessage(presetText?: string) {
+    const text = (presetText ?? input).trim();
+    if (!text || loading) return;
+
+    // Snapshot of the thread BEFORE this message - the API appends the new
+    // message itself. Without this the assistant has no memory between turns,
+    // which is what made it re-greet and re-explain on every reply.
+    const priorMessages = messages;
+    const newMessages = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
     setInput("");
     setActionsOpen(false);
@@ -121,7 +149,7 @@ export default function ChatWidget() {
       const res = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: text, history: priorMessages }),
       });
       const data = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.reply }]);
@@ -141,8 +169,9 @@ export default function ChatWidget() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110"
+          className="fixed right-5 sm:right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95"
           style={{
+            bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.5rem))",
             background: "linear-gradient(135deg, var(--purple), var(--scarlet))",
             boxShadow: "var(--btn-primary-shadow)",
           }}
@@ -152,46 +181,54 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Chat panel — fixed 360×580, compact corner widget */}
+      {/* Chat panel — full screen on phones, corner panel from sm up */}
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-[9999] flex flex-col overflow-hidden rounded-2xl shadow-2xl"
+          className="fixed z-[9999] flex flex-col overflow-hidden shadow-2xl inset-0 rounded-none sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl"
           style={{
-            width: "360px",
-            height: "580px",
             background: "var(--modal-bg)",
             border: "1px solid var(--modal-border)",
             backdropFilter: "var(--modal-blur)",
             boxShadow: "var(--modal-shadow)",
           }}
+          role="dialog"
+          aria-label="Gracy Assistant"
         >
           {/* Header — fixed, never grows */}
           <div
-            className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+            className="flex items-center justify-between gap-2 px-4 py-3 flex-shrink-0"
             style={{
               background: "linear-gradient(135deg, var(--purple), var(--scarlet))",
+              paddingTop: "max(0.75rem, env(safe-area-inset-top))",
             }}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <MessageCircle size={18} color="#fff" className="flex-shrink-0" />
-              <span className="text-sm font-bold text-white truncate">
-                Gracy Assistant
-              </span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                <MessageCircle size={17} color="#fff" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold leading-tight text-white">
+                  Gracy Assistant
+                </p>
+                <p className="truncate text-[11px] leading-tight text-white/75">
+                  Usually replies instantly
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center gap-0.5">
               <button
                 onClick={() => setOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/20 transition-colors"
+                className="rounded-lg p-2 transition-colors hover:bg-white/20"
                 aria-label="Minimize chat"
               >
-                <Minus size={16} color="#fff" />
+                <Minus size={17} color="#fff" />
               </button>
               <button
                 onClick={() => { setOpen(false); setMessages([]); }}
-                className="p-1 rounded-lg hover:bg-white/20 transition-colors"
-                aria-label="Close chat"
+                className="rounded-lg p-2 transition-colors hover:bg-white/20"
+                aria-label="Close chat and clear conversation"
               >
-                <X size={16} color="#fff" />
+                <X size={17} color="#fff" />
               </button>
             </div>
           </div>
@@ -202,16 +239,52 @@ export default function ChatWidget() {
             style={{ scrollbarWidth: "none" }}
           >
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-2 py-8">
+              <div className="flex min-h-full flex-col justify-center px-1 py-6">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ background: "var(--glass-bg-subtle)" }}
+                  className="mb-4 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold text-white"
+                  style={{
+                    background: "linear-gradient(135deg, var(--purple), var(--scarlet))",
+                  }}
                 >
-                  <MessageCircle size={22} style={{ color: "var(--text-muted)" }} />
+                  G
                 </div>
-                <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
-                  Hi! I&apos;m Gracy. Ask me anything 👋
+                <h3
+                  className="text-lg font-bold leading-snug"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Hi there 👋
+                </h3>
+                <p
+                  className="mt-1.5 text-sm leading-relaxed"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  I&apos;m Gracy. I can help you find a product, book a service,
+                  browse courses and jobs, or point you to the right person.
                 </p>
+
+                <p
+                  className="mb-2 mt-6 text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Try asking
+                </p>
+                <div className="flex flex-col gap-2">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => sendMessage(suggestion)}
+                      className="rounded-xl px-3.5 py-2.5 text-left text-sm transition-all hover:opacity-80 active:scale-[0.99]"
+                      style={{
+                        background: "var(--card-bg)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -255,6 +328,12 @@ export default function ChatWidget() {
 
             {loading && (
               <div className="flex items-end gap-2">
+                <style>{`
+                  @keyframes gracy-typing {
+                    0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+                    30% { transform: translateY(-4px); opacity: 1; }
+                  }
+                `}</style>
                 <div
                   className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
                   style={{
@@ -264,14 +343,27 @@ export default function ChatWidget() {
                   G
                 </div>
                 <div
-                  className="px-4 py-2.5 rounded-2xl"
+                  className="flex items-center gap-1 px-3.5 py-3"
                   style={{
-                    background: "var(--glass-bg-subtle, rgba(0,0,0,0.05))",
+                    background: "var(--card-bg)",
                     border: "1px solid var(--glass-border)",
+                    borderRadius: "16px",
                     borderBottomLeftRadius: "4px",
                   }}
+                  role="status"
+                  aria-label="Gracy is typing"
                 >
-                  <Loader2 size={14} className="animate-spin" style={{ color: "var(--text-muted)" }} />
+                  {[0, 1, 2].map((dot) => (
+                    <span
+                      key={dot}
+                      className="block w-1.5 h-1.5 rounded-full"
+                      style={{
+                        background: "var(--text-muted)",
+                        animation: "gracy-typing 1.2s infinite ease-in-out",
+                        animationDelay: `${dot * 0.18}s`,
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -285,6 +377,7 @@ export default function ChatWidget() {
             style={{
               borderTop: "1px solid var(--glass-border)",
               background: "var(--card-bg)",
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
             }}
           >
             <div className="relative flex-shrink-0">
@@ -354,7 +447,9 @@ export default function ChatWidget() {
               }}
               placeholder="Ask me anything..."
               rows={1}
-              className="min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-xl px-3 py-2.5 text-sm leading-5 outline-none"
+              // text-base (16px) on mobile is deliberate: iOS Safari zooms the
+              // whole page when a focused input is under 16px.
+              className="min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-xl px-3 py-2.5 text-base leading-5 outline-none sm:text-sm"
               style={{
                 background: "var(--input-bg)",
                 border: "1px solid var(--input-border)",
@@ -363,7 +458,7 @@ export default function ChatWidget() {
               }}
             />
             <button
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={!input.trim() || loading}
               className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40"
               style={{

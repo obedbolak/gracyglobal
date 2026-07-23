@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, ShoppingBag, User, LogOut, Search, ArrowRight, HeartPulse, Briefcase, Users, Layers, GraduationCap, Share2, ChevronRight } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, Search, ArrowRight, HeartPulse, Briefcase, Users, Layers, GraduationCap, Share2, ChevronRight, Award } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
