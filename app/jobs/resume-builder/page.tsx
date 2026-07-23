@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Eye, X, Download, SlidersHorizontal, Search, Phone, Mail, MapPin, Settings, User, Briefcase, GraduationCap, Award } from "lucide-react";
 import ProfileUpload from "@/components/shared/ProfileUpload";
@@ -58,6 +58,26 @@ async function loadJsPDF() {
 // and the thing that downloads cannot drift apart.
 const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1123;
+
+// Sub-pixel rounding, a stray margin or a border can push a sheet a handful of
+// pixels past A4 and cost a whole extra, near-blank page. Overflow smaller than
+// this is folded back into the last page instead of starting a new one.
+const PAGE_OVERFLOW_TOLERANCE_PX = 28;
+
+function countPages(contentHeightPx: number) {
+  const usable = Math.max(contentHeightPx - PAGE_OVERFLOW_TOLERANCE_PX, 1);
+  return Math.max(1, Math.ceil(usable / A4_HEIGHT_PX));
+}
+
+// React state changes do not reach the DOM synchronously. Anything that
+// captures the off-screen preview immediately after a setState has to wait for
+// the browser to paint, or html2canvas rasterises the PREVIOUS render - which
+// is how an AI-polished resume could download as the unpolished draft.
+function nextPaint() {
+  return new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+}
 
 // html2canvas-pro rather than html2canvas: this project is on Tailwind v4,
 // which emits oklch() colours and compiles opacity modifiers to
@@ -118,11 +138,17 @@ async function downloadResumePdfFromNode(
   // One PDF page per A4_HEIGHT_PX of captured content - the same boundaries
   // the preview draws its page-break markers at.
   const slicePx = A4_HEIGHT_PX * CAPTURE_SCALE;
-  const pageCount = Math.max(1, Math.ceil(canvas.height / slicePx));
+  const pageCount = countPages(canvas.height / CAPTURE_SCALE);
 
   for (let page = 0; page < pageCount; page++) {
     const offset = page * slicePx;
-    const sliceHeight = Math.min(slicePx, canvas.height - offset);
+    // The final page takes whatever is left, even if that is slightly more
+    // than one sheet: addImage below scales it down by at most the tolerance
+    // (~2.5%), which is invisible and loses nothing off the bottom.
+    const sliceHeight =
+      page === pageCount - 1
+        ? canvas.height - offset
+        : Math.min(slicePx, canvas.height - offset);
     if (sliceHeight <= 0) break;
 
     const pageCanvas = document.createElement("canvas");
@@ -427,6 +453,12 @@ interface ResumeForm {
   certifications: string;
   languages: string;
   links: string;
+  // AI tailoring. optimizeWithAi is an explicit opt-in: nothing is sent to the
+  // model unless the applicant chooses it. The institution fields are only
+  // collected when they do, and are context for tailoring - never new facts.
+  optimizeWithAi: "yes" | "no";
+  targetCompany: string;
+  institutionDetails: string;
   customColor?: string;
   imageShape?: "circle" | "square" | "rounded";
 }
@@ -447,10 +479,321 @@ const EMPTY_RESUME_FORM: ResumeForm = {
   certifications: "",
   languages: "",
   links: "",
+  optimizeWithAi: "yes",
+  targetCompany: "",
+  institutionDetails: "",
   customColor: "",
   imageShape: "circle",
 };
 
+
+// ─── CV scoring ───────────────────────────────────────────────────────────────
+//
+// Deliberately deterministic rather than asking the model for a number: the
+// same CV must always score the same, and every point lost has to map to a
+// concrete, actionable fix. An LLM-generated score would drift between runs and
+// could not be explained to the applicant.
+//
+// Weights sum to 100.
+
+const ACTION_VERBS = [
+  "achieved", "analysed", "analyzed", "automated", "built", "collaborated",
+  "conducted", "coordinated", "created", "delivered", "designed", "developed",
+  "directed", "drove", "engineered", "established", "expanded", "generated",
+  "grew", "implemented", "improved", "increased", "initiated", "introduced",
+  "launched", "led", "maintained", "managed", "mentored", "migrated",
+  "negotiated", "operated", "optimised", "optimized", "organised", "organized",
+  "oversaw", "planned", "produced", "reduced", "resolved", "restructured",
+  "revamped", "scaled", "secured", "simplified", "spearheaded", "streamlined",
+  "strengthened", "supervised", "supported", "taught", "trained", "transformed",
+  "upgraded", "wrote",
+];
+
+export interface ScoreCheck {
+  id: string;
+  label: string;
+  tip: string;
+  weight: number;
+  passed: boolean;
+}
+
+function startsWithActionVerb(bullet: string) {
+  const first = bullet.trim().toLowerCase().split(/[^a-z]+/)[0] || "";
+  return ACTION_VERBS.includes(first);
+}
+
+function scoreResume(resume: GeneratedResume): {
+  score: number;
+  checks: ScoreCheck[];
+} {
+  const text = (v?: string) => (v || "").trim();
+  const experience = (resume.experience || []).filter(
+    (e) => text(e.role) || text(e.company) || (e.bullets || []).length,
+  );
+  const bullets = experience
+    .flatMap((e) => e.bullets || [])
+    .map((b) => text(b))
+    .filter(Boolean);
+  const summary = text(resume.summary);
+  const skills = (resume.skills || []).map((s) => text(s)).filter(Boolean);
+  const education = (resume.education || []).filter(
+    (e) => text(e.degree) || text(e.institution) || text(e.details),
+  );
+  const links = (resume.contact?.links || []).map((l) => text(l)).filter(Boolean);
+
+  const verbBullets = bullets.filter(startsWithActionVerb).length;
+  const longestBullet = bullets.reduce((max, b) => Math.max(max, b.length), 0);
+
+  const checks: ScoreCheck[] = [
+    {
+      id: "contact",
+      weight: 10,
+      label: "Email and phone are both present",
+      tip: "Add both an email address and a phone number — a recruiter who cannot reach you cannot hire you.",
+      passed: !!text(resume.contact?.email) && !!text(resume.contact?.phone),
+    },
+    {
+      id: "location",
+      weight: 4,
+      label: "Location is listed",
+      tip: "Add your city. Many employers filter candidates by location before reading anything else.",
+      passed: !!text(resume.contact?.location),
+    },
+    {
+      id: "headline",
+      weight: 5,
+      label: "Professional headline is set",
+      tip: "Add a job title under your name, e.g. “Senior Software Engineer”. It frames everything below it.",
+      passed: !!text(resume.title),
+    },
+    {
+      id: "summary",
+      weight: 10,
+      label: "Summary is a solid 2–4 sentences",
+      tip: !summary
+        ? "Add a short professional summary at the top — 2 to 4 sentences on who you are and what you do best."
+        : summary.length < 150
+          ? "Your summary is very short. Two to four full sentences give a recruiter a reason to keep reading."
+          : "Your summary is long enough to be skipped. Tighten it to 2–4 sentences.",
+      passed: summary.length >= 150 && summary.length <= 800,
+    },
+    {
+      id: "experience",
+      weight: 12,
+      label: "Work experience is included",
+      tip: "Add at least one role with the employer and what you did there. This is the section employers read first.",
+      passed: experience.length > 0,
+    },
+    {
+      id: "dates",
+      weight: 6,
+      label: "Every role has dates",
+      tip: "Add start and end dates to each role. Gaps in dates read as gaps in honesty, even when they are not.",
+      passed:
+        experience.length > 0 && experience.every((e) => !!text(e.period)),
+    },
+    {
+      id: "bulletCount",
+      weight: 8,
+      label: "Enough detail under your roles",
+      tip: "Write at least three bullet points across your roles. One line per job tells an employer almost nothing.",
+      passed: bullets.length >= 3,
+    },
+    {
+      id: "actionVerbs",
+      weight: 10,
+      label: "Bullets lead with strong verbs",
+      tip: "Start each bullet with an action verb — “Led”, “Built”, “Reduced” — instead of “Responsible for” or “Worked on”.",
+      passed: bullets.length > 0 && verbBullets / bullets.length >= 0.6,
+    },
+    {
+      id: "quantified",
+      weight: 10,
+      label: "Achievements are quantified",
+      tip: "Put numbers in at least one bullet — team size, users served, time saved, percentage improved. Numbers are what make a claim credible.",
+      passed: bullets.some((b) => /\d/.test(b)),
+    },
+    {
+      id: "bulletLength",
+      weight: 4,
+      label: "Bullets are scannable",
+      tip: "One or more bullets run long. Keep each to roughly two lines so the page can be skimmed in seconds.",
+      passed: bullets.length > 0 && longestBullet <= 220,
+    },
+    {
+      id: "skills",
+      weight: 8,
+      label: "Skills section is substantial",
+      tip: "List at least five skills. Automated screening tools match on these before a person ever sees your CV.",
+      passed: skills.length >= 5,
+    },
+    {
+      id: "education",
+      weight: 7,
+      label: "Education is included",
+      tip: "Add your education — the qualification, the institution and the years.",
+      passed: education.length > 0,
+    },
+    {
+      id: "links",
+      weight: 3,
+      label: "A portfolio or profile link is included",
+      tip: "Add a LinkedIn, GitHub or portfolio link. It lets an interested employer verify your work immediately.",
+      passed: links.length > 0,
+    },
+    {
+      id: "photo",
+      weight: 3,
+      label: "Profile photo added",
+      tip: "Add a clear professional photo. (Skip this if you are applying somewhere that asks for CVs without photos.)",
+      passed: !!text(resume.photoUrl),
+    },
+  ];
+
+  const score = checks.reduce((sum, c) => sum + (c.passed ? c.weight : 0), 0);
+  return { score, checks };
+}
+
+function scoreBand(score: number) {
+  if (score >= 90) return { label: "Excellent", color: "#16a34a" };
+  if (score >= 75) return { label: "Strong", color: "#65a30d" };
+  if (score >= 50) return { label: "Getting there", color: "#d97706" };
+  return { label: "Needs work", color: "#dc2626" };
+}
+
+function ResumeScoreCard({ resume }: { resume: GeneratedResume }) {
+  const [showPassed, setShowPassed] = useState(false);
+  const { score, checks } = useMemo(() => scoreResume(resume), [resume]);
+  const band = scoreBand(score);
+
+  // Biggest wins first - the applicant should fix the 12-point gap before the
+  // 3-point one.
+  const todo = checks
+    .filter((c) => !c.passed)
+    .sort((a, b) => b.weight - a.weight);
+  const done = checks.filter((c) => c.passed);
+
+  return (
+    <div className="glass p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            📊 CV strength
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {done.length} of {checks.length} checks passed
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <div
+            className="text-2xl font-bold leading-none"
+            style={{ color: band.color }}
+          >
+            {score}%
+          </div>
+          <div
+            className="text-[11px] font-semibold uppercase tracking-wider mt-1"
+            style={{ color: band.color }}
+          >
+            {band.label}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="h-2 w-full rounded-full overflow-hidden"
+        style={{ background: "var(--divider)" }}
+        role="progressbar"
+        aria-valuenow={score}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${score}%`, background: band.color }}
+        />
+      </div>
+
+      {todo.length > 0 ? (
+        <div className="flex flex-col gap-2 mt-1">
+          <p
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Recommendations
+          </p>
+          {todo.map((c) => (
+            <div key={c.id} className="flex gap-2.5 items-start">
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-[2px]"
+                style={{
+                  background: "var(--glass-bg-subtle)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--divider)",
+                }}
+                title={`Worth ${c.weight} points`}
+              >
+                +{c.weight}
+              </span>
+              <span
+                className="text-xs leading-relaxed"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {c.tip}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p
+          className="text-xs px-3 py-2 rounded-lg mt-1"
+          style={{
+            background: "var(--success-bg)",
+            color: "var(--success-text)",
+            border: "1px solid var(--success-border)",
+          }}
+        >
+          ✓ Every check passed. This CV is ready to send.
+        </p>
+      )}
+
+      {done.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowPassed((v) => !v)}
+            className="text-xs font-medium hover:opacity-70 transition-opacity"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {showPassed ? "Hide" : "Show"} what is already good ({done.length})
+          </button>
+          {showPassed && (
+            <ul className="flex flex-col gap-1.5 mt-2">
+              {done.map((c) => (
+                <li
+                  key={c.id}
+                  className="text-xs flex gap-2 items-start"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <span style={{ color: "#16a34a" }}>✓</span>
+                  <span>{c.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+        A guide, not a verdict — it checks structure and completeness, not
+        whether you are right for the job.
+      </p>
+    </div>
+  );
+}
 
 function FormField({
   label,
@@ -517,7 +860,8 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     { label: "Personal Info", icon: "👤" },
     { label: "Experience", icon: "💼" },
     { label: "Skills & Extras", icon: "🎯" },
-    { label: "Review", icon: "✨" },
+    { label: "Review", icon: "🔍" },
+    { label: "AI Optimization", icon: "✨" },
   ];
 
   // Per-step validation
@@ -561,28 +905,41 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     }
   }
 
+  // Single call site for the polish endpoint, shared by the Polish button and
+  // by the manual download path. Throws on failure so each caller can decide
+  // whether that is fatal.
+  async function requestEnhance(current: GeneratedResume) {
+    const res = await fetch("/api/jobs/resume/enhance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resume: current,
+        instruction: enhanceInstruction.trim() || undefined,
+        targetRole: form.targetRole || undefined,
+        // Where the CV is going. Context for tailoring emphasis and vocabulary
+        // - the route's prompt still forbids inventing anything.
+        targetCompany: form.targetCompany.trim() || undefined,
+        institutionDetails: form.institutionDetails.trim() || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not enhance the resume.");
+    return {
+      improved: data.resume as GeneratedResume,
+      summary: (data.summary as string | undefined) || null,
+    };
+  }
+
   async function handleEnhance() {
     const current = resume ?? mapFormToResume();
     setEnhancing(true);
     setError(null);
     setEnhanceNote(null);
     try {
-      const res = await fetch("/api/jobs/resume/enhance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resume: current,
-          instruction: enhanceInstruction.trim() || undefined,
-          targetRole: form.targetRole || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Could not enhance the resume.");
-
+      const { improved, summary } = await requestEnhance(current);
       setPreEnhanceResume(current);
-      setResume(data.resume as GeneratedResume);
-      setEnhanceNote(data.summary || null);
+      setResume(improved);
+      setEnhanceNote(summary);
       setEnhanceInstruction("");
     } catch (e: any) {
       setError(e.message || "Could not enhance the resume. Please try again.");
@@ -602,6 +959,8 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     setDownloading(true);
     setError(null);
     try {
+      // The capture node may have just been handed new content; let it paint.
+      await nextPaint();
       await downloadResumePdfFromNode(
         captureRef.current,
         resumeFileName(resume?.name || form.fullName),
@@ -610,6 +969,40 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
       setError(e.message || "Could not generate the PDF. Please try again.");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Final wizard step: optimize only. Downloading happens on the next screen,
+  // so the applicant can actually see what the AI changed before committing to
+  // a file. Setting `resume` is what advances to that screen.
+  //
+  // Optimization is best-effort: if the AI service is down or unconfigured we
+  // still advance with the original wording rather than trapping the user in
+  // the wizard - they can download as-is, or retry Polish from there.
+  async function handleOptimize() {
+    setError(null);
+    setEnhanceNote(null);
+
+    const base = mapFormToResume();
+
+    if (form.optimizeWithAi === "no") {
+      setResume(base);
+      return;
+    }
+
+    setEnhancing(true);
+    try {
+      const { improved, summary } = await requestEnhance(base);
+      setPreEnhanceResume(base);
+      setResume(improved);
+      setEnhanceNote(summary || "Wording and grammar polished.");
+    } catch (e: any) {
+      setError(
+        `${e?.message || "Could not optimize the resume."} Your original wording is shown instead - you can download it, or try Polish again below.`,
+      );
+      setResume(base);
+    } finally {
+      setEnhancing(false);
     }
   }
 
@@ -761,6 +1154,39 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     };
   };
 
+  // Hands the finished resume over to the cover letter page. sessionStorage
+  // rather than a query string: a job description and a list of highlights are
+  // far too long for a URL, and none of it belongs in browser history.
+  function seedCoverLetter() {
+    const source = resume ?? mapFormToResume();
+    const highlights = [
+      source.summary,
+      ...(source.experience || []).flatMap((e) => e.bullets || []),
+    ]
+      .map((s) => (s || "").trim())
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      sessionStorage.setItem(
+        "gg:coverLetterSeed",
+        JSON.stringify({
+          fullName: source.name || form.fullName,
+          email: source.contact?.email || form.email,
+          phone: source.contact?.phone || form.phone,
+          location: source.contact?.location || form.location,
+          roleTitle: source.title || form.targetRole,
+          company: form.targetCompany,
+          jobDescription: form.institutionDetails,
+          highlights,
+        }),
+      );
+    } catch {
+      // Private browsing can refuse sessionStorage; the page still works, it
+      // just starts empty.
+    }
+  }
+
   // Summary helper for review step
   const selectedTemplate = RESUME_TEMPLATES.find((t) => t.id === form.template);
   const reviewSections = [
@@ -784,7 +1210,21 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
     { label: "Certifications", value: form.certifications },
     { label: "Languages", value: form.languages },
     { label: "Links", value: form.links },
+    {
+      label: "AI optimization",
+      value:
+        form.optimizeWithAi === "yes"
+          ? "On"
+          : "Off - your wording is kept exactly as written",
+    },
+    { label: "Submitting to", value: form.targetCompany },
   ];
+
+  // Two-column layout (controls left, sticky preview right) applies to the
+  // manual builder AND to the finished-resume screen. That screen used to
+  // stack the preview underneath the action bar in a single narrow column,
+  // which pushed the CV far below the fold.
+  const splitView = builderMode === "manual" || !!resume;
 
   if (builderMode === "select") {
     return (
@@ -846,8 +1286,8 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
               </p>
             </div>
           </button>
-          <button
-            onClick={() => setBuilderMode("cover-letter")}
+          <Link
+            href="/jobs/cover-letter"
             className="glass p-6 rounded-2xl flex flex-col items-start gap-4 hover:border-[var(--green)] transition-all text-left"
           >
             <span className="text-3xl">✉️</span>
@@ -859,48 +1299,53 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 Write Cover Letter
               </h3>
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Create a customized cover letter to stand out to employers.
+                Let AI write a letter aimed at the role you are applying for.
               </p>
             </div>
-          </button>
+          </Link>
         </div>
       </div>
     );
   }
 
+  // The cover letter lives on its own route (/jobs/cover-letter) now, so the
+  // "under construction" placeholder that used to sit here is gone. The
+  // builderMode value is kept only so any older link that still sets it lands
+  // somewhere sensible rather than rendering a blank wizard.
   if (builderMode === "cover-letter") {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center" style={{ animation: "fade-up 0.35s ease both" }}>
-        <button
-          onClick={() => setBuilderMode("select")}
-          className="flex items-center gap-2 text-sm font-medium mb-12 hover:opacity-70 transition-opacity mx-auto"
-          style={{ color: "var(--text-muted)" }}
-        >
-          ← Back to Options
-        </button>
         <span className="text-6xl mb-6 block">✉️</span>
         <h2 className="text-3xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
           Cover Letter Builder
         </h2>
         <p className="text-lg mb-8" style={{ color: "var(--text-muted)" }}>
-          The Cover Letter builder is currently under construction. Check back soon for AI-powered templates and custom generation!
+          The cover letter builder has moved to its own page.
         </p>
-        <button
-          onClick={() => setBuilderMode("select")}
-          className="btn-primary px-8 py-3 rounded-lg font-semibold"
-        >
-          Go Back
-        </button>
+        <div className="flex gap-3 justify-center flex-wrap">
+          <button
+            onClick={() => setBuilderMode("select")}
+            className="btn-secondary px-6 py-3 rounded-lg font-semibold"
+          >
+            ← Back to Options
+          </button>
+          <Link
+            href="/jobs/cover-letter"
+            className="btn-primary px-8 py-3 rounded-lg font-semibold"
+          >
+            Open Cover Letter Builder →
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className={`mx-auto px-4 py-8 ${builderMode === "manual" ? "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start" : "max-w-3xl"}`}
+      className={`mx-auto px-4 py-8 ${splitView ? "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start" : "max-w-3xl"}`}
       style={{ animation: "fade-up 0.35s ease both" }}
     >
-      {builderMode === "manual" && !resume && (
+      {splitView && (
         <div className="col-span-1 lg:col-span-2 flex items-center justify-between mb-4 gap-2">
           {/* Mobile Toggle */}
           <div className="lg:hidden flex p-1 rounded-lg border w-full max-w-[200px]" style={{ background: "var(--glass-bg)", borderColor: "var(--divider)" }}>
@@ -910,7 +1355,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 mobileTab === "edit" ? "bg-white text-black shadow-sm" : "text-[var(--text-secondary)] hover:bg-white/5"
               }`}
             >
-              Edit Info
+              {resume ? "Options" : "Edit Info"}
             </button>
             <button
               onClick={() => setMobileTab("preview")}
@@ -957,10 +1402,20 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 </div>
               )}
             </div>
+            {/* Downloading only becomes available once a resume exists - that
+                is, after the AI Optimization step. Before then the CV has not
+                been through the optimization choice yet, so handing out a file
+                would defeat the flow. The button stays visible but disabled so
+                it is discoverable. */}
             <button
               onClick={handleDownload}
-              disabled={downloading}
-              className="px-3 py-2 rounded-xl bg-[var(--purple)] text-white shadow-sm hover:shadow-md transition-all font-semibold flex items-center gap-1.5 text-sm"
+              disabled={downloading || !resume}
+              title={
+                resume
+                  ? "Download your CV"
+                  : `Available after the ${STEPS[STEPS.length - 1].label} step`
+              }
+              className="px-3 py-2 rounded-xl bg-[var(--purple)] text-white shadow-sm hover:shadow-md transition-all font-semibold flex items-center gap-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-sm"
             >
               {downloading ? "Wait..." : <><Download size={16} /> <span className="hidden sm:inline">Download</span></>}
             </button>
@@ -968,7 +1423,7 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className={`flex flex-col ${builderMode === "manual" && !resume && mobileTab === "preview" ? "hidden lg:flex" : "flex"}`}>
+      <div className={`flex flex-col ${splitView && mobileTab === "preview" ? "hidden lg:flex" : "flex"}`}>
         <style>{`
         @keyframes rb-slide-left {
           from { opacity: 0; transform: translateX(40px); }
@@ -1331,9 +1786,9 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                       className="text-sm"
                       style={{ color: "var(--text-secondary)" }}
                     >
-                      Everything look good? Hit <strong>Generate</strong> to
-                      build your AI-powered resume. You can go back to any step
-                      to make edits.
+                      Check everything below. You can go back to any step to
+                      make edits — the last step decides how AI should handle
+                      your CV before it downloads.
                     </p>
                     <div
                       className="rounded-xl p-5 flex flex-col gap-3"
@@ -1370,6 +1825,151 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                         </p>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* Step 5: AI optimization - the last gate before the CV can
+                    be downloaded, so the choice is always made deliberately. */}
+                {step === 5 && (
+                  <div className="flex flex-col gap-5">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Step 6 — AI Optimization
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {builderMode === "ai"
+                        ? "Last step. Tell the AI where this CV is going so it can aim your resume before generating it."
+                        : "Last step. Choose whether AI should refine your CV. You will see the result and download it on the next screen."}
+                    </p>
+
+                    {builderMode === "manual" && (
+                    <div
+                      className="rounded-xl p-5 flex flex-col gap-4"
+                      style={{
+                        background: "var(--glass-bg)",
+                        border: "1px solid var(--divider)",
+                      }}
+                    >
+                      <div>
+                        <span
+                          className="text-sm font-semibold block"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          ✨ Optimize this CV with AI?
+                        </span>
+                        <span
+                          className="text-xs mt-1 block"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          Fixes grammar, tightens wording and aims the CV at the
+                          place you are applying to. It never invents employers,
+                          dates, degrees or numbers.
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {(["yes", "no"] as const).map((choice) => (
+                          <button
+                            key={choice}
+                            type="button"
+                            onClick={() => update("optimizeWithAi", choice)}
+                            className={`flex-1 py-2.5 text-sm font-semibold rounded-lg border transition-all ${
+                              form.optimizeWithAi === choice
+                                ? "bg-[var(--purple)] text-white border-transparent shadow-sm"
+                                : "border-[var(--divider)] text-[var(--text-secondary)] hover:bg-white/5"
+                            }`}
+                          >
+                            {choice === "yes"
+                              ? "Yes, optimize it"
+                              : "No, keep my wording"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    )}
+
+                    {builderMode === "ai" || form.optimizeWithAi === "yes" ? (
+                      <div
+                        className="rounded-xl p-5 flex flex-col gap-4"
+                        style={{
+                          background: "var(--glass-bg)",
+                          border: "1px solid var(--divider)",
+                        }}
+                      >
+                        <div>
+                          <span
+                            className="text-sm font-semibold block"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            Where is this CV going?
+                          </span>
+                          <span
+                            className="text-xs mt-1 block"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            The more you give here, the better the CV is aimed.
+                            Both fields are optional — leave them blank for a
+                            general polish.
+                          </span>
+                        </div>
+
+                        <FormField
+                          label="Institution or company"
+                          optional
+                        >
+                          <input
+                            type="text"
+                            value={form.targetCompany}
+                            onChange={(e) =>
+                              update("targetCompany", e.target.value)
+                            }
+                            placeholder="e.g. University of Yaoundé I, MTN Cameroon, UNICEF"
+                            className="glass-input w-full px-4 py-2.5 text-sm"
+                          />
+                        </FormField>
+
+                        <FormField
+                          label="Details about the role or institution"
+                          optional
+                        >
+                          <textarea
+                            value={form.institutionDetails}
+                            onChange={(e) =>
+                              update("institutionDetails", e.target.value)
+                            }
+                            rows={6}
+                            placeholder="Paste the job posting here, or describe the department, the responsibilities and what they are looking for."
+                            className="glass-input w-full px-4 py-2.5 text-sm resize-y"
+                          />
+                        </FormField>
+
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          This is used to decide what to emphasise and which
+                          words to use. Nothing you did not write yourself will
+                          be added to your CV.
+                        </p>
+                      </div>
+                    ) : (
+                      <p
+                        className="text-sm px-4 py-3 rounded-lg"
+                        style={{
+                          background: "var(--glass-bg)",
+                          border: "1px solid var(--divider)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        Your CV will be built exactly as you wrote it. Nothing
+                        is sent to the AI.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1423,14 +2023,20 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 ) : builderMode === "manual" ? (
                   <button
                     type="button"
-                    onClick={async () => {
-                      setResume(mapFormToResume());
-                      await handleDownload();
-                    }}
-                    disabled={downloading || !canProceed()}
+                    onClick={handleOptimize}
+                    disabled={enhancing || !canProceed()}
+                    title={
+                      form.optimizeWithAi === "yes"
+                        ? "Aims your CV at the institution you named, then shows you the result. It will not invent employers, dates or numbers."
+                        : "Builds your CV from what you typed, with no AI rewriting."
+                    }
                     className="btn-primary flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-70"
                   >
-                    {downloading ? "Preparing…" : "Download PDF ↓"}
+                    {enhancing
+                      ? "Optimizing…"
+                      : form.optimizeWithAi === "yes"
+                        ? "Optimize ✨"
+                        : "Continue →"}
                   </button>
                 ) : (
                   <button
@@ -1448,11 +2054,13 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
         ) : (
           <div className="flex flex-col gap-4">
             {/* Action bar */}
-            <div className="glass p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="glass p-4 flex flex-col gap-3">
               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                ✓ Your resume is ready. Review it below, then download.
+                ✓ Your resume is ready. Check the preview, then download.
               </p>
-              <div className="flex gap-2">
+              {/* Wraps rather than squeezing: this bar now sits in the narrower
+                  left column beside the preview. */}
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
                     setResume(null);
@@ -1486,6 +2094,40 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
                 </button>
               </div>
             </div>
+
+            {/* Score and recommendations, sitting between "here it is" and the
+                tool that fixes it. */}
+            <ResumeScoreCard resume={resume} />
+
+            {/* Next step in the application, prefilled from this resume. */}
+            <Link
+              href="/jobs/cover-letter"
+              onClick={seedCoverLetter}
+              className="glass p-4 flex items-center gap-3 hover:border-[var(--green)] transition-all"
+            >
+              <span className="text-2xl shrink-0">✉️</span>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Now write a matching cover letter
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  AI writes it from this resume — your details and role carry
+                  over.
+                </p>
+              </div>
+              <span
+                className="text-sm shrink-0"
+                style={{ color: "var(--text-muted)" }}
+              >
+                →
+              </span>
+            </Link>
 
             {/* AI polish */}
             <div className="glass p-4 flex flex-col gap-3">
@@ -1568,27 +2210,17 @@ function ResumeBuilder({ onBack }: { onBack: () => void }) {
               </p>
             )}
 
-            {/* Resume preview. Wrapped so the AI path gets the same A4 sizing
-                and page-break markers the manual path already had - and so it
-                honours the chosen accent colour and photo shape, which the
-                bare preview was silently dropping. */}
-            <A4ScaleWrapper>
-              <ResumePreview
-                resume={resume}
-                template={form.template}
-                customColor={form.customColor}
-                imageShape={form.imageShape}
-              />
-            </A4ScaleWrapper>
+            {/* The preview lives in the sticky right-hand column, not here -
+                see below. */}
           </div>
         )}
       </div>
 
-      {builderMode === "manual" && !resume && (
+      {splitView && (
         <div className={`sticky top-8 w-full flex flex-col gap-3 pb-12 ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
           <A4ScaleWrapper>
             <ResumePreview
-              resume={mapFormToResume()}
+              resume={resume ?? mapFormToResume()}
               template={form.template}
               customColor={form.customColor}
               imageShape={form.imageShape}
@@ -1677,7 +2309,9 @@ function A4ScaleWrapper({
     return () => observer.disconnect();
   }, []);
 
-  const pageCount = Math.max(1, Math.ceil(contentHeight / A4_HEIGHT_PX));
+  // Same tolerance as the PDF slicer, so the preview never advertises a page
+  // the download does not produce.
+  const pageCount = countPages(contentHeight);
   const sheetW = A4_WIDTH_PX * scale;
   const sheetH = A4_HEIGHT_PX * scale;
 
@@ -2126,29 +2760,34 @@ function ResumePreview({
               <h2 className="text-sm font-bold tracking-widest uppercase mb-4 pb-1" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
                 Contact
               </h2>
+              {/* Contact rows wrap rather than truncate. `truncate` sets
+                  overflow:hidden on an inline span, which html2canvas clips to
+                  the em-box - that is what sliced the bottom off the email in
+                  the downloaded PDF. break-all keeps long addresses inside the
+                  narrow sidebar without any clipping. */}
               <div className="flex flex-col gap-3 text-xs" style={{ color: sidebarTextMain }}>
                 {resume.contact?.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone size={14} style={{ color: sidebarTextSecondary }} />
-                    <span>{resume.contact.phone}</span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Phone size={14} className="shrink-0 mt-[3px]" style={{ color: sidebarTextSecondary }} />
+                    <span className="min-w-0 break-words leading-[1.5]">{resume.contact.phone}</span>
                   </div>
                 )}
                 {resume.contact?.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail size={14} style={{ color: sidebarTextSecondary }} />
-                    <span className="truncate">{resume.contact.email}</span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Mail size={14} className="shrink-0 mt-[3px]" style={{ color: sidebarTextSecondary }} />
+                    <span className="min-w-0 break-all leading-[1.5]">{resume.contact.email}</span>
                   </div>
                 )}
                 {resume.contact?.location && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={14} style={{ color: sidebarTextSecondary }} />
-                    <span>{resume.contact.location}</span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <MapPin size={14} className="shrink-0 mt-[3px]" style={{ color: sidebarTextSecondary }} />
+                    <span className="min-w-0 break-words leading-[1.5]">{resume.contact.location}</span>
                   </div>
                 )}
                 {resume.contact?.links?.map((link, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="text-[10px]" style={{ color: sidebarTextSecondary }}>🔗</span>
-                    <span className="truncate">{link}</span>
+                  <div key={i} className="flex items-start gap-3 min-w-0">
+                    <span className="text-[10px] shrink-0 mt-[3px]" style={{ color: sidebarTextSecondary }}>🔗</span>
+                    <span className="min-w-0 break-all leading-[1.5]">{link}</span>
                   </div>
                 ))}
               </div>
@@ -2290,8 +2929,11 @@ function ResumePreview({
     return (
       <div className="flex flex-col min-h-[1123px] w-full bg-[#e6e6e6] text-[#333] m-0 p-0 relative text-[13px]" style={{ fontFamily: "system-ui, sans-serif" }}>
         {/* Top Header */}
+        {/* pl-[35%] puts the header text over the right-hand column; the inner
+            padding must match that column's px-10 exactly or the name sits off
+            the body text by a few pixels. */}
         <div className="w-full h-40 flex items-center pl-[35%]" style={{ backgroundColor: accent }}>
-          <div className="pl-12 pr-10 text-white w-full">
+          <div className="px-10 text-white w-full">
             <h1 className="text-4xl font-bold tracking-widest uppercase">{resume.name}</h1>
             {resume.title && (
               <p className="text-base tracking-widest uppercase mt-2 opacity-90">{resume.title}</p>
@@ -2302,7 +2944,9 @@ function ResumePreview({
         {/* 2-Column Content */}
         <div className="flex flex-1 w-full">
           {/* Left Sidebar */}
-          <div className="w-[35%] flex flex-col gap-8 relative px-8 pb-8 pt-6 border-r border-[#d4d4d4]">
+          {/* 40px outer page margin on the left, matching the right column's
+              40px outer margin on the other side of the sheet. */}
+          <div className="w-[35%] flex flex-col gap-6 relative pl-10 pr-8 pt-6 pb-10 border-r border-[#d4d4d4]">
             {/* The profile photo overlaps the header and sidebar */}
             {resume.photoUrl && (
               <div className="absolute -top-32 left-0 w-full flex justify-center">
@@ -2323,29 +2967,32 @@ function ResumePreview({
                 <h2 className="text-[15px] font-bold tracking-[0.15em] uppercase mb-4 pb-2 border-b-2 border-black text-black">
                   Contact
                 </h2>
-                <div className="flex flex-col gap-4 text-[13px] text-black font-medium">
+                {/* Wrap instead of truncate - see the note in the classic
+                    template: overflow:hidden on an inline span is what clipped
+                    the email in the exported PDF. */}
+                <div className="flex flex-col gap-3.5 text-[13px] text-black font-medium">
                   {resume.contact?.phone && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white shrink-0"><Phone size={12} /></div>
-                      <span>{resume.contact.phone}</span>
+                      <span className="min-w-0 break-words leading-[1.5] pt-[3px]">{resume.contact.phone}</span>
                     </div>
                   )}
                   {resume.contact?.email && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white shrink-0"><Mail size={12} /></div>
-                      <span className="truncate">{resume.contact.email}</span>
+                      <span className="min-w-0 break-all leading-[1.5] pt-[3px]">{resume.contact.email}</span>
                     </div>
                   )}
                   {resume.contact?.location && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white shrink-0"><MapPin size={12} /></div>
-                      <span>{resume.contact.location}</span>
+                      <span className="min-w-0 break-words leading-[1.5] pt-[3px]">{resume.contact.location}</span>
                     </div>
                   )}
                   {resume.contact?.links?.map((link, i) => (
-                    <div key={i} className="flex items-center gap-3">
+                    <div key={i} className="flex items-start gap-3 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white shrink-0"><span className="text-[10px]">🔗</span></div>
-                      <span className="truncate">{link}</span>
+                      <span className="min-w-0 break-all leading-[1.5] pt-[3px]">{link}</span>
                     </div>
                   ))}
                 </div>
@@ -2405,7 +3052,7 @@ function ResumePreview({
           </div>
 
           {/* Right Content Area */}
-          <div className="w-[65%] bg-white p-10 pt-12 flex flex-col gap-8 relative z-0">
+          <div className="w-[65%] bg-white px-10 py-10 flex flex-col gap-6 relative z-0">
             {/* PROFILE */}
             {resume.summary && (
               <div className="flex gap-6 relative">
@@ -2415,8 +3062,8 @@ function ResumePreview({
                   </div>
                   <div className="w-px h-full bg-black opacity-30 absolute top-11" />
                 </div>
-                <div className="flex-1 pb-4">
-                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-4 text-black pt-2">
+                <div className="flex-1 pb-2">
+                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-3 text-black pt-2">
                     Profile
                   </h2>
                   <p className="text-[13px] leading-relaxed text-[#555] text-justify">
@@ -2435,11 +3082,11 @@ function ResumePreview({
                   </div>
                   <div className="w-px h-full bg-black opacity-30 absolute top-11" />
                 </div>
-                <div className="flex-1 pb-6">
-                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-6 text-black pt-2">
+                <div className="flex-1 pb-4">
+                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-5 text-black pt-2">
                     Work Experience
                   </h2>
-                  <div className="flex flex-col gap-8 relative">
+                  <div className="flex flex-col gap-6 relative">
                     {resume.experience.map((exp, i) => (
                       <div key={i} className="relative">
                         {/* Small timeline dot */}
@@ -2480,11 +3127,11 @@ function ResumePreview({
                   </div>
                   <div className="w-px h-full bg-black opacity-30 absolute top-11" />
                 </div>
-                <div className="flex-1 pb-6">
-                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-6 text-black pt-2">
+                <div className="flex-1 pb-4">
+                  <h2 className="text-xl font-bold tracking-[0.15em] uppercase mb-5 text-black pt-2">
                     Education
                   </h2>
-                  <div className="flex flex-col gap-8 relative">
+                  <div className="flex flex-col gap-6 relative">
                     {resume.education.map((ed, i) => (
                       <div key={i} className="relative">
                         {/* Small timeline dot */}
